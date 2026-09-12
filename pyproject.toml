@@ -1,0 +1,38 @@
+[project]
+name = "rl-fun"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "fanto", email = "kotmaster10@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "gymnasium>=1.3.0",
+    "numpy>=2.5.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.17,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.7",
+]
+notebook = [
+    "jupyter>=1.1.1",
+    "matplotlib>=3.11.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
