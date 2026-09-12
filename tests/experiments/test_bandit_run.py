@@ -20,7 +20,8 @@ def test_one_run_writes_reproducible_artifacts(tmp_path):
     summary = run_bandit_once(config, seed=17, run_id="fixed-run")
 
     # Assert
-    assert json.loads((summary.run_dir / "summary.json").read_text(encoding="utf-8"))["status"] == "success"
+    written_summary = json.loads((summary.run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert written_summary["status"] == "success"
 
 
 def test_same_seed_produces_same_numeric_summary(tmp_path):
