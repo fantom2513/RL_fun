@@ -1,67 +1,46 @@
-import json
-
 import pytest
 
 from rl_fun.experiments.config import ExperimentConfig
 
 
-def test_config_loads_explicit_seeds(tmp_path):
-    # Arrange
-    path = tmp_path / "experiment.json"
-    path.write_text(
-        json.dumps(
-            {
-                "name": "bandit-demo",
-                "algorithm": "epsilon_greedy",
-                "seeds": [11, 22],
-                "steps": 100,
-                "workers": 2,
-                "output_root": "runs",
-                "parameters": {"arms": 10, "epsilon": 0.1},
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    # Act
-    config = ExperimentConfig.from_json(path)
-
-    # Assert
-    assert config.seeds == (11, 22)
+def valid_values() -> dict[str, object]:
+    return {
+        "name": "cartpole-random",
+        "environment": {"id": "CartPole-v1", "kwargs": {}},
+        "algorithm": {"id": "random", "kwargs": {}},
+        "run": {
+            "seeds": [11, 22],
+            "total_steps": 100,
+            "workers": 2,
+            "output_root": "runs",
+        },
+        "evaluation": {"episodes": 5, "max_episode_steps": 500},
+    }
 
 
-@pytest.mark.parametrize("steps", [0, -1])
-def test_config_rejects_non_positive_steps(steps):
-    # Arrange
-    config = ExperimentConfig(
-        name="invalid",
-        algorithm="random",
-        seeds=(1,),
-        steps=steps,
-        workers=1,
-        output_root="runs",
-        parameters={},
-    )
+def test_config_v2_round_trip_preserves_sections():
+    config = ExperimentConfig.from_dict(valid_values())
 
-    # Act / Assert
-    with pytest.raises(ValueError, match="steps must be positive"):
-        config.validate()
+    assert ExperimentConfig.from_dict(config.to_dict()) == config
 
 
-def test_config_round_trip_preserves_values():
-    # Arrange
-    config = ExperimentConfig(
-        name="bandit-demo",
-        algorithm="greedy",
-        seeds=(3, 5),
-        steps=50,
-        workers=1,
-        output_root="runs",
-        parameters={"arms": 4},
-    )
+def test_old_flat_schema_has_actionable_error():
+    with pytest.raises(ValueError, match="configuration version 2"):
+        ExperimentConfig.from_dict({"name": "old", "algorithm": "random"})
 
-    # Act
-    restored = ExperimentConfig.from_dict(config.to_dict())
 
-    # Assert
-    assert restored == config
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (lambda value: value["run"].update(total_steps=0), "total_steps must be positive"),
+        (lambda value: value["run"].update(seeds=[1, 1]), "seeds must be unique"),
+        (lambda value: value["algorithm"].update(id=""), "algorithm.id must not be empty"),
+        (lambda value: value.update(extra=True), "unknown top-level keys"),
+    ],
+)
+def test_config_rejects_invalid_values(mutate, message):
+    values = valid_values()
+    mutate(values)
+
+    with pytest.raises(ValueError, match=message):
+        ExperimentConfig.from_dict(values)
