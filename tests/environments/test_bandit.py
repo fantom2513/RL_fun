@@ -1,6 +1,10 @@
+import gymnasium as gym
 import numpy as np
+import pytest
+from gymnasium.envs.registration import EnvSpec
 from gymnasium.utils.env_checker import check_env
 
+from rl_fun.environments import register_environments
 from rl_fun.environments.bandit import StationaryBanditEnv
 
 
@@ -10,6 +14,37 @@ def test_bandit_passes_gymnasium_contract():
 
     # Act / Assert
     check_env(env)
+
+
+def test_project_bandit_is_registered_and_checked():
+    # Arrange
+    register_environments()
+    register_environments()
+    env = gym.make("RLFun/StationaryBandit-v0", arms=3, horizon=5, reward_std=0.0)
+
+    try:
+        # Act / Assert
+        check_env(env.unwrapped)
+    finally:
+        env.close()
+
+
+def test_register_environments_rejects_conflicting_entry_point(monkeypatch):
+    # Arrange
+    environment_id = "RLFun/StationaryBandit-v0"
+    original = gym.registry[environment_id]
+    conflicting_spec = EnvSpec(
+        id=environment_id,
+        entry_point="rl_fun.environments.bandit:ConflictingBanditEnv",
+    )
+
+    # Act / Assert
+    with monkeypatch.context() as patch:
+        patch.setitem(gym.registry, environment_id, conflicting_spec)
+        with pytest.raises(RuntimeError, match="StationaryBandit-v0.*ConflictingBanditEnv"):
+            register_environments()
+
+    assert gym.registry[environment_id] is original
 
 
 def test_same_seed_reproduces_arm_means():
