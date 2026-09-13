@@ -1,20 +1,21 @@
+import gymnasium as gym
 import numpy as np
 
 from rl_fun.algorithms.bandits.types import BanditOutcome, random_argmax, update_estimate
-from rl_fun.environments.bandit import StationaryBanditEnv
 from rl_fun.tracking.metrics import MetricSink
 
 
 def run_greedy(
-    env: StationaryBanditEnv,
+    env: gym.Env,
     steps: int,
     rng: np.random.Generator,
     metrics: MetricSink,
 ) -> BanditOutcome:
-    if steps > env.horizon:
+    bandit = env.unwrapped
+    if steps > bandit.horizon:
         raise ValueError("steps must not exceed environment horizon")
-    estimates = np.zeros(env.arms, dtype=np.float64)
-    counts = np.zeros(env.arms, dtype=np.int64)
+    estimates = np.zeros(bandit.arms, dtype=np.float64)
+    counts = np.zeros(bandit.arms, dtype=np.int64)
     cumulative_reward = 0.0
     cumulative_regret = 0.0
     optimal_actions = 0

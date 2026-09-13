@@ -174,6 +174,8 @@ def _validate_run_config(config: RunConfig) -> None:
         raise ValueError("at least one seed is required")
     for seed in config.seeds:
         _require_int(seed, "seeds")
+        if seed < 0:
+            raise ValueError("seeds must be non-negative")
     if len(set(config.seeds)) != len(config.seeds):
         raise ValueError("seeds must be unique")
     _require_positive_int(config.total_steps, "total_steps")

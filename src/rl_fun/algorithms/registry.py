@@ -74,6 +74,8 @@ def _run_random(
             max_episode_steps=total_steps - completed_steps,
         )
         completed_steps += episode.length
+        if episode.reached_safety_limit:
+            continue
         completed_episodes += 1
         cumulative_reward += episode.reward
         metrics.log(
@@ -135,11 +137,11 @@ def _bandit_result(outcome: BanditOutcome) -> AlgorithmResult:
     )
 
 
-def _require_bandit_environment(env: gym.Env, algorithm_id: str) -> StationaryBanditEnv:
+def _require_bandit_environment(env: gym.Env, algorithm_id: str) -> gym.Env:
     unwrapped = env.unwrapped
     if not isinstance(unwrapped, StationaryBanditEnv):
         raise ValueError(f"algorithm {algorithm_id!r} requires a StationaryBanditEnv")
-    return unwrapped
+    return env
 
 
 def _validate_bandit(algorithm_id: str) -> AlgorithmValidator:

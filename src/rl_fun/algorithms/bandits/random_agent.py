@@ -1,25 +1,26 @@
+import gymnasium as gym
 import numpy as np
 
 from rl_fun.algorithms.bandits.types import BanditOutcome, update_estimate
-from rl_fun.environments.bandit import StationaryBanditEnv
 from rl_fun.tracking.metrics import MetricSink
 
 
 def run_random(
-    env: StationaryBanditEnv,
+    env: gym.Env,
     steps: int,
     rng: np.random.Generator,
     metrics: MetricSink,
 ) -> BanditOutcome:
-    if steps > env.horizon:
+    bandit = env.unwrapped
+    if steps > bandit.horizon:
         raise ValueError("steps must not exceed environment horizon")
-    estimates = np.zeros(env.arms, dtype=np.float64)
-    counts = np.zeros(env.arms, dtype=np.int64)
+    estimates = np.zeros(bandit.arms, dtype=np.float64)
+    counts = np.zeros(bandit.arms, dtype=np.int64)
     cumulative_reward = 0.0
     cumulative_regret = 0.0
     optimal_actions = 0
     for step in range(1, steps + 1):
-        action = int(rng.integers(env.arms))
+        action = int(rng.integers(bandit.arms))
         _, reward, terminated, truncated, info = env.step(action)
         update_estimate(estimates, counts, action, reward)
         cumulative_reward += reward
