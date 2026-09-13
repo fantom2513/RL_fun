@@ -28,10 +28,10 @@ def run_greedy(
         metrics.log(
             step,
             {
-                "reward": reward,
-                "cumulative_reward": cumulative_reward,
-                "regret": cumulative_regret,
-                "optimal_action_rate": optimal_actions / step,
+                "train/reward": reward,
+                "train/cumulative_reward": cumulative_reward,
+                "train/cumulative_regret": cumulative_regret,
+                "train/optimal_action_rate": optimal_actions / step,
             },
         )
         if terminated or truncated:

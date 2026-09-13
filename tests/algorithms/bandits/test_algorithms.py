@@ -98,7 +98,14 @@ def test_bandit_adapters_seed_their_first_reset(
     env = SeedRecordingBanditEnv(arms=3, horizon=4, reward_std=0.0)
 
     # Act
-    get_algorithm(algorithm_id).run(env, 4, 29, np.random.default_rng(29), MemoryMetricSink(), parameters)
+    get_algorithm(algorithm_id).run(
+        env,
+        4,
+        29,
+        np.random.default_rng(29),
+        MemoryMetricSink(),
+        parameters,
+    )
 
     # Assert
     assert env.reset_seeds == [29]
