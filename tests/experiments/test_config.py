@@ -1,6 +1,11 @@
 import pytest
 
-from rl_fun.experiments.config import ExperimentConfig
+from rl_fun.experiments.config import (
+    AlgorithmConfig,
+    EnvironmentConfig,
+    ExperimentConfig,
+    RunConfig,
+)
 
 
 def valid_values() -> dict[str, object]:
@@ -27,6 +32,30 @@ def test_config_v2_round_trip_preserves_sections():
 def test_old_flat_schema_has_actionable_error():
     with pytest.raises(ValueError, match="configuration version 2"):
         ExperimentConfig.from_dict({"name": "old", "algorithm": "random"})
+
+
+def test_config_parser_rejects_negative_seed():
+    # Arrange
+    values = valid_values()
+    values["run"]["seeds"] = [-1]
+
+    # Act / Assert
+    with pytest.raises(ValueError, match="seeds must be non-negative"):
+        ExperimentConfig.from_dict(values)
+
+
+def test_config_validate_rejects_negative_seed():
+    # Arrange
+    config = ExperimentConfig(
+        name="negative-seed",
+        environment=EnvironmentConfig(id="CartPole-v1"),
+        algorithm=AlgorithmConfig(id="random"),
+        run=RunConfig(seeds=(-1,), total_steps=1),
+    )
+
+    # Act / Assert
+    with pytest.raises(ValueError, match="seeds must be non-negative"):
+        config.validate()
 
 
 @pytest.mark.parametrize(
