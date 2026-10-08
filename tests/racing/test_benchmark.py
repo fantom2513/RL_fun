@@ -32,14 +32,15 @@ def test_reference_completes_a_lap_in_benchmark():
 
 def test_benchmark_is_reproducible():
     benchmark = load_benchmark("oval")
-    params = ref.EvolutionParams(**{**benchmark["params"], "hidden": tuple(benchmark["params"]["hidden"])})
+    stored_params = benchmark["params"]
+    params = ref.EvolutionParams(**{**stored_params, "hidden": tuple(stored_params["hidden"])})
 
     run = ref.train(
         benchmark["track"], seed=benchmark["seed"], generations=3,
         params=params, fleet_kwargs=benchmark["fleet"],
     )
 
-    for new, stored in zip(run.history, benchmark["history"][:3]):
+    for new, stored in zip(run.history, benchmark["history"][:3], strict=True):
         assert new["best"] == pytest.approx(stored["best"])
         assert new["mean"] == pytest.approx(stored["mean"])
 
