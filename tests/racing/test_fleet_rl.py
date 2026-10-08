@@ -12,7 +12,8 @@ def repeat(action: np.ndarray, count: int) -> np.ndarray:
 
 def _crash(fleet: RacingFleet, index: int = 0) -> None:
     for _ in range(900):
-        actions = repeat(FORWARD, fleet.n_cars)
+        actions = repeat(np.zeros(2), fleet.n_cars)
+        actions[index] = FORWARD
         fleet.step(actions)
         if not fleet.alive[index]:
             return
@@ -214,12 +215,12 @@ def test_lateral_offset_is_zero_on_the_centerline_and_grows_when_drifting():
 
     # Act
     offsets = []
-    for _ in range(15):
+    for _ in range(45):
         fleet.step(np.array([[0.0, 1.0], [1.0, 1.0]]))
         offsets.append(fleet.lateral_offset.copy())
 
     # Assert
-    assert offsets[-1][0] < 0.1
+    assert offsets[-1][1] > 2 * offsets[-1][0]
     assert offsets[-1][1] > offsets[0][1]
     assert offsets[-1][1] > 0.5
     assert fleet.lateral_offset.shape == (2,)

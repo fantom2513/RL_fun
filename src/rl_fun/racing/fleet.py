@@ -105,9 +105,58 @@ class RacingFleet:
         self._speed_total = np.zeros(count)
         self._centering_total = np.zeros(count)
         self._steer_change_total = np.zeros(count)
+        self.lateral_offset = np.zeros(count)
+        self.steer_change = np.zeros(count)
+        self.just_crashed = np.zeros(count, dtype=bool)
+        self.just_finished = np.zeros(count, dtype=bool)
         self.steps = 0
         self._started = True
         self._distances = self._cast()
+        return self._observe()
+
+    def respawn(self, mask: np.ndarray) -> np.ndarray:
+        """Return the cars selected by the boolean `mask` (shape (n_cars,)) to the start line.
+
+        Their state, counters, statistics and flags are reset as in `reset`; the other cars and the
+        fleet step counter are left alone. Returns the observations of all cars.
+        """
+        if not self._started:
+            raise RuntimeError("call reset() before respawn()")
+        mask = np.asarray(mask)
+        if mask.shape != (self.n_cars,) or mask.dtype != bool:
+            raise ValueError(
+                f"mask must be a boolean array of shape ({self.n_cars},), "
+                f"got {mask.dtype} {mask.shape}"
+            )
+        if not mask.any():
+            return self._observe()
+        position, heading = self.track.start_pose()
+        arclength, _ = self.track.project(position)
+        self.x[mask] = position[0]
+        self.y[mask] = position[1]
+        self.heading[mask] = heading
+        for array in (
+            self.v_long,
+            self.v_lat,
+            self.yaw_rate,
+            self._travelled,
+            self._acceleration,
+            self._steering,
+            self._speed_total,
+            self._centering_total,
+            self._steer_change_total,
+            self.lateral_offset,
+            self.steer_change,
+        ):
+            array[mask] = 0.0
+        self._arclength[mask] = arclength
+        self.alive[mask] = True
+        self.finished[mask] = False
+        self.just_crashed[mask] = False
+        self.just_finished[mask] = False
+        self.steps_alive[mask] = 0
+        self.lap_steps[mask] = np.nan
+        self._distances[mask] = self._cast(mask)
         return self._observe()
 
     def step(self, actions: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -145,14 +194,18 @@ class RacingFleet:
         rewards = delta / self.track.length
 
         centering = 1.0 - np.clip(offset / (self.track.width / 2), 0.0, 1.0)
-        steer_change = np.abs(steer - self._steering) / 2.0
+        raw_change = np.abs(steer - self._steering)
         self._speed_total += np.where(moving, self.v_long / self.dynamics.max_speed, 0.0)
         self._centering_total += np.where(moving, centering, 0.0)
-        self._steer_change_total += np.where(moving, steer_change, 0.0)
+        self._steer_change_total += np.where(moving, raw_change / 2.0, 0.0)
         self._steering = np.where(moving, steer, self._steering)
 
-        on_road = self.track.contains_many(positions)
+        on_road = offset <= self.track.width / 2
         finished_now = moving & on_road & (self._travelled >= self.laps * self.track.length)
+        self.just_crashed = moving & ~on_road
+        self.just_finished = finished_now
+        self.lateral_offset = offset
+        self.steer_change = np.where(moving, raw_change, 0.0)
         self.finished |= finished_now
         self.lap_steps = np.where(finished_now, float(self.steps), self.lap_steps)
         self.alive = moving & on_road & ~finished_now
@@ -197,13 +250,15 @@ class RacingFleet:
         counts = self.steps_alive
         return np.divide(total, counts, out=np.zeros_like(total), where=counts > 0)
 
-    def _cast(self) -> np.ndarray:
+    def _cast(self, mask: np.ndarray | None = None) -> np.ndarray:
+        selected = slice(None) if mask is None else mask
+        count = self.n_cars if mask is None else int(np.count_nonzero(mask))
         if self.ray_angles.size == 0:
-            return np.zeros((self.n_cars, 0))
+            return np.zeros((count, 0))
         return cast_rays_many(
             self.track.boundary_segments,
-            np.column_stack([self.x, self.y]),
-            self.heading,
+            np.column_stack([self.x[selected], self.y[selected]]),
+            self.heading[selected],
             self.ray_angles,
             self.ray_range,
         )
