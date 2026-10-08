@@ -1,0 +1,7 @@
+{
+  "name": "racing-random",
+  "environment": {"id": "RLFun/Racing-v0", "kwargs": {"track": "oval"}},
+  "algorithm": {"id": "random", "kwargs": {}},
+  "run": {"seeds": [11, 22], "total_steps": 300, "workers": 1, "output_root": "runs"},
+  "evaluation": {"episodes": 2, "max_episode_steps": 300}
+}
