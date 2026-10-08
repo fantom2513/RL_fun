@@ -49,9 +49,7 @@ def test_cast_rays_many_matches_single_origin_casts():
 
     assert many.shape == (3, 5)
     for index in range(3):
-        single = cast_rays(
-            track.boundary_segments, origins[index], headings[index], angles, 40.0
-        )
+        single = cast_rays(track.boundary_segments, origins[index], headings[index], angles, 40.0)
         assert many[index] == pytest.approx(single)
 
 
@@ -67,7 +65,9 @@ def test_step_arrays_matches_scalar_step():
     nx, ny, nheading, nspeed, nyaw = model.step_arrays(x, y, heading, speed, steer, throttle, 0.05)
 
     for i in range(3):
-        after = model.step(VehicleState(x[i], y[i], heading[i], v_long=speed[i]), steer[i], throttle[i], 0.05)
+        after = model.step(
+            VehicleState(x[i], y[i], heading[i], v_long=speed[i]), steer[i], throttle[i], 0.05
+        )
         assert nx[i] == pytest.approx(after.x)
         assert ny[i] == pytest.approx(after.y)
         assert nheading[i] == pytest.approx(after.heading)

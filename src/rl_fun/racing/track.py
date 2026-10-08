@@ -90,9 +90,30 @@ class Track:
         progress = float(self._offsets[index] + fractions[index] * self._lengths[index])
         return progress, float(distances[index])
 
+    def project_many(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Vectorized `project` for an (N, 2) array of points.
+
+        Returns arclength and distance arrays, each of shape (N,).
+        """
+        positions = np.asarray(points, dtype=np.float64)[:, None, :]
+        relative = positions - self.centerline[None]
+        fractions = np.clip(
+            np.einsum("nsi,si->ns", relative, self._vectors) / self._lengths**2, 0.0, 1.0
+        )
+        closest = self.centerline[None] + fractions[:, :, None] * self._vectors[None]
+        distances = np.linalg.norm(positions - closest, axis=2)
+        index = np.argmin(distances, axis=1)
+        rows = np.arange(len(index))
+        progress = self._offsets[index] + fractions[rows, index] * self._lengths[index]
+        return progress, distances[rows, index]
+
     def contains(self, point: Sequence[float]) -> bool:
         """Return whether a point lies on the road."""
         return self.project(point)[1] <= self.width / 2
+
+    def contains_many(self, points: np.ndarray) -> np.ndarray:
+        """Vectorized `contains` for an (N, 2) array of points."""
+        return self.project_many(points)[1] <= self.width / 2
 
     def start_pose(self) -> tuple[np.ndarray, float]:
         """Return the start position and heading along the first centerline segment."""
@@ -108,6 +129,13 @@ class Track:
         elif delta < -half:
             delta += self.length
         return delta
+
+    def progress_delta_many(self, previous: np.ndarray, current: np.ndarray) -> np.ndarray:
+        """Vectorized `progress_delta` for arrays of arclengths."""
+        delta = np.asarray(current, dtype=np.float64) - np.asarray(previous, dtype=np.float64)
+        half = self.length / 2
+        delta = np.where(delta > half, delta - self.length, delta)
+        return np.where(delta < -half, delta + self.length, delta)
 
     def _boundaries(self) -> tuple[np.ndarray, np.ndarray]:
         directions = self._vectors / self._lengths[:, None]

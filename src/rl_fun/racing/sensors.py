@@ -42,3 +42,29 @@ def cast_rays(
     hit = (np.abs(denominator) > 1e-12) & (along_ray >= 0) & (along_edge >= 0) & (along_edge <= 1)
     nearest = np.where(hit, along_ray, np.inf).min(axis=1)
     return np.minimum(nearest, max_range)
+
+
+def cast_rays_many(
+    segments: np.ndarray,
+    origins: np.ndarray,
+    headings: np.ndarray,
+    angles: np.ndarray,
+    max_range: float,
+) -> np.ndarray:
+    """Vectorized `cast_rays` for N origins at once; returns an (N, R) array.
+
+    `origins` has shape (N, 2), `headings` shape (N,), `segments` shape (S, 2, 2).
+    """
+    absolute = headings[:, None] + angles[None, :]
+    directions = np.stack([np.cos(absolute), np.sin(absolute)], axis=2)[:, :, None, :]
+    starts = segments[:, 0, :]
+    edges = segments[:, 1, :] - starts
+    offsets = (starts[None, :, :] - origins[:, None, :])[:, None, :, :]
+    edges_b = edges[None, None, :, :]
+    denominator = cross(directions, edges_b)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        along_ray = cross(offsets, edges_b) / denominator
+        along_edge = cross(offsets, directions) / denominator
+    hit = (np.abs(denominator) > 1e-12) & (along_ray >= 0) & (along_edge >= 0) & (along_edge <= 1)
+    nearest = np.where(hit, along_ray, np.inf).min(axis=2)
+    return np.minimum(nearest, max_range)

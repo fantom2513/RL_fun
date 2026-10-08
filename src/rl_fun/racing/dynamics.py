@@ -6,6 +6,8 @@ import math
 from dataclasses import dataclass
 from typing import Protocol
 
+import numpy as np
+
 
 @dataclass(frozen=True, slots=True)
 class VehicleState:
@@ -29,6 +31,18 @@ class VehicleDynamics(Protocol):
         self, state: VehicleState, steer: float, throttle: float, dt: float
     ) -> VehicleState:
         """Advance the vehicle by dt seconds."""
+
+    def step_arrays(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        heading: np.ndarray,
+        v_long: np.ndarray,
+        steer: np.ndarray,
+        throttle: np.ndarray,
+        dt: float,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Vectorized `step`: returns (x, y, heading, v_long, yaw_rate) arrays."""
 
 
 def _clip(value: float, low: float, high: float) -> float:
@@ -68,6 +82,27 @@ class KinematicBicycle:
             v_lat=0.0,
             yaw_rate=yaw_rate,
         )
+
+    def step_arrays(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        heading: np.ndarray,
+        v_long: np.ndarray,
+        steer: np.ndarray,
+        throttle: np.ndarray,
+        dt: float,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Vectorized `step` over arrays of cars: returns (x, y, heading, v_long, yaw_rate)."""
+        steer = np.clip(steer, -1.0, 1.0)
+        throttle = np.clip(throttle, -1.0, 1.0)
+        rate = np.where(throttle >= 0, throttle * self.acceleration, throttle * self.braking)
+        speed = np.clip(v_long + rate * dt, 0.0, self.max_speed)
+        yaw_rate = speed / self.wheelbase * np.tan(steer * self.max_steer)
+        new_heading = heading + yaw_rate * dt
+        new_x = x + speed * np.cos(new_heading) * dt
+        new_y = y + speed * np.sin(new_heading) * dt
+        return new_x, new_y, new_heading, speed, yaw_rate
 
 
 _DYNAMICS = {"kinematic": KinematicBicycle}
