@@ -1,8 +1,9 @@
-// Lab shell: run tabs, run controls, the track view, the parameters form and the learning curves.
-// The network panel is a placeholder for now.
+// Lab shell: run tabs, run controls, the track view, the parameters form, the learning curves and
+// the leader's network graph.
 
 import * as api from './api.js';
 import { Chart, METRICS } from './charts.js';
+import { modelLabels, NetworkView } from './network_view.js';
 import { ParamsForm } from './params_form.js';
 import { TrackView } from './track_view.js';
 
@@ -38,8 +39,13 @@ const el = {
   zoomOut: $('zoom-out'),
   hint: $('stage-hint'),
   toasts: $('toasts'),
+  announcer: $('announcer'),
   paramsPanel: document.querySelector('.params'),
   paramsBody: $('params-body'),
+  paramsStatus: $('params-status'),
+  paramsRetry: $('params-retry'),
+  networkBody: $('network-body'),
+  networkLegend: $('network-legend'),
   chart: $('chart'),
   metrics: $('metrics'),
   legend: $('legend'),
@@ -57,12 +63,15 @@ const state = {
 let view = null;
 let form = null;
 let chart = null;
+let network = null;
+let pauseBusy = false;
 
 // ---- notifications ------------------------------------------------------------------------
 
 function toast(text, kind = 'info') {
   const node = document.createElement('div');
   node.className = `toast${kind === 'error' ? ' toast-error' : ''}`;
+  if (kind === 'error') node.setAttribute('role', 'alert');
   node.textContent = text;
   el.toasts.append(node);
   setTimeout(() => node.remove(), kind === 'error' ? 8000 : 5000);
@@ -70,6 +79,24 @@ function toast(text, kind = 'info') {
 }
 
 api.setErrorHandler((message) => toast(message, 'error'));
+
+// Screen-reader announcement of state changes that are otherwise only visible (pause, finish…).
+function announce(text) {
+  el.announcer.textContent = '';
+  setTimeout(() => {
+    el.announcer.textContent = text;
+  }, 30);
+}
+
+function setRunStatus(run, status) {
+  if (run.status === status) return;
+  run.status = status;
+  if (run.id === state.activeId) announce(`${run.name}: ${STATUS_LABELS[status] ?? status}`);
+}
+
+// What the run tabs and the new-run form say about the selection: the open run's tab looks
+// selected only while its own parameters are shown, not while the form is writing a new run.
+const formMode = () => form?.mode ?? 'new';
 
 // ---- runs ---------------------------------------------------------------------------------
 
@@ -85,6 +112,7 @@ function addRun(row) {
     color: RUN_COLORS[state.colorIndex++ % RUN_COLORS.length],
     config: null,
     frame: null,
+    net: null,
     speed: '1',
     connection: 'open',
     error: null,
@@ -93,7 +121,12 @@ function addRun(row) {
   run.subscription = api.subscribe(run.id, {
     frame: (frame) => {
       run.frame = frame;
-      if (run.id === state.activeId) view.setFrame(frame);
+      const first = !run.net && Boolean(frame.net);
+      if (frame.net) run.net = frame.net;
+      if (run.id !== state.activeId) return;
+      view.setFrame(frame);
+      if (run.config) network.setNet(frame.net);
+      if (first) renderNetworkState();
     },
     gen: (gen) => {
       run.gens.push(gen);
@@ -103,11 +136,12 @@ function addRun(row) {
       form.onGen(run);
     },
     status: (message) => {
-      run.status = message.status;
+      setRunStatus(run, message.status);
       run.error = message.message ?? null;
       renderTabs();
       renderControls();
       renderBanner();
+      if (run.id === state.activeId) renderNetworkState();
       if (run.id === state.activeId) form.refreshLock();
     },
     notice: (message) => toast(message.text),
@@ -121,7 +155,24 @@ function addRun(row) {
 
 function setConnection(run, connection) {
   run.connection = connection;
-  if (run.id === state.activeId) renderBanner();
+  if (run.id !== state.activeId) return;
+  renderBanner();
+  renderNetworkState();
+}
+
+// Empty, waiting and error texts of the network panel; the graph itself shows once a net arrived.
+function renderNetworkState() {
+  const run = activeRun();
+  let text = null;
+  if (!run) {
+    text = 'Сеть лидера появится, когда вы создадите запуск.';
+  } else if (!run.net) {
+    if (run.status === 'error') text = 'Запуск завершился с ошибкой, сеть не получена.';
+    else if (run.connection === 'lost') text = 'Поток данных отключён, сети пока нет.';
+    else if (TERMINAL.has(run.status)) text = 'Запуск закончился до первого кадра, сети нет.';
+    else text = 'Ждём первый кадр запуска…';
+  }
+  network.setMessage(text);
 }
 
 async function ensureConfig(run) {
@@ -149,6 +200,9 @@ async function select(id) {
   chart.setHighlight(id);
   const run = activeRun();
   el.empty.hidden = Boolean(run);
+  network.clear();
+  network.setLabels(null);
+  renderNetworkState();
   if (!run) {
     view.clearTrack();
     el.loading.hidden = true;
@@ -160,6 +214,9 @@ async function select(id) {
     const config = await ensureConfig(run);
     if (state.activeId !== id) return;
     form.showRun(run, config);
+    network.setLabels(modelLabels(config.model, state.catalog));
+    network.setNet(run.net);
+    renderNetworkState();
     if (view.trackName !== config.track) {
       el.loading.hidden = false;
       view.clearTrack();
@@ -270,7 +327,14 @@ function renderTabs() {
     tab.dataset.status = run.status;
     tab.dataset.id = run.id;
     tab.style.setProperty('--run', run.color);
-    tab.setAttribute('aria-selected', String(run.id === state.activeId));
+    // While the form writes a new run no tab is the selected one; the stage keeps showing the
+    // last opened run, and its tab is marked as such only through `aria-current`.
+    const selected = run.id === state.activeId && formMode() === 'run';
+    tab.setAttribute('aria-selected', String(selected));
+    if (run.id === state.activeId && !selected) {
+      tab.setAttribute('aria-current', 'true');
+      tab.title = 'Этот запуск показан на трассе; справа открыта форма нового запуска';
+    }
     const label = STATUS_LABELS[run.status] ?? run.status;
     const best = run.best == null ? '' : ` · ${Math.round(run.best * 100)}%`;
     tab.setAttribute('aria-label', `${run.name}, ${label}`);
@@ -366,10 +430,27 @@ function renderBanner() {
 function renderHint() {
   const follow = view.mode === 'follow';
   el.cameraMode.textContent = follow ? 'Следовать' : 'Вписать';
-  el.hint.textContent = `Колесо или + / −: масштаб ${view.zoomLabel} · C: камера${follow ? '' : ' · перетаскивание: сдвиг'}`;
+  el.hint.textContent = `Колесо или + / −: масштаб ${view.zoomLabel} · C: камера · Пробел: пауза${follow ? '' : ' · перетаскивание: сдвиг'}`;
 }
 
 // ---- wiring -------------------------------------------------------------------------------
+
+// Pause or resume the open run (button and Space).
+async function togglePause() {
+  const run = activeRun();
+  if (!run || TERMINAL.has(run.status) || pauseBusy) return;
+  pauseBusy = true;
+  try {
+    const wasPaused = run.status === 'paused';
+    if (await sendCommand(run, wasPaused ? 'resume' : 'pause')) {
+      setRunStatus(run, wasPaused ? 'running' : 'paused'); // confirmed later by the status event
+      renderTabs();
+      renderControls();
+    }
+  } finally {
+    pauseBusy = false;
+  }
+}
 
 function zoom(factor) {
   view.zoomBy(factor);
@@ -395,16 +476,7 @@ function wire() {
     chart.setMetric(segment.dataset.metric);
     renderMetrics();
   });
-  el.pause.addEventListener('click', async () => {
-    const run = activeRun();
-    if (!run) return;
-    const wasPaused = run.status === 'paused';
-    if (await sendCommand(run, wasPaused ? 'resume' : 'pause')) {
-      run.status = wasPaused ? 'running' : 'paused'; // confirmed later by the status event
-      renderTabs();
-      renderControls();
-    }
-  });
+  el.pause.addEventListener('click', togglePause);
   el.speed.addEventListener('change', async () => {
     const run = activeRun();
     if (!run) return;
@@ -424,8 +496,17 @@ function wire() {
   el.canvas.addEventListener('dblclick', () => requestAnimationFrame(renderHint));
 
   window.addEventListener('keydown', (event) => {
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.target.closest?.('input, select, textarea, [contenteditable]')) return;
+    if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+    // Never act while the user types or operates a control: shortcuts are for the stage only.
+    const target = event.target.closest ? event.target : document.body;
+    if (target.closest('input, select, textarea, [contenteditable]')) return;
+    if (event.code === 'Space') {
+      // On a focused button Space already means "press it".
+      if (target.closest('button, a[href], summary, [role="tab"], [role="radio"]')) return;
+      event.preventDefault();
+      if (!event.repeat) togglePause();
+      return;
+    }
     switch (event.code) {
       case 'KeyC':
         view.toggleMode();
@@ -451,22 +532,42 @@ function wire() {
 async function init() {
   view = new TrackView(el.canvas, { onModeChange: renderHint });
   chart = new Chart(el.chart, () => [...state.runs.values()]);
-  window.__lab = { state, view, chart }; // handle for debugging in the browser console
+  network = new NetworkView(el.networkBody, el.networkLegend);
+  window.__lab = { state, view, chart, network }; // handle for debugging in the browser console
   renderMetrics();
   wire();
   renderHint();
   renderControls();
+  renderNetworkState();
+  el.paramsRetry.addEventListener('click', start);
+  await start();
+}
+
+const EMPTY_TEXT = el.empty.querySelector('p').textContent;
+
+// Loads the catalog and everything that depends on it; the retry button runs it again.
+async function start() {
+  el.paramsStatus.textContent = 'Загрузка параметров…';
+  el.paramsRetry.hidden = true;
   try {
     state.catalog = await api.getCatalog();
-  } catch {
+  } catch (error) {
+    el.paramsStatus.textContent = 'Параметры недоступны: каталог не загрузился.';
+    el.paramsRetry.hidden = false;
     el.empty.hidden = false;
-    el.empty.querySelector('p').textContent = 'Не удалось загрузить каталог. Обновите страницу, когда сервер будет доступен.';
+    el.emptyNew.hidden = true;
+    el.empty.querySelector('h2').textContent = 'Лаборатория недоступна';
+    el.empty.querySelector('p').textContent = `${error.message} Нажмите «Повторить» в панели параметров.`;
     return;
   }
+  el.empty.querySelector('h2').textContent = 'Создайте запуск';
+  el.empty.querySelector('p').textContent = EMPTY_TEXT;
+  el.emptyNew.hidden = false;
   form = new ParamsForm(el.paramsBody, state.catalog, {
     onCreate: createFromForm,
     onCopy: copySettings,
     onLiveUpdate: liveUpdate,
+    onModeChange: renderTabs,
   });
   window.__lab.form = form;
   form.showNew({ name: nextRunName() });

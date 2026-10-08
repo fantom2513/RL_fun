@@ -19,7 +19,10 @@ export function reportError(message) {
   errorHandler(message);
 }
 
-async function request(method, path, body) {
+// `quiet` leaves the reporting to the caller (the form shows submit errors itself): the error is
+// still thrown, it just is not also shown through the global handler, so the user sees it once.
+async function request(method, path, body, { quiet = false } = {}) {
+  const report = quiet ? () => {} : reportError;
   const options = { method, headers: { Accept: 'application/json' } };
   if (body !== undefined) {
     options.headers['Content-Type'] = 'application/json';
@@ -30,7 +33,7 @@ async function request(method, path, body) {
     response = await fetch(path, options);
   } catch {
     const error = new ApiError('Нет связи с лабораторией. Проверьте, что сервер запущен.');
-    reportError(error.message);
+    report(error.message);
     throw error;
   }
   let data = null;
@@ -41,17 +44,19 @@ async function request(method, path, body) {
   }
   if (!response.ok) {
     const message = (data && data.error) || `Сервер ответил ошибкой ${response.status}.`;
-    reportError(message);
+    report(message);
     throw new ApiError(message, response.status);
   }
   return data;
 }
 
-export const getCatalog = () => request('GET', '/api/catalog');
+// The caller shows a persistent "unavailable" state with a retry button instead of a toast.
+export const getCatalog = () => request('GET', '/api/catalog', undefined, { quiet: true });
 export const getTrack = (name) => request('GET', `/api/tracks/${encodeURIComponent(name)}`);
 export const listRuns = () => request('GET', '/api/runs');
 export const getRun = (id) => request('GET', `/api/runs/${encodeURIComponent(id)}`);
-export const createRun = (config) => request('POST', '/api/runs', config);
+// Errors of creating a run are shown by the form that submitted it, not as a toast.
+export const createRun = (config) => request('POST', '/api/runs', config, { quiet: true });
 export const deleteRun = (id) => request('DELETE', `/api/runs/${encodeURIComponent(id)}`);
 
 // `cmd` is a command object ({cmd: 'speed', value: 4}) or just its name ('pause').

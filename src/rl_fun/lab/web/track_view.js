@@ -14,7 +14,9 @@ const CURB_STRIPE = 2;
 const DEFAULT_FOLLOW_ZOOM = 3;
 const LEADER_COLOR = '#f2b01e';
 const CRASH_COLOR = '#d62e3e';
-const HUD_FONT = '600 13px ui-monospace, "Cascadia Mono", Consolas, monospace';
+const COMPACT_HUD_WIDTH = 640; // canvases narrower or lower than this get the one-line HUD plate
+const COMPACT_HUD_HEIGHT = 480;
+const HUD_FONT ='600 13px ui-monospace, "Cascadia Mono", Consolas, monospace';
 const LABEL_FONT = '500 12px Bahnschrift, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif';
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -555,7 +557,36 @@ export class TrackView {
     ctx.fill();
   }
 
+  // On small canvases the five-row plate would cover a good part of the track: one line instead.
+  drawCompactHud() {
+    const ctx = this.ctx;
+    const frame = this.frame;
+    const text = frame
+      ? `Пок. ${frame.gen + 1} · ${frame.alive}/${frame.n} · ${Math.round(frame.hud.progress * 100)}%`
+      : 'Ждём кадр…';
+    ctx.font = HUD_FONT;
+    const x = 10;
+    const y = 10;
+    const plateWidth = Math.min(ctx.measureText(text).width + 24, Math.max(this.width - 150, 120));
+    ctx.fillStyle = 'rgba(22, 31, 39, 0.84)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, plateWidth, 26, 8);
+    ctx.fill();
+    ctx.fillStyle = CRASH_COLOR;
+    ctx.beginPath();
+    ctx.roundRect(x, y + 6, 3, 14, 2);
+    ctx.fill();
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#f4f7f9';
+    ctx.fillText(text, x + 12, y + 13, plateWidth - 18);
+  }
+
   drawHud() {
+    if (this.width < COMPACT_HUD_WIDTH || this.height < COMPACT_HUD_HEIGHT) {
+      this.drawCompactHud();
+      return;
+    }
     const ctx = this.ctx;
     const frame = this.frame;
     const rows = [

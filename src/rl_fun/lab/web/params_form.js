@@ -723,6 +723,7 @@ export class ParamsForm {
     this.write(next);
     this.dirty = false;
     this.root.scrollTop = 0;
+    this.hooks.onModeChange?.(this.mode);
   }
 
   showRun(run, config) {
@@ -738,6 +739,7 @@ export class ParamsForm {
     const last = run.gens[run.gens.length - 1]?.params;
     this.write({ ...config, ...(last ?? {}) });
     this.setLiveNote();
+    this.hooks.onModeChange?.(this.mode);
   }
 
   stashDraft() {

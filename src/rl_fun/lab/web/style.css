@@ -17,6 +17,14 @@
   --font-ui: Bahnschrift, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-data: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", monospace;
   --radius: 10px;
+  /* network graph (same hues as the pygame panel) */
+  --net-edge-pos: #28c83c;
+  --net-edge-neg: #d63246;
+  --net-node-pos: #5aff50;
+  --net-node-neg: #fa3e52;
+  --net-node-neutral: #eceef0;
+  --net-node-ring: #3c4a52;
+  --net-edge-neutral: #78808a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,6 +39,11 @@
     --accent-text: #0f1a22;
     --danger: #ec6377;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.28);
+    --net-edge-pos: #3fdc59;
+    --net-edge-neg: #ef5468;
+    --net-node-neutral: #2d3944;
+    --net-node-ring: #8fa2b0;
+    --net-edge-neutral: #92a2ae;
   }
 }
 
@@ -400,6 +413,7 @@ select {
   background: rgba(22, 31, 39, 0.55);
   color: rgba(244, 247, 249, 0.86);
   font-size: 12px;
+  max-width: calc(100% - 24px);
   pointer-events: none;
 }
 
@@ -863,6 +877,137 @@ input[type="range"] {
   color: var(--muted);
 }
 
+/* ---- network graph ---------------------------------------------------------------------------- */
+
+.network {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.network .panel-title {
+  margin-bottom: 0;
+}
+
+.network-body {
+  position: relative;
+  flex: 1 1 220px;
+  min-height: 200px;
+}
+
+.net-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.net-message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  color: var(--muted);
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
+.net-edge {
+  stroke: var(--net-edge-pos);
+}
+
+.net-edge.neg {
+  stroke: var(--net-edge-neg);
+}
+
+.net-edge.neutral {
+  stroke: var(--net-edge-neutral);
+}
+
+.net-ring {
+  fill: var(--net-node-neutral);
+  stroke: var(--net-node-ring);
+  stroke-width: 2.2;
+}
+
+.net-tint.pos,
+.net-glow.pos {
+  fill: var(--net-node-pos);
+}
+
+.net-tint.neg,
+.net-glow.neg {
+  fill: var(--net-node-neg);
+}
+
+.net-title {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--muted);
+}
+
+.net-label {
+  font-size: 13px;
+  fill: var(--text);
+}
+
+.net-value {
+  font: 11px var(--font-data);
+  fill: var(--muted);
+}
+
+.net-legend {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 0 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--text);
+  border-top: 1px solid var(--line);
+}
+
+.net-legend li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.net-swatch {
+  overflow: visible;
+}
+
+.net-swatch .net-edge {
+  fill: none;
+}
+
+.panel-note {
+  color: var(--muted);
+}
+
+.params-body > .btn {
+  align-self: start;
+  margin-top: 8px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---- learning curves ------------------------------------------------------------------------- */
 
 .curves {
@@ -1000,6 +1145,15 @@ input[type="range"] {
 
   .curves {
     min-height: 260px;
+  }
+
+  .network-body {
+    flex: none;
+    height: 300px;
+  }
+
+  .net-legend {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 
   .banner {

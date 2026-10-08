@@ -10,6 +10,7 @@
   <link rel="modulepreload" href="/static/track_view.js">
   <link rel="modulepreload" href="/static/params_form.js">
   <link rel="modulepreload" href="/static/charts.js">
+  <link rel="modulepreload" href="/static/network_view.js">
 </head>
 <body>
   <div class="app">
@@ -24,7 +25,7 @@
 
       <div class="tabs-wrap">
         <div id="tabs" class="tabs" role="tablist" aria-label="Запуски"></div>
-        <button id="new-run" class="btn btn-primary" type="button">+ новый запуск</button>
+        <button id="new-run" class="btn btn-primary" type="button" aria-controls="params-body">+ новый запуск</button>
       </div>
 
       <div class="controls" role="group" aria-label="Управление запуском">
@@ -47,15 +48,18 @@
     <main class="layout">
       <aside class="panel params" aria-labelledby="params-title">
         <h2 id="params-title" class="panel-title">Параметры</h2>
-        <div id="params-body" class="params-body"></div>
+        <div id="params-body" class="params-body">
+          <p id="params-status" class="panel-note" role="status">Загрузка параметров…</p>
+          <button id="params-retry" class="btn btn-small" type="button" hidden>Повторить</button>
+        </div>
       </aside>
 
       <section class="stage" aria-label="Трасса">
         <canvas id="track" tabindex="0" aria-label="Трасса с машинками"></canvas>
         <div class="camera-tools" role="group" aria-label="Камера">
-          <button id="camera-mode" class="chip" type="button" aria-label="Режим камеры (клавиша C)">Вписать</button>
-          <button id="zoom-out" class="chip chip-square" type="button" aria-label="Уменьшить">−</button>
-          <button id="zoom-in" class="chip chip-square" type="button" aria-label="Увеличить">+</button>
+          <button id="camera-mode" class="chip" type="button" aria-label="Режим камеры: вписать или следовать (клавиша C)" title="Режим камеры (C)">Вписать</button>
+          <button id="zoom-out" class="chip chip-square" type="button" aria-label="Уменьшить масштаб (клавиша −)" title="Уменьшить (−)">−</button>
+          <button id="zoom-in" class="chip chip-square" type="button" aria-label="Увеличить масштаб (клавиша +)" title="Увеличить (+)">+</button>
         </div>
         <p id="stage-hint" class="stage-hint">Колесо или + / −: масштаб · C: камера</p>
         <div id="stage-empty" class="stage-message" hidden>
@@ -74,7 +78,8 @@
 
       <aside class="panel network" aria-labelledby="network-title">
         <h2 id="network-title" class="panel-title">Сеть лидера</h2>
-        <p class="placeholder">Граф нейросети лидера появится здесь.</p>
+        <div id="network-body" class="network-body"></div>
+        <ul id="network-legend" class="net-legend" aria-label="Как читать граф"></ul>
       </aside>
 
       <section class="panel curves" aria-labelledby="curves-title">
@@ -89,7 +94,8 @@
       </section>
     </main>
 
-    <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <p id="announcer" class="sr-only" role="status" aria-live="polite"></p>
   </div>
   <script type="module" src="/static/app.js"></script>
 </body>
