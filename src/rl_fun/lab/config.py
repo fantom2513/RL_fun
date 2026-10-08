@@ -8,7 +8,7 @@ from typing import Any
 
 from rl_fun.racing.fitness import PRESETS, FitnessSpec
 from rl_fun.racing.model_spec import ModelSpec
-from rl_fun.racing.track import available_tracks, load_track
+from rl_fun.racing.track import available_tracks
 
 MAX_NAME_LENGTH = 40
 
@@ -158,11 +158,9 @@ class RunConfig:
 
 
 def _check_track(track: str) -> None:
-    try:
-        load_track(track)
-    except (OSError, ValueError) as error:
-        built_in = ", ".join(available_tracks())
+    names = available_tracks()
+    if track not in names:
         raise ValueError(
-            f"поле track: трасса {track!r} не найдена или повреждена; "
-            f"встроенные трассы: {built_in} ({error})"
-        ) from error
+            f"поле track: трасса {track!r} не встроенная; "
+            f"допустимые имена: {', '.join(names)}"
+        )
