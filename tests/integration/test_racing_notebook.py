@@ -5,8 +5,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 PATH = Path("notebooks/02_racing/01_evolution.ipynb")
 STUBS = ("init_population", "forward", "next_generation", "inspect")
 REFERENCE_CELLS = {
