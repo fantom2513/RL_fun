@@ -44,6 +44,7 @@ CONTENT_TYPES = {
     ".mjs": "text/javascript; charset=utf-8",
     ".svg": "image/svg+xml",
     ".json": "application/json; charset=utf-8",
+    ".woff2": "font/woff2",
 }
 _STATUS_TEXT = {
     400: "некорректный запрос",
