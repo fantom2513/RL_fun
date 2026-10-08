@@ -1,0 +1,7 @@
+{
+  "name": "cartpole-random",
+  "environment": {"id": "CartPole-v1", "kwargs": {}},
+  "algorithm": {"id": "random", "kwargs": {}},
+  "run": {"seeds": [11, 22], "total_steps": 100, "workers": 1, "output_root": "runs"},
+  "evaluation": {"episodes": 2, "max_episode_steps": 100}
+}

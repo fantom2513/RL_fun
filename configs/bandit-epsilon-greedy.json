@@ -1,13 +1,7 @@
 {
   "name": "bandit-epsilon-greedy",
-  "algorithm": "epsilon_greedy",
-  "seeds": [11, 22, 33, 44],
-  "steps": 1000,
-  "workers": 4,
-  "output_root": "runs",
-  "parameters": {
-    "arms": 10,
-    "epsilon": 0.1,
-    "reward_std": 1.0
-  }
+  "environment": {"id": "RLFun/StationaryBandit-v0", "kwargs": {"arms": 10, "reward_std": 1.0}},
+  "algorithm": {"id": "bandit_epsilon", "kwargs": {"epsilon": 0.1}},
+  "run": {"seeds": [11, 22, 33, 44], "total_steps": 1000, "workers": 4, "output_root": "runs"},
+  "evaluation": {"episodes": 5, "max_episode_steps": 100}
 }
