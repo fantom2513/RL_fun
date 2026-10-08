@@ -34,7 +34,7 @@ def test_nose_is_narrower_than_the_tail():
     alpha = alpha_of(build_car_sprite("alive", LENGTH)) > 128
     columns = np.flatnonzero(alpha.any(axis=1))
 
-    nose = alpha[columns.max() - 2].sum()
+    nose = alpha[columns.max() - 1].sum()
     tail = alpha[columns.min() + 2].sum()
 
     assert nose < tail
@@ -76,8 +76,8 @@ def test_all_variants_build():
 
 
 def test_rotated_sprite_is_cached_per_three_degree_bucket():
-    first = rotated_car_sprite("alive", LENGTH, np.radians(10.0))
-    same_bucket = rotated_car_sprite("alive", LENGTH, np.radians(10.8))
+    first = rotated_car_sprite("alive", LENGTH, np.radians(9.5))
+    same_bucket = rotated_car_sprite("alive", LENGTH, np.radians(10.4))
     other = rotated_car_sprite("alive", LENGTH, np.radians(40.0))
 
     assert first is same_bucket

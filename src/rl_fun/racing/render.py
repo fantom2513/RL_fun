@@ -9,15 +9,14 @@ from typing import Protocol
 import numpy as np
 import pygame
 
+from rl_fun.racing.sprites import rotated_car_sprite
 from rl_fun.racing.style import (
-    CAR_COLORS,
     CHEQUER_DARK,
     CHEQUER_LIGHT,
     CURB_RED,
     CURB_STRIPE,
     CURB_WHITE,
     GRASS,
-    LEADER_BODY,
     LEADER_HALO,
     PANEL_BACKGROUND,
     RAY,
@@ -25,9 +24,6 @@ from rl_fun.racing.style import (
     ROAD_LINE,
     TEXT,
     TEXT_SHADOW,
-    CarPart,
-    Color,
-    car_polygons,
     curb_spans,
 )
 from rl_fun.racing.track import Track
@@ -41,7 +37,7 @@ SUPERSAMPLE = 3  # the static background is drawn this much larger, then smoothe
 LINE_WIDTH = 2.6  # px, road edge lines
 CURB_WIDTH = 1.8  # m, how far a curb reaches onto the road
 CHEQUER_SIZE = 1.0  # m, size of one start-line square
-CAR_VISUAL_SCALE = 1.25  # cars are drawn slightly larger than their physical size to stay readable
+CAR_VISUAL_SCALE = 1.6  # cars are drawn larger than their physical size to stay readable
 HALO_RADIUS = 3.2  # m, soft glow under the leader
 HALO_ALPHA = 70
 
@@ -79,7 +75,7 @@ class Renderer:
             self._clock = pygame.time.Clock()
         self._fit_track()
         self._background = self._draw_background()
-        self._parts = [(part, np.asarray(part.points, dtype=np.float64)) for part in car_polygons()]
+        self._car_px = max(8, round(CAR_LENGTH * CAR_VISUAL_SCALE * self._scale))
         self._halo = self._make_halo()
 
     def draw(
@@ -114,16 +110,14 @@ class Renderer:
         self._begin_frame()
         if leader is not None:
             self._draw_halo((x[leader], y[leader]))
-            self._draw_car(
-                x[leader], y[leader], heading[leader], alive=bool(alive[leader]), leader=True
-            )
-        # Crashed cars first so living ones end up on top of them.
+        # Crashed cars first so living ones end up on top of them; the leader is on top of all.
         for index in np.argsort(alive, kind="stable"):
             if index != leader:
                 self._draw_car(x[index], y[index], heading[index], alive=bool(alive[index]))
         if leader is not None:
-            # A thin contour and the rays go last, so the leader stays marked under other cars.
-            self._draw_car_outline(x[leader], y[leader], heading[leader])
+            self._draw_car(
+                x[leader], y[leader], heading[leader], alive=bool(alive[leader]), leader=True
+            )
             if ray_points is not None:
                 self._draw_rays((x[leader], y[leader]), ray_points)
         self._draw_hud(lines)
@@ -227,7 +221,7 @@ class Renderer:
     def _draw_rays(self, origin_world: tuple[float, float], ray_points: np.ndarray) -> None:
         origin = self._to_screen(origin_world)
         for point in ray_points:
-            pygame.draw.line(self._canvas, RAY, origin, self._to_screen(point), 1)
+            pygame.draw.aaline(self._canvas, RAY, origin, self._to_screen(point))
 
     def _draw_hud(self, lines: Sequence[str]) -> None:
         for index, text in enumerate(lines):
@@ -266,34 +260,9 @@ class Renderer:
             self._halo, (cx - self._halo.get_width() / 2, cy - self._halo.get_height() / 2)
         )
 
-    def _part_points(self, part_points: np.ndarray, x: float, y: float, heading: float) -> list:
-        """Screen-space vertices of a car part for a car at (x, y) facing `heading`."""
-        cos, sin = math.cos(heading), math.sin(heading)
-        local = part_points * CAR_VISUAL_SCALE
-        world_x = x + local[:, 0] * cos - local[:, 1] * sin
-        world_y = y + local[:, 0] * sin + local[:, 1] * cos
-        screen_x = (world_x - self._center[0]) * self._scale + GAME_WIDTH / 2
-        screen_y = GAME_HEIGHT / 2 - (world_y - self._center[1]) * self._scale
-        return list(zip(screen_x.tolist(), screen_y.tolist(), strict=True))
-
-    def _draw_car_outline(self, x: float, y: float, heading: float) -> None:
-        for part, points in self._parts:
-            if part.name == "body":
-                vertices = self._part_points(points, x, y, heading)
-                pygame.draw.polygon(self._canvas, LEADER_BODY, vertices, 1)
-
     def _draw_car(
         self, x: float, y: float, heading: float, alive: bool = True, leader: bool = False
     ) -> None:
-        for part, points in self._parts:
-            color = _part_color(part, alive, leader)
-            vertices = self._part_points(points, x, y, heading)
-            pygame.draw.polygon(self._canvas, color, vertices)
-
-
-def _part_color(part: CarPart, alive: bool, leader: bool) -> Color:
-    """Palette color of a car part: bright when alive, dimmed when crashed or finished."""
-    if leader and part.color_key == "body":
-        return LEADER_BODY
-    living, dimmed = CAR_COLORS[part.color_key]
-    return living if alive else dimmed
+        variant = "leader" if leader else ("alive" if alive else "dead")
+        sprite = rotated_car_sprite(variant, self._car_px, heading)
+        self._canvas.blit(sprite, sprite.get_rect(center=self._to_screen((x, y))))

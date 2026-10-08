@@ -44,6 +44,36 @@ NODE_NEGATIVE: Color = (250, 62, 82)
 EDGE_POSITIVE: Color = (40, 200, 60)
 EDGE_NEGATIVE: Color = (214, 50, 70)
 
+EDGE_VISIBLE_FRACTION = 0.08  # edges weaker than this share of the layer's largest |w| are hidden
+
+# Legend under the network panel: (swatch kind, text).
+LEGEND_ENTRIES: tuple[tuple[str, str], ...] = (
+    ("positive", "Зелёная линия — положительный вес (усиливает сигнал)"),
+    ("negative", "Красная линия — отрицательный вес (ослабляет сигнал)"),
+    ("thickness", "Толщина линии — сила связи"),
+    ("node", "Цвет узла — знак и сила активации (зелёный +, красный −)"),
+)
+
+
+def network_column_titles(layer_count: int) -> list[str]:
+    """Column headers of the network panel: input, numbered hidden layers, output."""
+    if layer_count <= 1:
+        return ["Вход"][:layer_count]
+    hidden = [f"Скрытый {index}" for index in range(1, layer_count - 1)]
+    return ["Вход", *hidden, "Выход"]
+
+
+def visible_edges(
+    matrix: np.ndarray, threshold_fraction: float = EDGE_VISIBLE_FRACTION
+) -> np.ndarray:
+    """Boolean mask of weights worth drawing: |w| of at least `threshold_fraction` of the max."""
+    magnitude = np.abs(np.asarray(matrix, dtype=np.float64))
+    largest = float(magnitude.max()) if magnitude.size else 0.0
+    if largest <= 0.0:
+        return np.zeros(magnitude.shape, dtype=bool)
+    return magnitude >= threshold_fraction * largest
+
+
 CURB_MIN_CURVATURE = 0.02  # rad/m; tighter turns than this (radius < 50 m) get curbs
 CURB_STRIPE = 2.0  # metres per red or white stripe
 
