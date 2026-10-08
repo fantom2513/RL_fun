@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Прототип интерфейса — Лаборатория</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body style="overflow:auto">
+<script src="assets/icons.js"></script>
+<main class="hub">
+  <div>
+    <span class="eyebrow">Прототип дизайна · не рабочее приложение</span>
+    <h1 class="screen-title" style="font-size: 28px; line-height: 34px; margin-top: 6px">Лаборатория машинок</h1>
+    <p class="muted" style="margin-top: 8px; max-width: 640px">Статические экраны с примерными данными. Клавиша <span class="kbd">T</span> переключает светлую и тёмную схему; параметр <span class="mono">?theme=light</span> или <span class="mono">?theme=dark</span> фиксирует её. Описание решений — в DESIGN.md рядом с папкой прототипа.</p>
+  </div>
+  <div class="hub-grid">
+    <a href="lab.html"><b>Лаборатория · заезд</b><span>Три запуска, трасса с толпой машинок, сеть лидера, правка на ходу, кривые</span></a>
+    <a href="lab.html?view=split"><b>Лаборатория · два запуска рядом</b><span>Эволюция и PPO на одной трассе одновременно</span></a>
+    <a href="lab.html?theme=light"><b>Лаборатория · светлая схема</b><span>Тот же экран в светлой схеме</span></a>
+    <a href="compare.html"><b>Сравнение запусков</b><span>Кривые с подсказкой и таблица итогов с лучшими значениями</span></a>
+    <a href="new-run.html"><b>Новый запуск</b><span>Шаблон, обучатель PPO с группами параметров, сеть, награда, трасса</span></a>
+    <a href="network-editor.html"><b>Редактор сети на графе</b><span>Нейроны, слои, входы и выходы прямо на графе</span></a>
+    <a href="demo.html"><b>Проверка сети</b><span>Лучшая сеть на незнакомой трассе, след по скорости, итоги по трассам</span></a>
+    <a href="challenges.html"><b>Челленджи</b><span>Задания со звёздами, цели и правила выбранного</span></a>
+    <a href="track-editor.html"><b>Редактор трассы</b><span>Кисть, ластик, ширина, сглаживание, проверка с отметками ошибок</span></a>
+    <a href="onboarding.html"><b>Первый запуск</b><span>Приветствие поверх пустой лаборатории</span></a>
+    <a href="onboarding.html?dialog=0"><b>Пустая лаборатория</b><span>Пустое состояние без запусков</span></a>
+  </div>
+</main>
+<script src="assets/proto.js"></script>
+</body>
+</html>

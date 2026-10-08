@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Лаборатория — заезд</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body>
+<script src="assets/icons.js"></script>
+<div class="shell">
+  <nav class="rail" aria-label="Разделы">
+    <a class="rail-brand" href="index.html" aria-label="Лаборатория: на главную">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#4f616e"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="#fffffc" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="#d62e3e" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
+    </a>
+    <a class="rail-item" href="lab.html" aria-current="page"><svg class="icon"><use href="#i-flask-conical"/></svg><span>Лаборатория</span></a>
+    <a class="rail-item" href="track-editor.html"><svg class="icon"><use href="#i-route"/></svg><span>Трассы</span></a>
+    <a class="rail-item" href="challenges.html"><svg class="icon"><use href="#i-trophy"/></svg><span>Челленджи</span><b class="rail-badge" aria-label="2 новых">2</b></a>
+    <a class="rail-item" href="demo.html"><svg class="icon"><use href="#i-warehouse"/></svg><span>Гараж</span></a>
+    <div class="rail-spacer"></div>
+    <a class="rail-item" href="#settings"><svg class="icon"><use href="#i-settings"/></svg><span>Настройки</span></a>
+  </nav>
+
+  <main class="screen" id="main">
+    <header class="runbar">
+      <div class="run-tabs" role="tablist" aria-label="Запуски">
+        <button class="run-tab" role="tab" aria-selected="true" style="--c: var(--run-1)">
+          <span class="run-tab-name"><svg class="icon" aria-label="Эволюция"><use href="#i-dna"/></svg>Гонщик · 5 лучей</span>
+          <span class="run-tab-best mono">64 %</span>
+          <span class="run-tab-meta"><i class="dot dot-running" aria-hidden="true"></i>идёт · <span class="mono">пок. 44</span></span>
+          <span class="run-tab-cap">лучший</span>
+        </button>
+        <button class="run-tab" role="tab" aria-selected="false" style="--c: var(--run-2)">
+          <span class="run-tab-name"><svg class="icon" aria-label="PPO"><use href="#i-brain"/></svg>PPO · осторожный</span>
+          <span class="run-tab-best mono">54 %</span>
+          <span class="run-tab-meta"><i class="dot dot-running" aria-hidden="true"></i>идёт · <span class="mono">итер. 61</span></span>
+          <span class="run-tab-cap">лучший</span>
+        </button>
+        <button class="run-tab" role="tab" aria-selected="false" style="--c: var(--run-3)">
+          <span class="run-tab-name"><svg class="icon" aria-label="Эволюция"><use href="#i-dna"/></svg>Глубокая 3 × 8</span>
+          <span class="run-tab-best mono">36,9</span>
+          <span class="run-tab-meta"><i class="dot dot-finished" aria-hidden="true"></i>готово · <span class="mono">пок. 80</span></span>
+          <span class="run-tab-cap">круг, с</span>
+        </button>
+        <a class="btn btn-ghost" href="new-run.html" title="Новый запуск (N)"><svg class="icon"><use href="#i-plus"/></svg><span class="new-label">Новый запуск</span></a>
+      </div>
+
+      <div class="transport" role="group" aria-label="Управление запуском «Гонщик · 5 лучей»">
+        <div class="seg view-switch" data-seg role="group" aria-label="Вид">
+          <button aria-pressed="true" onclick="location.href='lab.html'+location.search">Заезд</button>
+          <button aria-pressed="false" onclick="location.href='compare.html'+location.search">Сравнение</button>
+        </div>
+        <span class="runbar-sep hide-narrow"></span>
+        <button class="btn" title="Пауза (пробел)"><svg class="icon"><use href="#i-pause"/></svg><span class="label-wide">Пауза</span></button>
+        <div class="seg seg-mono seg-speed" data-seg role="group" aria-label="Скорость симуляции">
+          <button aria-pressed="false">×1</button><button aria-pressed="true">×2</button><button aria-pressed="false">×4</button><button aria-pressed="false">×8</button><button aria-pressed="false">макс</button>
+        </div>
+        <button class="btn speed-menu" title="Скорость симуляции (1–5)" aria-haspopup="menu"><svg class="icon"><use href="#i-fast-forward"/></svg><span class="mono">×2</span><svg class="icon"><use href="#i-chevron-down"/></svg></button>
+        <button class="btn btn-icon" title="Остановить" aria-label="Остановить"><svg class="icon"><use href="#i-square"/></svg></button>
+        <button class="btn btn-icon btn-ghost" title="Ещё" aria-label="Ещё действия" aria-haspopup="menu"><svg class="icon"><use href="#i-ellipsis"/></svg></button>
+      </div>
+    </header>
+
+    <div class="lab-body" id="body">
+      <div class="stage-wrap">
+        <section class="stage" aria-label="Трасса circuit, запуск «Гонщик · 5 лучей»">
+          <canvas id="stageA" tabindex="0" aria-label="Трасса с машинками. Колесо мыши — масштаб, перетаскивание — сдвиг"></canvas>
+          <div class="stage-overlay tl">
+            <dl class="glass hud" aria-label="Показатели поколения">
+              <div class="hud-run"><i class="swatch" style="--c: var(--run-1)"></i>Гонщик · 5 лучей</div>
+              <dt>Поколение</dt><dd>44</dd>
+              <dt>Живых</dt><dd>41 / 60</dd>
+              <dt class="hud-extra">Скорость лидера</dt><dd class="hud-extra">21,3 м/с</dd>
+              <dt>Прогресс лидера</dt><dd>61 %</dd>
+              <div class="hud-lap hud-extra"><span style="color: rgba(242,246,248,.68)">Лучший круг</span><span style="color: rgba(242,246,248,.68)">нет финиша</span></div>
+            </dl>
+          </div>
+          <div class="stage-overlay tr">
+            <div class="glass toolgroup" role="group" aria-label="Камера">
+              <div class="seg seg-sm" data-seg>
+                <button aria-pressed="true" title="Вписать трассу (C)"><svg class="icon"><use href="#i-scan"/></svg>Вписать</button>
+                <button aria-pressed="false" title="Следить за лидером (C)"><svg class="icon"><use href="#i-crosshair"/></svg>Лидер</button>
+              </div>
+              <button class="glass-btn" aria-label="Уменьшить (−)" title="Уменьшить (−)"><svg class="icon"><use href="#i-zoom-out"/></svg></button>
+              <button class="glass-btn" aria-label="Увеличить (+)" title="Увеличить (+)"><svg class="icon"><use href="#i-zoom-in"/></svg></button>
+              <button class="glass-btn split-toggle" aria-label="Два запуска рядом (V)" title="Два запуска рядом (V)" onclick="toggleSplit()"><svg class="icon"><use href="#i-columns-2"/></svg></button>
+            </div>
+          </div>
+          <div class="stage-overlay bl">
+            <div class="glass gen-strip">
+              <span>Шаг</span><span class="mono">812 / 1500</span>
+              <span class="progress" aria-hidden="true"><i style="width: 54%"></i></span>
+              <span class="mono hud-extra">×2</span>
+            </div>
+          </div>
+          <div class="stage-overlay br">
+            <button class="glass glass-btn" style="width:34px;height:34px" aria-label="Клавиши (?)" title="Клавиши (?)"><svg class="icon"><use href="#i-keyboard"/></svg></button>
+          </div>
+        </section>
+
+        <section class="stage" id="stageBWrap" hidden aria-label="Трасса circuit, запуск «PPO · осторожный»">
+          <canvas id="stageB"></canvas>
+          <div class="stage-overlay tl">
+            <dl class="glass hud">
+              <div class="hud-run"><i class="swatch" style="--c: var(--run-2)"></i>PPO · осторожный</div>
+              <dt>Итерация</dt><dd>61</dd>
+              <dt>Машинок</dt><dd>32</dd>
+              <dt>Прогресс лидера</dt><dd>54 %</dd>
+            </dl>
+          </div>
+          <div class="stage-overlay tr">
+            <div class="glass toolgroup"><div class="seg seg-sm" data-seg><button aria-pressed="true"><svg class="icon"><use href="#i-scan"/></svg>Вписать</button><button aria-pressed="false"><svg class="icon"><use href="#i-crosshair"/></svg>Лидер</button></div></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="side">
+        <section class="board" aria-labelledby="net-title">
+          <header class="card-head">
+            <h2 class="card-title" id="net-title">Сеть лидера</h2>
+            <span class="tag mono">8 → 6 → 5 → 2</span>
+            <span class="head-spacer"></span>
+            <button class="btn btn-ghost btn-sm" title="Структура меняется в новом запуске"><svg class="icon"><use href="#i-pencil"/></svg>Изменить</button>
+          </header>
+          <svg class="net" id="net" role="img" aria-label="Граф сети лидера: 8 входов, слои 6 и 5, 2 выхода"></svg>
+          <footer class="board-foot">
+            <span class="legend-swatch"><i style="background: var(--net-edge-pos)"></i>плюс</span>
+            <span class="legend-swatch"><i style="background: var(--net-edge-neg)"></i>минус</span>
+            <span>толщина — сила связи</span>
+            <span class="head-spacer"></span>
+            <button class="btn btn-ghost btn-sm btn-icon" aria-label="Как читать граф" title="Как читать граф"><svg class="icon"><use href="#i-circle-help"/></svg></button>
+          </footer>
+        </section>
+
+        <section class="card live" aria-labelledby="live-title">
+          <header class="card-head">
+            <h2 class="card-title" id="live-title">На ходу</h2>
+            <span class="head-spacer"></span>
+            <div class="seg seg-sm" role="tablist" aria-label="Что менять на ходу">
+              <button role="tab" aria-selected="true" aria-controls="live-evo">Эволюция</button>
+              <button role="tab" aria-selected="false" aria-controls="live-reward">Награда</button>
+            </div>
+          </header>
+          <div class="card-body">
+            <div id="live-evo" role="tabpanel">
+              <div class="param param-compact is-changed">
+                <label class="param-label" for="mut">Мутация <span class="help" title="Какая доля весов меняется у каждого потомка"><svg class="icon"><use href="#i-info"/></svg></span></label>
+                <span class="param-value"><span class="value-field"><input id="mut" value="0,20" inputmode="decimal" aria-label="Мутация, значение"></span></span>
+                <input class="range param-range" type="range" min="0.01" max="1" step="0.01" value="0.2" aria-label="Мутация">
+              </div>
+              <div class="param param-compact">
+                <label class="param-label" for="mscale">Сила мутации <span class="help" title="Насколько сильно меняется вес"><svg class="icon"><use href="#i-info"/></svg></span></label>
+                <span class="param-value"><span class="value-field"><input id="mscale" value="0,30" inputmode="decimal" aria-label="Сила мутации, значение"></span></span>
+                <input class="range param-range" type="range" min="0.01" max="2" step="0.01" value="0.3" aria-label="Сила мутации">
+              </div>
+              <div class="param param-compact">
+                <label class="param-label" for="elite">Элита <span class="help" title="Сколько лучших переходят в новое поколение без изменений"><svg class="icon"><use href="#i-info"/></svg></span></label>
+                <span class="param-value"><span class="value-field"><input id="elite" value="6" inputmode="numeric" aria-label="Элита, значение"><span class="unit">из 60</span></span></span>
+                <input class="range param-range" type="range" min="1" max="59" step="1" value="6" data-fmt="int" aria-label="Элита">
+              </div>
+            <div class="live-extra">
+                <h3 class="subhead" style="margin-top: 18px">Награда · сбалансированный <span class="head-spacer"></span><button class="btn btn-ghost btn-sm">Изменить</button></h3>
+                <div class="reward-bar" aria-hidden="true"><i style="flex:1;background:var(--run-1)"></i><i style="flex:.3;background:var(--run-3)"></i><i style="flex:.15;background:var(--run-6)"></i><i style="flex:.15;background:var(--run-4)"></i></div>
+                <div class="reward-legend"><span><i style="background:var(--run-1)"></i>прогресс 62 %</span><span><i style="background:var(--run-3)"></i>быстрый круг 19 %</span><span><i style="background:var(--run-6)"></i>скорость 9 %</span><span><i style="background:var(--run-4)"></i>центр 9 %</span></div>
+              </div>
+            </div>
+            <div id="live-reward" role="tabpanel" hidden>
+              <div class="reward-bar" aria-hidden="true"><i style="flex:1;background:var(--run-1)"></i><i style="flex:.3;background:var(--run-3)"></i><i style="flex:.15;background:var(--run-6)"></i><i style="flex:.15;background:var(--run-4)"></i></div>
+              <div class="param param-compact"><span class="param-label">Прогресс</span><span class="param-value"><span class="value-field"><input value="1,00"></span></span><input class="range param-range" type="range" min="-1" max="2" step="0.05" value="1"></div>
+              <div class="param param-compact"><span class="param-label">Быстрый круг</span><span class="param-value"><span class="value-field"><input value="0,30"></span></span><input class="range param-range" type="range" min="-1" max="2" step="0.05" value="0.3"></div>
+            </div>
+          </div>
+          <p class="live-note"><svg class="icon"><use href="#i-zap"/></svg>Изменения применятся со следующего поколения</p>
+        </section>
+      </aside>
+
+      <section class="card curves" aria-labelledby="curves-title">
+        <header class="card-head">
+          <h2 class="card-title" id="curves-title">Кривые</h2>
+          <div class="seg seg-sm" data-seg role="group" aria-label="Показатель">
+            <button aria-pressed="true">Лучший прогресс</button><button aria-pressed="false">Средний</button><button aria-pressed="false">Финиш</button><button aria-pressed="false">Время круга</button>
+          </div>
+          <div class="legend" aria-label="Запуски на графике">
+            <button aria-pressed="true" style="--c: var(--run-1)"><i class="swatch"></i>Гонщик</button>
+            <button aria-pressed="true" style="--c: var(--run-2)"><i class="swatch"></i>PPO</button>
+            <button aria-pressed="true" style="--c: var(--run-3)"><i class="swatch"></i>Глубокая</button>
+          </div>
+        </header>
+        <svg class="chart" id="chart" role="img" aria-label="Лучший прогресс по итерациям: Гонщик 61 %, PPO 54 %, Глубокая 100 %"></svg>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="toasts" aria-live="polite" id="toasts"></div>
+
+<script src="assets/tracks.js"></script>
+<script src="assets/proto.js"></script>
+<script>
+  const split = Proto.params.get('view') === 'split';
+  function toggleSplit() {
+    const p = new URLSearchParams(location.search);
+    if (p.get('view') === 'split') p.delete('view'); else p.set('view', 'split');
+    location.search = p.toString();
+  }
+  if (split) {
+    document.getElementById('body').dataset.view = 'split';
+    document.getElementById('stageBWrap').hidden = false;
+    document.querySelectorAll('#stageA ~ .stage-overlay .hud-extra').forEach((e) => e.classList.add('sr-only'));
+    document.querySelector('.split-toggle').setAttribute('aria-pressed', 'true');
+    document.querySelector('.split-toggle').style.background = 'rgba(255,255,255,.18)';
+  }
+  if (Proto.params.get('toast')) {
+    document.getElementById('toasts').innerHTML = '<div class="toast" role="status"><svg class="icon"><use href="#i-circle-check"/></svg><span class="toast-text">Мутация 0,20 применится со следующего поколения</span><button class="btn btn-ghost btn-sm">Отменить</button></div>';
+  }
+  window.render = function () {
+    const C = Proto.css;
+    Proto.drawScene(document.getElementById('stageA'), { track: 'circuit', cars: 60, crashed: 9, progress: 0.61, spread: 70, seed: 11, padTop: 40, pad: 36, padLeft: split ? 36 : 210, padBottom: 64 });
+    if (split) Proto.drawScene(document.getElementById('stageB'), { track: 'circuit', cars: 32, crashed: 0, progress: 0.54, spread: 120, seed: 5, padTop: 120, pad: 30, padBottom: 30 });
+    Proto.drawNetwork(document.getElementById('net'), {
+      inputs: ['↑ −90°', '↑ −30°', '↑ 0°', '↑ 30°', '↑ 90°', 'Скор.', 'Бок.', 'Угл.'],
+      hidden: [6, 5], outputs: ['Руль', 'Газ'], seed: 21,
+      values: [0.69, 0.73, 0.47, 0.67, 0.27, 0.96, 0.06, -0.48],
+    });
+    const a = Proto.curve(3, 44, 0.66, 12, 0.04, 0.08);
+    const b = Proto.curve(9, 61, 0.6, 30, 0.03, 0.05);
+    const c = Proto.curve(4, 80, 1.0, 22, 0.05, 0.06);
+    Proto.drawChart(document.getElementById('chart'), {
+      xmax: 80, xstep: 10, xlabel: 'итерация', yticks: [0, 0.5, 1],
+      series: [
+        { name: 'Глубокая 3 × 8', color: C('--run-3'), data: c, width: 1.75 },
+        { name: 'PPO · осторожный', color: C('--run-2'), data: b, width: 1.75, labelDy: 6 },
+        { name: 'Гонщик · 5 лучей', color: C('--run-1'), data: a, width: 2.75, labelDy: -4 },
+      ],
+    });
+  };
+</script>
+</body>
+</html>

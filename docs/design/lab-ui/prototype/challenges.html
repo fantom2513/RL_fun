@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Челленджи — Лаборатория</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body>
+<script src="assets/icons.js"></script>
+<div class="shell">
+  <nav class="rail" aria-label="Разделы">
+    <a class="rail-brand" href="index.html" aria-label="Лаборатория: на главную">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#4f616e"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="#fffffc" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="#d62e3e" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
+    </a>
+    <a class="rail-item" href="lab.html"><svg class="icon"><use href="#i-flask-conical"/></svg><span>Лаборатория</span></a>
+    <a class="rail-item" href="track-editor.html"><svg class="icon"><use href="#i-route"/></svg><span>Трассы</span></a>
+    <a class="rail-item" href="challenges.html" aria-current="page"><svg class="icon"><use href="#i-trophy"/></svg><span>Челленджи</span></a>
+    <a class="rail-item" href="demo.html"><svg class="icon"><use href="#i-warehouse"/></svg><span>Гараж</span></a>
+    <div class="rail-spacer"></div>
+    <a class="rail-item" href="#settings"><svg class="icon"><use href="#i-settings"/></svg><span>Настройки</span></a>
+  </nav>
+
+  <main class="screen" id="main">
+    <header class="screen-head">
+      <h1 class="screen-title">Челленджи</h1>
+      <span class="screen-sub hide-narrow">Задания с целями на трёх уровнях. Результат считается сам по истории запуска.</span>
+      <span class="head-spacer"></span>
+      <div class="star-total" aria-label="Собрано 7 звёзд из 24"><svg class="icon"><use href="#i-star"/></svg>7 <span class="faint" style="font: 500 14px/1 var(--font-ui)">из 24</span></div>
+    </header>
+
+    <div class="chal">
+      <div class="chal-list">
+        <div class="chal-filters">
+          <div class="seg" data-seg role="group" aria-label="Фильтр">
+            <button aria-pressed="true">Все</button><button aria-pressed="false">Новые <span class="tag tag-live" style="height:18px">2</span></button><button aria-pressed="false">Начатые</button><button aria-pressed="false">Пройденные</button>
+          </div>
+        </div>
+
+        <h2 class="chal-group-title section-title">Первые шаги <span class="faint mono" style="font-size: 13px">6 / 9</span></h2>
+        <div class="chal-grid" role="listbox" aria-label="Первые шаги">
+          <button class="chal-card" role="option" aria-selected="false"><canvas data-thumb="oval" data-cars="12"></canvas><div class="body"><b>Первый круг</b><p>Пройдите круг на овале как можно раньше.</p></div><span></span><div class="foot"><span class="tag">Овал</span><span class="stars" aria-label="3 звезды из 3"><svg class="icon on"><use href="#i-star"/></svg><svg class="icon on"><use href="#i-star"/></svg><svg class="icon on"><use href="#i-star"/></svg></span></div></button>
+          <button class="chal-card" role="option" aria-selected="false"><canvas data-thumb="oval" data-cars="6"></canvas><div class="body"><b>Меньше — лучше</b><p>Круг на овале сетью не больше чем из 40 весов.</p></div><span></span><div class="foot"><span class="tag">Овал</span><span class="tag">≤ 40 весов</span><span class="stars" aria-label="2 звезды из 3"><svg class="icon on"><use href="#i-star"/></svg><svg class="icon on"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span></div></button>
+          <button class="chal-card" role="option" aria-selected="false"><canvas data-thumb="wavy" data-cars="10"></canvas><div class="body"><b>Три луча</b><p>Пройдите «Волны», когда машинка видит только три луча.</p></div><span></span><div class="foot"><span class="tag">Волны</span><span class="tag">3 луча</span><span class="stars" aria-label="1 звезда из 3"><svg class="icon on"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span></div></button>
+        </div>
+
+        <h2 class="chal-group-title section-title">Скорость <span class="faint mono" style="font-size: 13px">1 / 9</span></h2>
+        <div class="chal-grid" role="listbox" aria-label="Скорость">
+          <button class="chal-card" role="option" aria-selected="true"><canvas data-thumb="circuit" data-cars="16"></canvas><div class="body"><b>Быстрее 35 секунд</b><p>Лучший круг на «Гран-при» за 100 поколений.</p></div><span></span><div class="foot"><span class="tag">Гран-при</span><span class="tag tag-warn">начат</span><span class="stars" aria-label="1 звезда из 3"><svg class="icon on"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span></div></button>
+          <button class="chal-card" role="option" aria-selected="false"><canvas data-thumb="circuit" data-cars="0"></canvas><div class="body"><b>Чистый круг</b><p>Лучшая машинка проходит круг, не касаясь бордюров.</p></div><span></span><div class="foot"><span class="tag">Гран-при</span><span class="tag tag-live">новый</span><span class="stars" aria-label="0 звёзд из 3"><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span></div></button>
+          <button class="chal-card" role="option" aria-selected="false"><canvas data-thumb="wavy" data-cars="0"></canvas><div class="body"><b>PPO против эволюции</b><p>PPO проходит «Волны» быстрее эволюции за те же 10 минут.</p></div><span></span><div class="foot"><span class="tag">Волны</span><span class="tag tag-live">новый</span><span class="stars" aria-label="0 звёзд из 3"><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span></div></button>
+        </div>
+
+        <h2 class="chal-group-title section-title">Мастер <span class="faint" style="font: 400 13px/1 var(--font-ui)">откроется после 12 звёзд</span></h2>
+        <div class="chal-grid" role="listbox" aria-label="Мастер">
+          <button class="chal-card locked" role="option" aria-disabled="true"><canvas data-thumb="wavy" data-cars="0"></canvas><span class="chal-lock"><svg class="icon"><use href="#i-lock"/></svg></span><div class="body"><b>Обобщение</b><p>Одна сеть проходит все три встроенные трассы.</p></div><span></span><div class="foot"><span class="tag">3 трассы</span><span class="stars"><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span></div></button>
+          <button class="chal-card locked" role="option" aria-disabled="true"><canvas data-thumb="circuit" data-cars="0"></canvas><span class="chal-lock"><svg class="icon"><use href="#i-lock"/></svg></span><div class="body"><b>Свой Гран-при</b><p>Нарисуйте трассу длиннее 800 м и пройдите её.</p></div><span></span><div class="foot"><span class="tag">своя трасса</span><span class="stars"><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span></div></button>
+        </div>
+      </div>
+
+      <aside class="chal-detail" aria-labelledby="ch-title">
+        <canvas id="detail"></canvas>
+        <div class="inner">
+          <div>
+            <span class="eyebrow">Скорость · Гран-при</span>
+            <h2 class="section-title" id="ch-title" style="font: 600 20px/28px var(--font-display); margin-top: 4px">Быстрее 35 секунд</h2>
+            <p class="muted" style="margin-top: 6px; font-size: 13px; line-height: 18px">Научите машинку проходить «Гран-при» быстро. Считается лучший круг любой машинки за первые 100 поколений или итераций.</p>
+          </div>
+          <div class="goal-list" aria-label="Цели">
+            <div class="goal"><span class="stars" aria-label="1 звезда"><svg class="icon on"><use href="#i-star"/></svg></span><span class="what">Круг быстрее 40,0 с<small>есть: 36,90 с</small></span><span class="ok" aria-label="выполнено"><svg class="icon"><use href="#i-circle-check"/></svg></span></div>
+            <div class="goal"><span class="stars" aria-label="2 звезды"><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span><span class="what">Быстрее 37,0 с за 60 поколений<small>36,90 с, но на 77-м поколении</small></span><span class="no" aria-label="не выполнено"><svg class="icon"><use href="#i-circle-dot"/></svg></span></div>
+            <div class="goal"><span class="stars" aria-label="3 звезды"><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg><svg class="icon"><use href="#i-star"/></svg></span><span class="what">Быстрее 35,0 с<small>не хватает 1,90 с</small></span><span class="no" aria-label="не выполнено"><svg class="icon"><use href="#i-circle-dot"/></svg></span></div>
+          </div>
+          <dl class="rules">
+            <dt>Трасса</dt><dd>circuit</dd>
+            <dt>Обучатель</dt><dd>любой</dd>
+            <dt>Машинок</dt><dd>до 60</dd>
+            <dt>Лимит</dt><dd>100 итераций</dd>
+          </dl>
+          <div class="callout"><svg class="icon"><use href="#i-lightbulb"/></svg><span>Подсказка: добавьте вес «Быстрый круг» в награду и выход «Буст».</span></div>
+          <div style="display: grid; gap: 8px">
+            <a class="btn btn-primary btn-lg" href="new-run.html"><svg class="icon"><use href="#i-play"/></svg>Начать попытку</a>
+            <button class="btn btn-ghost">Попытки: 3 · лучшая 36,90 с</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="assets/tracks.js"></script>
+<script src="assets/proto.js"></script>
+<script>
+  window.render = function () {
+    document.querySelectorAll('[data-thumb]').forEach((c, k) => Proto.drawScene(c, { track: c.dataset.thumb, cars: Number(c.dataset.cars), crashed: 0, progress: 0.3 + 0.1 * k, spread: 40, pad: 12, leader: Number(c.dataset.cars) > 0, rays: [], seed: k + 2 }));
+    Proto.drawScene(document.getElementById('detail'), { track: 'circuit', cars: 24, crashed: 3, progress: 0.42, spread: 60, pad: 18, seed: 4, rays: [-30, 0, 30] });
+  };
+</script>
+</body>
+</html>

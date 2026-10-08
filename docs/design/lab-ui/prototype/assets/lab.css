@@ -723,6 +723,7 @@ input[type="range"].range::-moz-range-thumb { width: 12px; height: 12px; border-
   color: var(--text-2); font-size: var(--fs-label); font-weight: 500; text-align: left; white-space: nowrap;
 }
 .table th.num, .table td.num { text-align: right; }
+.table th.num { font-family: var(--font-ui); letter-spacing: 0; }
 .table th button { all: unset; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .table th button:hover { color: var(--text); }
 .table th button:focus-visible { outline: 2px solid var(--focus); border-radius: 2px; }
@@ -852,7 +853,7 @@ input[type="range"].range::-moz-range-thumb { width: 12px; height: 12px; border-
 .stage-label { padding: 6px 12px 6px 10px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
 
 /* side column */
-.side { grid-area: side; min-height: 0; display: grid; grid-template-rows: minmax(0, 1.18fr) minmax(0, 1fr); gap: var(--sp-3); }
+.side { grid-area: side; min-height: 0; display: grid; grid-template-rows: minmax(0, 1.08fr) minmax(0, 1fr); gap: var(--sp-3); }
 
 /* network board */
 .board {
@@ -1061,6 +1062,7 @@ svg.chart { flex: 1; min-height: 0; width: 100%; display: block; }
 .chal-detail .inner { padding: var(--sp-5); display: grid; gap: var(--sp-4); }
 .goal-list { display: grid; gap: 2px; }
 .goal { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-3); align-items: center; padding: 10px var(--sp-3); border-radius: var(--r-s); background: var(--surface-2); }
+.goal .stars { width: 51px; justify-content: flex-start; }
 .goal .stars .icon { width: 15px; height: 15px; }
 .goal .what { font-size: var(--fs-body-s); line-height: var(--lh-body-s); }
 .goal .what small { display: block; color: var(--text-3); font-size: 12px; }
@@ -1132,6 +1134,7 @@ svg.chart { flex: 1; min-height: 0; width: 100%; display: block; }
 }
 @media (min-width: 1700px) {
   :root { --side-w: 452px; --curves-h: 280px; --runbar-h: 64px; }
+  .chal { grid-template-columns: minmax(0, 1fr) 440px; }
   .run-tab { width: 236px; }
 }
 @media (max-width: 1599px) {
@@ -1142,6 +1145,7 @@ svg.chart { flex: 1; min-height: 0; width: 100%; display: block; }
 .speed-menu { display: none; }
 @media (max-width: 1440px) {
   .col-wide { display: none; }
+  .table td, .table th { padding: 0 10px; }
 }
 @media (max-width: 1360px) {
   .newrun { grid-template-columns: minmax(0, 1fr) 300px; padding-left: var(--sp-5); padding-right: var(--sp-5); }

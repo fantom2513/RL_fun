@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Проверка сети — Гараж</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body>
+<script src="assets/icons.js"></script>
+<div class="shell">
+  <nav class="rail" aria-label="Разделы">
+    <a class="rail-brand" href="index.html" aria-label="Лаборатория: на главную">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#4f616e"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="#fffffc" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="#d62e3e" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
+    </a>
+    <a class="rail-item" href="lab.html"><svg class="icon"><use href="#i-flask-conical"/></svg><span>Лаборатория</span></a>
+    <a class="rail-item" href="track-editor.html"><svg class="icon"><use href="#i-route"/></svg><span>Трассы</span></a>
+    <a class="rail-item" href="challenges.html"><svg class="icon"><use href="#i-trophy"/></svg><span>Челленджи</span><b class="rail-badge" aria-label="2 новых">2</b></a>
+    <a class="rail-item" href="demo.html" aria-current="page"><svg class="icon"><use href="#i-warehouse"/></svg><span>Гараж</span></a>
+    <div class="rail-spacer"></div>
+    <a class="rail-item" href="#settings"><svg class="icon"><use href="#i-settings"/></svg><span>Настройки</span></a>
+  </nav>
+
+  <main class="screen" id="main">
+    <header class="screen-head">
+      <div>
+        <nav class="crumbs" aria-label="Путь"><a href="#garage">Гараж</a><svg class="icon icon-s"><use href="#i-chevron-right"/></svg><span>Глубокая 3 × 8</span></nav>
+        <h1 class="screen-title">Проверка сети</h1>
+      </div>
+      <label class="field" style="grid-auto-flow: column; align-items: center; gap: 8px; margin-left: 12px">
+        <span class="field-label hide-narrow">Сеть</span>
+        <select class="select" style="width: 300px"><option>Глубокая 3 × 8 — лучшая, пок. 77</option><option>Гонщик · 5 лучей — лидер сейчас</option></select>
+      </label>
+      <span class="head-spacer"></span>
+      <div class="head-actions">
+        <div class="seg" data-seg role="group" aria-label="Трасса">
+          <button aria-pressed="false">Овал</button><button aria-pressed="true">Волны</button><button aria-pressed="false">Гран-при</button><button aria-pressed="false">Петля</button>
+        </div>
+        <span class="runbar-sep"></span>
+        <button class="btn btn-icon" aria-label="Заново (R)" title="Заново (R)"><svg class="icon"><use href="#i-skip-back"/></svg></button>
+        <button class="btn btn-primary"><svg class="icon"><use href="#i-pause"/></svg>Пауза</button>
+      </div>
+    </header>
+
+    <div class="demo">
+      <section class="stage" aria-label="Демо-заезд на трассе «Волны»">
+        <canvas id="stage"></canvas>
+        <div class="stage-overlay tl">
+          <dl class="glass hud">
+            <div class="hud-run"><svg class="icon icon-s"><use href="#i-timer"/></svg>Круг 1 · Волны</div>
+            <dt>Время</dt><dd>36,04 с</dd>
+            <dt>Скорость</dt><dd>27,8 м/с</dd>
+            <dt>Прогресс</dt><dd>86 %</dd>
+          </dl>
+        </div>
+        <div class="stage-overlay tr">
+          <div class="glass toolgroup"><div class="seg seg-sm" data-seg><button aria-pressed="true"><svg class="icon"><use href="#i-scan"/></svg>Вписать</button><button aria-pressed="false"><svg class="icon"><use href="#i-crosshair"/></svg>Машинка</button></div>
+            <button class="glass-btn" aria-label="След по скорости" title="След по скорости" style="background: rgba(255,255,255,.16)"><svg class="icon"><use href="#i-spline"/></svg></button>
+          </div>
+        </div>
+        <div class="stage-overlay bl">
+          <div class="glass gen-strip" style="max-width: 360px">
+            <span>След</span>
+            <span style="flex:1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, hsl(200,90%,62%), hsl(120,90%,65%), hsl(40,90%,68%))"></span>
+            <span class="mono">медленно → быстро</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="demo-side">
+        <section class="card result-big" aria-labelledby="res-title">
+          <div style="display:flex; align-items:center; gap: 8px">
+            <span class="eyebrow" id="res-title">Прошлый круг на «Волнах»</span>
+            <span class="head-spacer"></span>
+            <span class="tag tag-ok"><svg class="icon"><use href="#i-flag"/></svg>финиш</span>
+          </div>
+          <p class="value">41,82<small>с</small></p>
+          <p class="muted" style="font-size: 13px">Трасса незнакомая: сеть училась на «Гран-при»</p>
+          <dl class="stat-grid">
+            <div class="stat"><dt>Средняя скорость</dt><dd>23,4 <small>м/с</small></dd></div>
+            <div class="stat"><dt>Максимальная</dt><dd>31,0 <small>м/с</small></dd></div>
+            <div class="stat"><dt>Касаний бордюра</dt><dd>3</dd></div>
+            <div class="stat"><dt>Плавность руля</dt><dd>0,82</dd></div>
+          </dl>
+        </section>
+
+        <section class="card" aria-labelledby="all-title">
+          <header class="card-head"><h2 class="card-title" id="all-title">На всех трассах</h2><span class="head-spacer"></span><button class="btn btn-sm"><svg class="icon"><use href="#i-play"/></svg>Проверить все</button></header>
+          <table class="table" style="font-size: 13px">
+            <tbody>
+              <tr><td style="height:40px">Гран-при <span class="tag" style="margin-left:4px">обучение</span></td><td class="num mono">36,90 с</td><td style="width:28px"><svg class="icon icon-s" style="color: var(--success)"><use href="#i-circle-check"/></svg></td></tr>
+              <tr><td style="height:40px">Овал</td><td class="num mono">22,10 с</td><td><svg class="icon icon-s" style="color: var(--success)"><use href="#i-circle-check"/></svg></td></tr>
+              <tr aria-selected="true"><td style="height:40px">Волны</td><td class="num mono">41,82 с</td><td><svg class="icon icon-s" style="color: var(--success)"><use href="#i-circle-check"/></svg></td></tr>
+              <tr><td style="height:40px">Петля <span class="faint">· моя</span></td><td class="num mono" style="color: var(--danger)">сход на 62 %</td><td><svg class="icon icon-s" style="color: var(--danger)"><use href="#i-octagon-x"/></svg></td></tr>
+            </tbody>
+          </table>
+          <div class="card-foot" style="border-top: 0; padding-top: 4px">
+            <div class="callout callout-warn" style="flex:1"><svg class="icon"><use href="#i-lightbulb"/></svg><span>На «Петле» сеть вылетает в шпильке. Попробуйте обучать на ней же или добавить луч −60°.</span></div>
+          </div>
+        </section>
+
+        <section class="board">
+          <header class="card-head"><h2 class="card-title">Сеть в заезде</h2><span class="tag mono">10 → 8 → 8 → 8 → 2</span></header>
+          <svg class="net" id="net" role="img" aria-label="Граф сети во время демо-заезда"></svg>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="assets/tracks.js"></script>
+<script src="assets/proto.js"></script>
+<script>
+  window.render = function () {
+    Proto.drawScene(document.getElementById('stage'), { track: 'wavy', cars: 0, single: true, trace: true, progress: 0.86, rays: [-90, -60, -30, 0, 30, 60, 90], padLeft: 40, padTop: 70, pad: 40, carScale: 1.5 });
+    Proto.drawNetwork(document.getElementById('net'), { inputs: ['−90°', '−60°', '−30°', '0°', '30°', '60°', '90°', 'Скор.', 'Бок.', 'Угл.'], hidden: [8, 8, 8], outputs: ['Руль', 'Газ'], seed: 30, small: true });
+  };
+</script>
+</body>
+</html>

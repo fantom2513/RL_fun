@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Сравнение запусков — Лаборатория</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body>
+<script src="assets/icons.js"></script>
+<div class="shell">
+  <nav class="rail" aria-label="Разделы">
+    <a class="rail-brand" href="index.html" aria-label="Лаборатория: на главную">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#4f616e"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="#fffffc" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="#d62e3e" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
+    </a>
+    <a class="rail-item" href="lab.html" aria-current="page"><svg class="icon"><use href="#i-flask-conical"/></svg><span>Лаборатория</span></a>
+    <a class="rail-item" href="track-editor.html"><svg class="icon"><use href="#i-route"/></svg><span>Трассы</span></a>
+    <a class="rail-item" href="challenges.html"><svg class="icon"><use href="#i-trophy"/></svg><span>Челленджи</span><b class="rail-badge" aria-label="2 новых">2</b></a>
+    <a class="rail-item" href="demo.html"><svg class="icon"><use href="#i-warehouse"/></svg><span>Гараж</span></a>
+    <div class="rail-spacer"></div>
+    <a class="rail-item" href="#settings"><svg class="icon"><use href="#i-settings"/></svg><span>Настройки</span></a>
+  </nav>
+
+  <main class="screen" id="main">
+    <header class="runbar">
+      <div class="run-tabs" role="tablist" aria-label="Запуски">
+        <button class="run-tab" role="tab" aria-selected="true" style="--c: var(--run-1)">
+          <span class="run-tab-name"><svg class="icon" aria-label="Эволюция"><use href="#i-dna"/></svg>Гонщик · 5 лучей</span><span class="run-tab-best mono">64 %</span>
+          <span class="run-tab-meta"><i class="dot dot-running" aria-hidden="true"></i>идёт · <span class="mono">пок. 44</span></span><span class="run-tab-cap">лучший</span>
+        </button>
+        <button class="run-tab" role="tab" aria-selected="false" style="--c: var(--run-2)">
+          <span class="run-tab-name"><svg class="icon" aria-label="PPO"><use href="#i-brain"/></svg>PPO · осторожный</span><span class="run-tab-best mono">54 %</span>
+          <span class="run-tab-meta"><i class="dot dot-running" aria-hidden="true"></i>идёт · <span class="mono">итер. 61</span></span><span class="run-tab-cap">лучший</span>
+        </button>
+        <button class="run-tab" role="tab" aria-selected="false" style="--c: var(--run-3)">
+          <span class="run-tab-name"><svg class="icon" aria-label="Эволюция"><use href="#i-dna"/></svg>Глубокая 3 × 8</span><span class="run-tab-best mono">36,9</span>
+          <span class="run-tab-meta"><i class="dot dot-finished" aria-hidden="true"></i>готово · <span class="mono">пок. 80</span></span><span class="run-tab-cap">круг, с</span>
+        </button>
+        <a class="btn btn-ghost" href="new-run.html" title="Новый запуск (N)"><svg class="icon"><use href="#i-plus"/></svg><span class="new-label">Новый запуск</span></a>
+      </div>
+      <div class="transport">
+        <div class="seg view-switch" data-seg role="group" aria-label="Вид">
+          <button aria-pressed="false" onclick="location.href='lab.html'+location.search">Заезд</button>
+          <button aria-pressed="true">Сравнение</button>
+        </div>
+        <span class="runbar-sep"></span>
+        <button class="btn"><svg class="icon"><use href="#i-download"/></svg><span class="label-wide">Экспорт</span></button>
+      </div>
+    </header>
+
+    <div class="compare">
+      <section class="card chart-card" aria-labelledby="cmp-chart">
+        <header class="card-head">
+          <h2 class="card-title" id="cmp-chart">Кривые</h2>
+          <div class="seg seg-sm" data-seg role="group" aria-label="Показатель">
+            <button aria-pressed="true">Лучший прогресс</button><button aria-pressed="false">Средний</button><button aria-pressed="false">Финишировали</button><button aria-pressed="false">Время круга</button>
+          </div>
+          <span class="head-spacer"></span>
+          <div class="seg seg-sm" data-seg role="group" aria-label="Ось X"><button aria-pressed="true">Итерации</button><button aria-pressed="false">Время</button></div>
+        </header>
+        <svg class="chart" id="chart" role="img" aria-label="Лучший прогресс трёх отмеченных запусков по итерациям"></svg>
+      </section>
+
+      <section class="card" aria-labelledby="cmp-table">
+        <header class="card-head">
+          <h2 class="card-title" id="cmp-table">Итоги запусков</h2>
+          <span class="faint" style="font-size: 13px">отмечено 3 из 4 · <span class="tag tag-best" style="vertical-align: 1px">лучший</span> — лучшее значение среди запусков на одной трассе</span>
+          <span class="head-spacer"></span>
+          <button class="btn btn-sm"><svg class="icon"><use href="#i-table"/></svg>Столбцы</button>
+        </header>
+        <div class="cmp-table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 36px"><input class="check" type="checkbox" aria-label="Отметить все" checked></th>
+                <th>Запуск</th>
+                <th>Статус</th>
+                <th class="num"><button>Итераций</button></th>
+                <th class="num" aria-sort="descending"><button>Лучший прогресс<svg class="icon"><use href="#i-chevron-down"/></svg></button></th>
+                <th class="num"><button>Средний</button></th>
+                <th class="num"><button>Лучший круг, с</button></th>
+                <th class="num"><button>Первый круг</button></th>
+                <th class="num"><button>Финишировали</button></th>
+                <th class="col-wide">Динамика</th>
+                <th class="col-wide">Сеть</th>
+                <th><span class="sr-only">Действия</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr aria-selected="true">
+                <td><input class="check" type="checkbox" checked aria-label="Глубокая 3 × 8"></td>
+                <td><div class="cmp-name"><i class="swatch" style="--c: var(--run-3)"></i><div><b>Глубокая 3 × 8</b><small>Эволюция · Гран-при</small></div></div></td>
+                <td><span class="tag tag-info"><svg class="icon"><use href="#i-check"/></svg>готово</span></td>
+                <td class="num mono">80</td>
+                <td class="num mono"><span class="cell-best">100 %</span></td>
+                <td class="num mono"><span class="cell-best">71 %</span></td>
+                <td class="num mono"><span class="cell-best">36,90</span></td>
+                <td class="num mono">пок. 23</td>
+                <td class="num mono"><span class="cell-best">41 из 60</span></td>
+                <td class="col-wide"><svg class="spark" data-spark="4,80,1,22,.06" data-color="--run-3"></svg></td>
+                <td class="col-wide"><span class="cmp-net">10 → 8 → 8 → 8 → 2</span></td>
+                <td><div style="display:flex; gap:4px; justify-content:flex-end"><a class="btn btn-sm" href="demo.html" aria-label="Проверить лучшую сеть" title="Проверить лучшую сеть"><svg class="icon"><use href="#i-play"/></svg><span class="col-wide">Проверить</span></a><button class="btn btn-ghost btn-sm btn-icon" aria-label="Ещё"><svg class="icon"><use href="#i-ellipsis"/></svg></button></div></td>
+              </tr>
+              <tr aria-selected="true">
+                <td><input class="check" type="checkbox" checked aria-label="Гонщик · 5 лучей"></td>
+                <td><div class="cmp-name"><i class="swatch" style="--c: var(--run-1)"></i><div><b>Гонщик · 5 лучей</b><small>Эволюция · Гран-при</small></div></div></td>
+                <td><span class="tag tag-ok"><i class="dot dot-running" style="width:6px;height:6px"></i>идёт</span></td>
+                <td class="num mono">44</td>
+                <td class="num mono">64 %</td>
+                <td class="num mono">38 %</td>
+                <td class="num mono faint">—</td>
+                <td class="num mono faint">—</td>
+                <td class="num mono">0 из 60</td>
+                <td class="col-wide"><svg class="spark" data-spark="3,44,.66,12,.08" data-color="--run-1"></svg></td>
+                <td class="col-wide"><span class="cmp-net">8 → 6 → 5 → 2</span></td>
+                <td><div style="display:flex; gap:4px; justify-content:flex-end"><a class="btn btn-sm" href="demo.html" aria-label="Проверить лучшую сеть" title="Проверить лучшую сеть"><svg class="icon"><use href="#i-play"/></svg><span class="col-wide">Проверить</span></a><button class="btn btn-ghost btn-sm btn-icon" aria-label="Ещё"><svg class="icon"><use href="#i-ellipsis"/></svg></button></div></td>
+              </tr>
+              <tr aria-selected="true">
+                <td><input class="check" type="checkbox" checked aria-label="PPO · осторожный"></td>
+                <td><div class="cmp-name"><i class="swatch" style="--c: var(--run-2)"></i><div><b>PPO · осторожный</b><small>PPO · Гран-при</small></div></div></td>
+                <td><span class="tag tag-ok"><i class="dot dot-running" style="width:6px;height:6px"></i>идёт</span></td>
+                <td class="num mono">61</td>
+                <td class="num mono">54 %</td>
+                <td class="num mono">41 %</td>
+                <td class="num mono faint">—</td>
+                <td class="num mono faint">—</td>
+                <td class="num mono">0 из 32</td>
+                <td class="col-wide"><svg class="spark" data-spark="9,61,.6,30,.05" data-color="--run-2"></svg></td>
+                <td class="col-wide"><span class="cmp-net">8 → 6 → 5 → 2</span></td>
+                <td><div style="display:flex; gap:4px; justify-content:flex-end"><a class="btn btn-sm" href="demo.html" aria-label="Проверить лучшую сеть" title="Проверить лучшую сеть"><svg class="icon"><use href="#i-play"/></svg><span class="col-wide">Проверить</span></a><button class="btn btn-ghost btn-sm btn-icon" aria-label="Ещё"><svg class="icon"><use href="#i-ellipsis"/></svg></button></div></td>
+              </tr>
+              <tr>
+                <td><input class="check" type="checkbox" aria-label="Простая · овал"></td>
+                <td><div class="cmp-name"><i class="swatch" style="--c: var(--run-4)"></i><div><b>Простая · овал</b><small>Эволюция · Овал <span class="tag" style="margin-left: 4px">другая трасса</span></small></div></div></td>
+                <td><span class="tag"><svg class="icon"><use href="#i-square"/></svg>остановлен</span></td>
+                <td class="num mono">30</td>
+                <td class="num mono">100 %</td>
+                <td class="num mono">88 %</td>
+                <td class="num mono">21,35</td>
+                <td class="num mono">пок. 9</td>
+                <td class="num mono">37 из 40</td>
+                <td class="col-wide"><svg class="spark" data-spark="12,30,1,6,.1" data-color="--run-4"></svg></td>
+                <td class="col-wide"><span class="cmp-net">5 → 4 → 2</span></td>
+                <td><div style="display:flex; gap:4px; justify-content:flex-end"><a class="btn btn-sm" href="demo.html" aria-label="Проверить лучшую сеть" title="Проверить лучшую сеть"><svg class="icon"><use href="#i-play"/></svg><span class="col-wide">Проверить</span></a><button class="btn btn-ghost btn-sm btn-icon" aria-label="Ещё"><svg class="icon"><use href="#i-ellipsis"/></svg></button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="assets/tracks.js"></script>
+<script src="assets/proto.js"></script>
+<script>
+  window.render = function () {
+    const C = Proto.css;
+    const a = Proto.curve(3, 44, 0.66, 12, 0.04, 0.08);
+    const b = Proto.curve(9, 61, 0.6, 30, 0.03, 0.05);
+    const c = Proto.curve(4, 80, 1.0, 22, 0.05, 0.06);
+    Proto.drawChart(document.getElementById('chart'), {
+      xmax: 80, xstep: 10, xlabel: 'итерация', hover: 39, xname: 'Итерация',
+      series: [
+        { name: 'Глубокая 3 × 8', color: C('--run-3'), data: c, width: 2 },
+        { name: 'PPO · осторожный', color: C('--run-2'), data: b, width: 2, labelDy: 6 },
+        { name: 'Гонщик · 5 лучей', color: C('--run-1'), data: a, width: 2, labelDy: -4 },
+      ],
+    });
+    document.querySelectorAll('[data-spark]').forEach((s) => {
+      s.innerHTML = '';
+      const [seed, n, top, tau, st] = s.dataset.spark.split(',').map(Number);
+      Proto.drawSpark(s, Proto.curve(seed, n, top, tau, 0.04, st), C(s.dataset.color));
+    });
+  };
+</script>
+</body>
+</html>

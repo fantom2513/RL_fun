@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Редактор трассы — Трассы</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body>
+<script src="assets/icons.js"></script>
+<div class="shell">
+  <nav class="rail" aria-label="Разделы">
+    <a class="rail-brand" href="index.html" aria-label="Лаборатория: на главную">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#4f616e"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="#fffffc" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="#d62e3e" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
+    </a>
+    <a class="rail-item" href="lab.html"><svg class="icon"><use href="#i-flask-conical"/></svg><span>Лаборатория</span></a>
+    <a class="rail-item" href="track-editor.html" aria-current="page"><svg class="icon"><use href="#i-route"/></svg><span>Трассы</span></a>
+    <a class="rail-item" href="challenges.html"><svg class="icon"><use href="#i-trophy"/></svg><span>Челленджи</span><b class="rail-badge" aria-label="2 новых">2</b></a>
+    <a class="rail-item" href="demo.html"><svg class="icon"><use href="#i-warehouse"/></svg><span>Гараж</span></a>
+    <div class="rail-spacer"></div>
+    <a class="rail-item" href="#settings"><svg class="icon"><use href="#i-settings"/></svg><span>Настройки</span></a>
+  </nav>
+
+  <main class="screen" id="main">
+    <header class="screen-head">
+      <a class="btn btn-ghost btn-icon" href="#tracks" aria-label="Назад к трассам"><svg class="icon"><use href="#i-arrow-left"/></svg></a>
+      <div>
+        <nav class="crumbs" aria-label="Путь"><a href="#tracks">Трассы</a><svg class="icon icon-s"><use href="#i-chevron-right"/></svg><span>Новая трасса</span></nav>
+        <h1 class="screen-title">Редактор трассы</h1>
+      </div>
+      <span class="head-spacer"></span>
+      <div class="head-actions">
+        <button class="btn btn-ghost btn-icon" aria-label="Отменить (Ctrl Z)" title="Отменить (Ctrl Z)"><svg class="icon"><use href="#i-undo-2"/></svg></button>
+        <button class="btn btn-ghost btn-icon" aria-label="Повторить (Ctrl Shift Z)" title="Повторить (Ctrl Shift Z)" disabled><svg class="icon"><use href="#i-redo-2"/></svg></button>
+        <button class="btn btn-ghost"><svg class="icon"><use href="#i-trash-2"/></svg><span class="hide-narrow">Очистить</span></button>
+        <span class="runbar-sep"></span>
+        <button class="btn" aria-disabled="true" title="Сначала исправьте ошибку 1"><svg class="icon"><use href="#i-play"/></svg><span class="hide-narrow">Пробный заезд</span></button>
+        <button class="btn btn-primary" aria-disabled="true" title="Сначала исправьте ошибку 1"><svg class="icon"><use href="#i-save"/></svg>Сохранить</button>
+      </div>
+    </header>
+
+    <div class="te">
+      <div class="te-tools" role="toolbar" aria-label="Инструменты" aria-orientation="vertical">
+        <button class="tool" aria-pressed="true" aria-label="Кисть (B)" title="Кисть — рисовать осевую линию (B)"><svg class="icon"><use href="#i-brush"/></svg><span class="k">B</span></button>
+        <button class="tool" aria-pressed="false" aria-label="Ластик (E)" title="Ластик — стереть участок (E)"><svg class="icon"><use href="#i-eraser"/></svg><span class="k">E</span></button>
+        <button class="tool" aria-pressed="false" aria-label="Точки (P)" title="Двигать точки (P)"><svg class="icon"><use href="#i-spline"/></svg><span class="k">P</span></button>
+        <button class="tool" aria-pressed="false" aria-label="Рука (H)" title="Сдвигать холст (H, пробел)"><svg class="icon"><use href="#i-hand"/></svg><span class="k">H</span></button>
+        <div class="te-sep"></div>
+        <button class="tool" aria-pressed="false" aria-label="Старт (S)" title="Поставить старт (S)"><svg class="icon"><use href="#i-flag"/></svg><span class="k">S</span></button>
+        <div class="rail-spacer"></div>
+        <button class="tool" aria-label="Вписать (0)" title="Вписать (0)"><svg class="icon"><use href="#i-scan"/></svg></button>
+      </div>
+
+      <div class="te-canvas">
+        <canvas id="canvas" tabindex="0" aria-label="Холст трассы. Рисуйте мышью с зажатой кнопкой; стрелки двигают выбранную точку"></canvas>
+        <div class="stage-overlay bl" style="right: auto">
+          <div class="glass gen-strip" style="gap: 14px">
+            <span class="mono">X 84 м · Y 41 м</span><span class="mono">масштаб 100 %</span><span>сетка 5 м</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="te-side" aria-label="Свойства трассы">
+        <section>
+          <div class="field"><label class="field-label" for="tname">Название</label><input class="input" id="tname" value="Петля" maxlength="40"></div>
+        </section>
+        <section>
+          <h3><svg class="icon icon-s"><use href="#i-brush"/></svg>Кисть</h3>
+          <div class="param param-compact" style="border:0">
+            <label class="param-label" for="w">Ширина трассы</label>
+            <span class="param-value"><span class="value-field"><input id="w" value="10"><span class="unit">м</span></span></span>
+            <input class="range param-range" type="range" min="6" max="16" step="0.5" value="10" data-fmt="int" aria-label="Ширина трассы">
+          </div>
+          <div class="param param-compact">
+            <label class="param-label" for="sm">Сглаживание</label>
+            <span class="param-value"><span class="value-field"><input id="sm" value="60"><span class="unit">%</span></span></span>
+            <input class="range param-range" type="range" min="0" max="100" step="5" value="60" data-fmt="int" aria-label="Сглаживание">
+          </div>
+          <div style="display: grid; gap: 10px; margin-top: 8px">
+            <label class="switch"><input type="checkbox" checked><span class="track"></span>Замыкать петлю сама</label>
+            <label class="switch"><input type="checkbox" checked><span class="track"></span>Бордюры в поворотах</label>
+          </div>
+        </section>
+        <section>
+          <h3><svg class="icon icon-s"><use href="#i-list-checks"/></svg>Проверка<span class="head-spacer"></span><span class="tag tag-err">1 ошибка</span></h3>
+          <div class="check-list" role="list">
+            <div class="check-item err" role="listitem"><svg class="icon"><use href="#i-octagon-x"/></svg><span><b>1.</b> Дорога почти касается сама себя</span><small>Между участками 2 м, нужно не меньше 4 м. Отодвиньте точку или сузьте трассу.</small><button class="btn btn-sm">Показать</button></div>
+            <div class="check-item warn" role="listitem"><svg class="icon"><use href="#i-triangle-alert"/></svg><span><b>2.</b> Крутой поворот, радиус 9 м</span><small>Проехать можно, но новички будут часто вылетать.</small></div>
+            <div class="check-item ok" role="listitem"><svg class="icon"><use href="#i-circle-check"/></svg><span>Петля замкнута</span><small>Длина 538 м — подходит (от 150 м)</small></div>
+          </div>
+        </section>
+        <section>
+          <h3><svg class="icon icon-s"><use href="#i-flag"/></svg>Старт</h3>
+          <div class="seg seg-sm" data-seg role="group" aria-label="Направление движения"><button aria-pressed="true">Против часовой</button><button aria-pressed="false">По часовой</button></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="assets/tracks.js"></script>
+<script src="assets/proto.js"></script>
+<script>
+  const LOOP = { width: 10, center: [[0,0],[40,-4],[80,-3],[110,8],[126,32],[120,58],[98,72],[76,66],[66,46],[63,20],[55,10],[42,16],[30,38],[12,58],[-18,62],[-44,46],[-50,20],[-34,4]] };
+  window.render = function () {
+    const canvas = document.getElementById('canvas');
+    const g = Proto.drawScene(canvas, { trackDef: LOOP, cars: 0, leader: false, pad: 70, padTop: 60, padBottom: 90 });
+    const ctx = canvas.getContext('2d');
+    const { X, Y, s } = g;
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    // 5 m grid, every 25 m stronger
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth = 1;
+    for (let gx = -100; gx <= 200; gx += 5) { ctx.beginPath(); ctx.moveTo(X(gx), 0); ctx.lineTo(X(gx), H); ctx.globalAlpha = gx % 25 === 0 ? 1.6 : 0.7; ctx.stroke(); }
+    for (let gy = -60; gy <= 140; gy += 5) { ctx.beginPath(); ctx.moveTo(0, Y(gy)); ctx.lineTo(W, Y(gy)); ctx.globalAlpha = gy % 25 === 0 ? 1.6 : 0.7; ctx.stroke(); }
+    ctx.restore();
+    // control points of the drawn centreline
+    for (const [x, y] of LOOP.center) {
+      ctx.beginPath(); ctx.arc(X(x), Y(y), 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#3c4a52'; ctx.stroke();
+    }
+    // selected point
+    const sp = LOOP.center[10];
+    ctx.beginPath(); ctx.arc(X(sp[0]), Y(sp[1]), 7, 0, Math.PI * 2); ctx.fillStyle = '#f2b33d'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#1a1406'; ctx.stroke();
+    // markers
+    function marker(x, y, n, color, label) {
+      const px = X(x), py = Y(y);
+      ctx.save();
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.arc(px, py, 26, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.18; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(px + 22, py - 22, 11, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = '600 12px "JetBrains Mono Variable", monospace'; ctx.textAlign = 'center'; ctx.fillText(String(n), px + 22, py - 18);
+      if (label) {
+        ctx.font = '600 12.5px "Onest Variable", sans-serif';
+        const w = ctx.measureText(label).width + 20;
+        const lx = px + 38, ly = py - 34;
+        ctx.fillStyle = 'rgba(16,23,29,0.86)';
+        ctx.beginPath(); ctx.roundRect(lx, ly, w, 26, 6); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(label, lx + 10, ly + 17);
+      }
+      ctx.restore();
+    }
+    marker(55, 1.5, 1, '#f0566a', 'Участки ближе 4 м');
+    marker(124, 46, 2, '#f5a524', '');
+    // brush cursor
+    const bx = X(-22), by = Y(30);
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(bx, by, (LOOP.width / 2) * s, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(bx - 5, by); ctx.lineTo(bx + 5, by); ctx.moveTo(bx, by - 5); ctx.lineTo(bx, by + 5); ctx.stroke(); ctx.restore();
+    // start flag label
+    ctx.save(); ctx.font = '600 12px "Onest Variable", sans-serif'; ctx.fillStyle = 'rgba(16,23,29,0.86)';
+    ctx.beginPath(); ctx.roundRect(X(0) - 26, Y(0) + 16, 52, 22, 6); ctx.fill(); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText('Старт', X(0), Y(0) + 31); ctx.restore();
+  };
+</script>
+</body>
+</html>

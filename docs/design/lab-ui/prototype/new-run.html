@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Новый запуск — Лаборатория</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body>
+<script src="assets/icons.js"></script>
+<div class="shell">
+  <nav class="rail" aria-label="Разделы">
+    <a class="rail-brand" href="index.html" aria-label="Лаборатория: на главную">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#4f616e"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="#fffffc" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="#d62e3e" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
+    </a>
+    <a class="rail-item" href="lab.html" aria-current="page"><svg class="icon"><use href="#i-flask-conical"/></svg><span>Лаборатория</span></a>
+    <a class="rail-item" href="track-editor.html"><svg class="icon"><use href="#i-route"/></svg><span>Трассы</span></a>
+    <a class="rail-item" href="challenges.html"><svg class="icon"><use href="#i-trophy"/></svg><span>Челленджи</span><b class="rail-badge" aria-label="2 новых">2</b></a>
+    <a class="rail-item" href="demo.html"><svg class="icon"><use href="#i-warehouse"/></svg><span>Гараж</span></a>
+    <div class="rail-spacer"></div>
+    <a class="rail-item" href="#settings"><svg class="icon"><use href="#i-settings"/></svg><span>Настройки</span></a>
+  </nav>
+
+  <main class="screen" id="main">
+    <header class="screen-head">
+      <a class="btn btn-ghost btn-icon" href="lab.html" aria-label="Назад в лабораторию" title="Назад (Esc)"><svg class="icon"><use href="#i-arrow-left"/></svg></a>
+      <h1 class="screen-title">Новый запуск</h1>
+      <span class="screen-sub hide-narrow">Черновик сохраняется сам</span>
+      <span class="head-spacer"></span>
+      <div class="head-actions">
+        <button class="btn btn-ghost"><svg class="icon"><use href="#i-upload"/></svg><span class="hide-narrow">Загрузить JSON</span></button>
+        <button class="btn btn-ghost"><svg class="icon"><use href="#i-warehouse"/></svg><span class="hide-narrow">Из гаража</span></button>
+      </div>
+    </header>
+
+    <div class="screen-body">
+      <div class="newrun">
+        <nav class="toc" aria-label="Разделы формы">
+          <a href="#s-template"><span class="n">1</span>Шаблон<span class="state"><svg class="icon"><use href="#i-check"/></svg></span></a>
+          <a href="#s-learner" aria-current="true"><span class="n">2</span>Обучатель</a>
+          <a href="#s-net"><span class="n">3</span>Сеть</a>
+          <a href="#s-reward"><span class="n">4</span>Награда</a>
+          <a href="#s-track"><span class="n">5</span>Трасса и лимиты</a>
+        </nav>
+
+        <div class="form-col">
+          <section class="card form-section" id="s-template" aria-labelledby="h-template">
+            <header><h2 class="section-title" id="h-template">С чего начать</h2><p>Шаблон заполняет сеть и награду; всё можно поменять ниже.</p></header>
+            <div class="tpl-grid" role="radiogroup" aria-labelledby="h-template">
+              <button class="tpl-card" role="radio" aria-checked="false"><svg class="glyph" data-glyph="3,4,2"></svg><b>Простая</b><span>3 луча и один слой. Учится за пару минут.</span><span class="mono">3 → 4 → 2</span></button>
+              <button class="tpl-card" role="radio" aria-checked="false"><svg class="glyph" data-glyph="10,8,8,2"></svg><b>Глубокая</b><span>7 лучей и датчики, два слоя по 8.</span><span class="mono">10 → 8 → 8 → 2</span></button>
+              <button class="tpl-card" role="radio" aria-checked="true"><svg class="glyph" data-glyph="8,6,5,2"></svg><b>Осторожная</b><span>Ценит центр трассы и плавный руль.</span><span class="mono">8 → 6 → 5 → 2</span></button>
+              <button class="tpl-card" role="radio" aria-checked="false"><svg class="glyph" data-glyph="8,6,5,3"></svg><b>Гонщик</b><span>Ценит скорость и быстрый круг, есть буст.</span><span class="mono">8 → 6 → 5 → 3</span></button>
+            </div>
+          </section>
+
+          <section class="card form-section" id="s-learner" aria-labelledby="h-learner">
+            <header><h2 class="section-title" id="h-learner">Обучатель</h2><p>Как сеть будет учиться. Граф, кривые и сравнение работают одинаково.</p></header>
+            <div class="learner-grid" role="radiogroup" aria-labelledby="h-learner">
+              <button class="learner-card" role="radio" aria-checked="false"><svg class="icon"><use href="#i-dna"/></svg><b>Эволюция</b><span>Поколения машинок: лучшие передают веса потомкам. Наглядно и надёжно.</span></button>
+              <button class="learner-card" role="radio" aria-checked="true"><svg class="icon"><use href="#i-brain"/></svg><b>PPO</b><span>Одна сеть учится на опыте всех машинок сразу. Чувствительнее к настройкам.</span></button>
+              <button class="learner-card" role="radio" aria-checked="false" aria-disabled="true"><svg class="icon"><use href="#i-git-compare-arrows"/></svg><b>Кросс-энтропия <span class="tag">скоро</span></b><span>Простой метод для сравнения с эволюцией.</span></button>
+            </div>
+
+            <details class="group" open>
+              <summary><svg class="icon chev"><use href="#i-chevron-right"/></svg>Основное<span class="muted">4 параметра</span></summary>
+              <div class="group-body">
+                <div class="param is-changed">
+                  <label class="param-label" for="lr">Скорость обучения</label>
+                  <span class="param-value"><button class="btn btn-ghost btn-sm btn-icon param-reset" aria-label="Вернуть 3·10⁻⁴" title="Вернуть 3·10⁻⁴"><svg class="icon"><use href="#i-rotate-ccw"/></svg></button><span class="value-field"><input id="lr" value="1e-4" aria-describedby="lr-hint"></span></span>
+                  <div class="param-range"><input class="range" type="range" min="-5" max="-2" step="0.1" value="-4" data-fmt="none" aria-label="Скорость обучения, логарифмическая шкала"><div class="range-scale"><span>10⁻⁵</span><span>10⁻⁴</span><span>10⁻³</span><span>10⁻²</span></div></div>
+                  <p class="param-hint" id="lr-hint"><span class="tag tag-live" title="Можно менять у работающего запуска"><svg class="icon"><use href="#i-zap"/></svg>на ходу</span>Шаг изменения весов. Меньше — стабильнее, но медленнее.</p>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="gamma">Дисконт γ <span class="help" title="Насколько важна будущая награда по сравнению с текущей"><svg class="icon"><use href="#i-info"/></svg></span></label>
+                  <span class="param-value"><span class="value-field"><input id="gamma" value="0,99"></span></span>
+                  <input class="range param-range" type="range" min="0.9" max="0.999" step="0.001" value="0.99" aria-label="Дисконт">
+                  <p class="param-hint">Ближе к 1 — машинка думает о дальних поворотах.</p>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="rollout">Длина роллаута</label>
+                  <span class="param-value"><span class="value-field"><input id="rollout" value="2048"><span class="unit">шагов</span></span></span>
+                  <input class="range param-range" type="range" min="256" max="8192" step="256" value="2048" data-fmt="int" aria-label="Длина роллаута">
+                  <p class="param-hint">Сколько шагов опыта собрать перед обновлением сети.</p>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="copies">Машинок</label>
+                  <span class="param-value"><span class="value-field"><input id="copies" value="32"><span class="unit">копий</span></span></span>
+                  <input class="range param-range" type="range" min="1" max="128" step="1" value="32" data-fmt="int" aria-label="Машинок">
+                  <p class="param-hint">Копии одной сети едут параллельно; разбитые сразу встают на старт.</p>
+                </div>
+              </div>
+            </details>
+
+            <details class="group" open>
+              <summary><svg class="icon chev"><use href="#i-chevron-right"/></svg>Оптимизация<span class="muted">4 параметра</span><span class="right"><span class="tag tag-err"><svg class="icon"><use href="#i-triangle-alert"/></svg>1 ошибка</span></span></summary>
+              <div class="group-body">
+                <div class="param">
+                  <label class="param-label" for="epochs">Эпох на роллаут</label>
+                  <span class="param-value"><div class="stepper"><button aria-label="Меньше"><svg class="icon"><use href="#i-minus"/></svg></button><output id="epochs">10</output><button aria-label="Больше"><svg class="icon"><use href="#i-plus"/></svg></button></div></span>
+                  <p class="param-hint">Сколько раз пройти по собранному опыту.</p>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="batch">Мини-батч</label>
+                  <span class="param-value"><span class="value-field" style="border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-soft)"><input id="batch" value="4096" aria-invalid="true" aria-describedby="batch-err"><span class="unit">шагов</span></span></span>
+                  <p class="field-error" id="batch-err" style="grid-column: 1 / -1"><svg class="icon"><use href="#i-triangle-alert"/></svg>Не больше длины роллаута — уменьшите до 2048 или меньше.</p>
+                </div>
+                <div class="param">
+                  <label class="param-label" for="clip">Клип ε <span class="help" title="Насколько сильно политика может измениться за одно обновление"><svg class="icon"><use href="#i-info"/></svg></span></label>
+                  <span class="param-value"><span class="value-field"><input id="clip" value="0,20"></span></span>
+                  <input class="range param-range" type="range" min="0.05" max="0.5" step="0.01" value="0.2" aria-label="Клип">
+                </div>
+                <div class="param">
+                  <label class="param-label" for="gae">GAE λ <span class="help" title="Сглаживание оценки преимущества: баланс шума и смещения"><svg class="icon"><use href="#i-info"/></svg></span></label>
+                  <span class="param-value"><span class="value-field"><input id="gae" value="0,95"></span></span>
+                  <input class="range param-range" type="range" min="0.8" max="1" step="0.01" value="0.95" aria-label="GAE λ">
+                </div>
+              </div>
+            </details>
+
+            <details class="group">
+              <summary><svg class="icon chev"><use href="#i-chevron-right"/></svg>Исследование и регуляризация<span class="muted">энтропия 0,01 · ценность 0,5 · σ 0,6</span><span class="right"><span class="tag">по умолчанию</span></span></summary>
+            </details>
+          </section>
+
+          <section class="card form-section" id="s-net" aria-labelledby="h-net">
+            <header><h2 class="section-title" id="h-net">Сеть</h2><p>Что машинка видит, как думает и чем управляет.</p><span class="head-spacer"></span><a class="btn btn-sm" href="network-editor.html"><svg class="icon"><use href="#i-network"/></svg>Редактор на графе</a></header>
+            <h3 class="subhead">Лучи дальномера <span class="faint">· углы к курсу</span></h3>
+            <div class="chips">
+              <button class="chip" aria-pressed="true"><span class="mono">−90°</span><svg class="icon"><use href="#i-x"/></svg></button>
+              <button class="chip" aria-pressed="true"><span class="mono">−30°</span><svg class="icon"><use href="#i-x"/></svg></button>
+              <button class="chip" aria-pressed="true"><span class="mono">0°</span><svg class="icon"><use href="#i-x"/></svg></button>
+              <button class="chip" aria-pressed="true"><span class="mono">30°</span><svg class="icon"><use href="#i-x"/></svg></button>
+              <button class="chip" aria-pressed="true"><span class="mono">90°</span><svg class="icon"><use href="#i-x"/></svg></button>
+              <button class="chip chip-dashed"><svg class="icon"><use href="#i-plus"/></svg>Луч</button>
+            </div>
+            <h3 class="subhead">Датчики</h3>
+            <div class="chips">
+              <button class="chip" aria-pressed="true"><svg class="icon"><use href="#i-check"/></svg>Скорость</button>
+              <button class="chip" aria-pressed="true"><svg class="icon"><use href="#i-check"/></svg>Боковое скольжение</button>
+              <button class="chip" aria-pressed="true"><svg class="icon"><use href="#i-check"/></svg>Скорость поворота</button>
+              <button class="chip" aria-pressed="false">Ускорение</button>
+              <button class="chip" aria-pressed="false">Угол колёс</button>
+            </div>
+            <h3 class="subhead">Слои</h3>
+            <div class="layers-strip">
+              <div class="layer-box fixed"><span class="eyebrow">Входы</span><span class="count">8</span></div>
+              <svg class="icon layer-arrow"><use href="#i-arrow-right"/></svg>
+              <div class="layer-box"><span class="eyebrow">Скрытый 1</span><div class="stepper"><button aria-label="Меньше нейронов"><svg class="icon"><use href="#i-minus"/></svg></button><output>6</output><button aria-label="Больше нейронов"><svg class="icon"><use href="#i-plus"/></svg></button></div></div>
+              <svg class="icon layer-arrow"><use href="#i-arrow-right"/></svg>
+              <div class="layer-box"><span class="eyebrow">Скрытый 2</span><div class="stepper"><button aria-label="Меньше нейронов"><svg class="icon"><use href="#i-minus"/></svg></button><output>5</output><button aria-label="Больше нейронов"><svg class="icon"><use href="#i-plus"/></svg></button></div></div>
+              <button class="layer-add"><svg class="icon"><use href="#i-plus"/></svg>Слой</button>
+              <svg class="icon layer-arrow"><use href="#i-arrow-right"/></svg>
+              <div class="layer-box fixed"><span class="eyebrow">Выходы</span><span class="count">2</span></div>
+            </div>
+            <h3 class="subhead">Выходы</h3>
+            <div class="chips">
+              <span class="chip is-locked" title="Без руля машинка не повернёт"><svg class="icon"><use href="#i-lock"/></svg>Руль</span>
+              <div class="seg seg-sm" data-seg role="group" aria-label="Газ и тормоз">
+                <button aria-pressed="true">Газ одним выходом</button><button aria-pressed="false">Газ и тормоз раздельно</button>
+              </div>
+              <button class="chip" aria-pressed="false"><svg class="icon"><use href="#i-zap"/></svg>Буст</button>
+            </div>
+            <h3 class="subhead">Активация</h3>
+            <div class="chips" style="align-items:center; gap: 12px">
+              <div class="seg seg-sm seg-mono" data-seg role="group" aria-label="Активация"><button aria-pressed="true">tanh</button><button aria-pressed="false">relu</button><button aria-pressed="false">sigmoid</button></div>
+              <span class="field-hint">гладкая, от −1 до 1</span>
+            </div>
+          </section>
+
+          <section class="card form-section" id="s-reward" aria-labelledby="h-reward">
+            <header><h2 class="section-title" id="h-reward">Награда</h2><p>За что машинку хвалить. Минус — штраф, ноль — не учитывать.</p></header>
+            <div class="seg" data-seg role="group" aria-label="Профиль награды" style="margin-bottom: 14px">
+              <button aria-pressed="false">Сбалансированный</button><button aria-pressed="false">Гонщик</button><button aria-pressed="true">Осторожный</button><button aria-pressed="false">Свой</button>
+            </div>
+            <div class="reward-bar" aria-hidden="true"><i style="flex:1;background:var(--run-1)"></i><i style="flex:.2;background:var(--run-5)"></i><i style="flex:.5;background:var(--run-3)"></i><i style="flex:.3;background:var(--run-4)"></i></div>
+            <div class="reward-legend" style="margin-bottom: 6px"><span><i style="background:var(--run-1)"></i>прогресс 50 %</span><span><i style="background:var(--run-5)"></i>выживание 10 %</span><span><i style="background:var(--run-3)"></i>центр трассы 25 %</span><span><i style="background:var(--run-4)"></i>плавность 15 %</span></div>
+            <div class="group-body" style="padding: 0; border: 0">
+              <div class="param param-compact"><span class="param-label">Прогресс</span><span class="param-value"><span class="value-field"><input value="1,00" aria-label="Прогресс"></span></span><input class="range param-range" type="range" min="-1" max="2" step="0.05" value="1" aria-label="Прогресс"></div>
+              <div class="param param-compact"><span class="param-label">Быстрый круг</span><span class="param-value"><span class="value-field"><input value="0" aria-label="Быстрый круг"></span></span><input class="range param-range" type="range" min="-1" max="2" step="0.05" value="0" aria-label="Быстрый круг"></div>
+              <div class="param param-compact"><span class="param-label">Средняя скорость</span><span class="param-value"><span class="value-field"><input value="0" aria-label="Средняя скорость"></span></span><input class="range param-range" type="range" min="-1" max="2" step="0.05" value="0" aria-label="Средняя скорость"></div>
+              <div class="param param-compact"><span class="param-label">Выживание</span><span class="param-value"><span class="value-field"><input value="0,20" aria-label="Выживание"></span></span><input class="range param-range" type="range" min="-1" max="2" step="0.05" value="0.2" aria-label="Выживание"></div>
+              <div class="param param-compact"><span class="param-label">Центр трассы</span><span class="param-value"><span class="value-field"><input value="0,50" aria-label="Центр трассы"></span></span><input class="range param-range" type="range" min="-1" max="2" step="0.05" value="0.5" aria-label="Центр трассы"></div>
+              <div class="param param-compact"><span class="param-label">Плавность руля</span><span class="param-value"><span class="value-field"><input value="0,30" aria-label="Плавность руля"></span></span><input class="range param-range" type="range" min="-1" max="2" step="0.05" value="0.3" aria-label="Плавность руля"></div>
+            </div>
+            <div class="callout" style="margin-top: 12px"><svg class="icon"><use href="#i-info"/></svg><span>У PPO награда начисляется на каждом шаге из тех же слагаемых, у эволюции — один раз за заезд.</span></div>
+          </section>
+
+          <section class="card form-section" id="s-track" aria-labelledby="h-track">
+            <header><h2 class="section-title" id="h-track">Трасса и лимиты</h2></header>
+            <div class="track-pick" role="radiogroup" aria-labelledby="h-track">
+              <button class="track-card" role="radio" aria-checked="false"><canvas data-thumb="oval"></canvas><b>Овал</b><span>oval · 303 м</span></button>
+              <button class="track-card" role="radio" aria-checked="false"><canvas data-thumb="wavy"></canvas><b>Волны</b><span>wavy · 390 м</span></button>
+              <button class="track-card" role="radio" aria-checked="true"><canvas data-thumb="circuit"></canvas><b>Гран-при</b><span>circuit · 612 м</span></button>
+              <a class="track-card add" href="track-editor.html"><svg class="icon"><use href="#i-pencil"/></svg><b>Нарисовать свою</b></a>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px">
+              <div class="field"><label class="field-label" for="steps">Лимит шагов</label><input class="input mono" id="steps" value="1500"><span class="field-hint">50–5000 шагов на заезд</span></div>
+              <div class="field"><label class="field-label" for="iters">Остановить после</label><input class="input mono" id="iters" placeholder="не останавливать"><span class="field-hint">итераций; пусто — до кнопки «Стоп»</span></div>
+              <div class="field"><label class="field-label" for="seed">Seed</label><div style="display:flex; gap:6px"><input class="input mono" id="seed" value="7" style="flex:1"><button class="btn btn-icon" aria-label="Случайный seed" title="Случайный seed"><svg class="icon"><use href="#i-rotate-ccw"/></svg></button></div><span class="field-hint">тот же seed — тот же ход обучения</span></div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="preview" aria-label="Сводка запуска">
+          <section class="board">
+            <header class="card-head"><h2 class="card-title">Сеть</h2><span class="tag mono">101 вес</span></header>
+            <svg class="net" id="net" role="img" aria-label="Схема сети 8 → 6 → 5 → 2"></svg>
+          </section>
+          <section class="card">
+            <dl class="summary-list">
+              <dt>Обучатель</dt><dd>PPO</dd>
+              <dt>Сеть</dt><dd class="mono">8 → 6 → 5 → 2</dd>
+              <dt>Награда</dt><dd>Осторожный</dd>
+              <dt>Трасса</dt><dd>Гран-при · 612 м</dd>
+              <dt>Машинок</dt><dd class="mono">32</dd>
+            </dl>
+            <div class="card-foot" style="flex-direction: column; align-items: stretch">
+              <div class="callout callout-err"><svg class="icon"><use href="#i-triangle-alert"/></svg><span><strong>Мини-батч</strong> больше роллаута. <a href="#batch">Исправить</a></span></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <footer class="sticky-foot">
+      <div class="field" style="grid-auto-flow: column; align-items: center; gap: 10px">
+        <label class="field-label" for="name">Название</label>
+        <input class="input" id="name" value="PPO · осторожный" maxlength="40" style="width: 240px">
+      </div>
+      <span class="head-spacer"></span>
+      <span class="faint hide-narrow" style="font-size: 13px">Изменено 2 параметра шаблона</span>
+      <a class="btn btn-ghost btn-lg" href="lab.html">Отмена</a>
+      <button class="btn btn-primary btn-lg" aria-disabled="true" title="Исправьте ошибку в разделе «Оптимизация»"><svg class="icon"><use href="#i-play"/></svg>Запустить<span class="kbd" style="background: rgba(0,0,0,.12); border-color: rgba(0,0,0,.18); color: inherit">Ctrl Enter</span></button>
+    </footer>
+  </main>
+</div>
+<script src="assets/tracks.js"></script>
+<script src="assets/proto.js"></script>
+<script>
+  function glyph(svg) {
+    const sizes = svg.dataset.glyph.split(',').map(Number);
+    const W = svg.clientWidth, H = svg.clientHeight;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const sel = svg.closest('[aria-checked="true"]');
+    const col = sel ? Proto.css('--accent') : Proto.css('--text-3');
+    const xs = sizes.map((_, i) => 8 + (i * (W - 16)) / (sizes.length - 1));
+    const ys = sizes.map((n) => Array.from({ length: n }, (_, j) => H / 2 + (j - (n - 1) / 2) * Math.min(7, (H - 8) / Math.max(1, n - 1))));
+    let html = '';
+    for (let l = 0; l < sizes.length - 1; l += 1) for (const a of ys[l]) for (const b of ys[l + 1]) html += `<line x1="${xs[l]}" y1="${a}" x2="${xs[l + 1]}" y2="${b}" stroke="${col}" stroke-opacity=".22" stroke-width="1"/>`;
+    sizes.forEach((_, l) => ys[l].forEach((y) => (html += `<circle cx="${xs[l]}" cy="${y}" r="2.6" fill="${col}"/>`)));
+    svg.innerHTML = html;
+  }
+  window.render = function () {
+    document.querySelectorAll('[data-glyph]').forEach(glyph);
+    document.querySelectorAll('[data-thumb]').forEach((c) => Proto.drawScene(c, { track: c.dataset.thumb, cars: 0, pad: 10, leader: false }));
+    Proto.drawNetwork(document.getElementById('net'), { inputs: ['−90°', '−30°', '0°', '30°', '90°', 'Скор.', 'Бок.', 'Угл.'], hidden: [6, 5], outputs: ['Руль', 'Газ'], seed: 8, small: true });
+  };
+</script>
+</body>
+</html>

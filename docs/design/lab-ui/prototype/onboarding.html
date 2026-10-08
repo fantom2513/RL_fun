@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Первый запуск — Лаборатория</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body>
+<script src="assets/icons.js"></script>
+<div class="shell">
+  <nav class="rail" aria-label="Разделы">
+    <a class="rail-brand" href="index.html" aria-label="Лаборатория: на главную">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="#4f616e"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="#fffffc" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="#d62e3e" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
+    </a>
+    <a class="rail-item" href="lab.html" aria-current="page"><svg class="icon"><use href="#i-flask-conical"/></svg><span>Лаборатория</span></a>
+    <a class="rail-item" href="track-editor.html"><svg class="icon"><use href="#i-route"/></svg><span>Трассы</span></a>
+    <a class="rail-item" href="challenges.html"><svg class="icon"><use href="#i-trophy"/></svg><span>Челленджи</span></a>
+    <a class="rail-item" href="demo.html"><svg class="icon"><use href="#i-warehouse"/></svg><span>Гараж</span></a>
+    <div class="rail-spacer"></div>
+    <a class="rail-item" href="#settings"><svg class="icon"><use href="#i-settings"/></svg><span>Настройки</span></a>
+  </nav>
+
+  <main class="screen" id="main">
+    <header class="runbar">
+      <span class="muted" style="padding-left: 6px">Запусков пока нет</span>
+      <div class="transport"><a class="btn btn-primary" href="new-run.html"><svg class="icon"><use href="#i-plus"/></svg>Новый запуск</a></div>
+    </header>
+    <div class="lab-body" style="grid-template-areas: 'stage stage' 'curves curves'">
+      <div class="stage-wrap">
+        <section class="stage" aria-label="Трасса без машинок">
+          <canvas id="stage"></canvas>
+          <div style="position:absolute; inset:0; display:grid; place-items:center; z-index: 5">
+            <div class="glass empty" style="padding: 28px 32px; max-width: 460px">
+              <h2 style="color:#fff">Трасса ждёт машинок</h2>
+              <p style="color: rgba(242,246,248,.75)">Создайте запуск: выберите шаблон сети и обучатель. Первые круги появятся через пару минут.</p>
+              <div style="display:flex; gap: 8px; margin-top: 4px">
+                <a class="btn btn-primary btn-lg" href="new-run.html"><svg class="icon"><use href="#i-plus"/></svg>Новый запуск</a>
+                <a class="btn btn-lg" href="challenges.html" style="--btn-bg: rgba(255,255,255,.1); --btn-fg: #fff; --btn-border: rgba(255,255,255,.18)">Челленджи</a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <section class="card curves" style="grid-area: curves">
+        <header class="card-head"><h2 class="card-title">Кривые обучения</h2></header>
+        <div style="flex:1; display:grid; place-items:center; color: var(--text-3); font-size: 13px; border-top: 1px dashed var(--border); margin: 0 16px 16px">Здесь появятся кривые всех запусков — по одной линии на запуск</div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="scrim" id="welcome" role="presentation">
+  <div class="dialog onb" role="dialog" aria-modal="true" aria-labelledby="onb-title" style="width: min(860px, 100%)">
+    <div class="onb-art"><canvas id="art"></canvas></div>
+    <div class="onb-main">
+      <div style="display:flex; align-items:center; gap: 10px"><span class="eyebrow">Шаг 1 из 3</span><div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div></div>
+      <h1 id="onb-title">Научите машинку ездить самой</h1>
+      <p class="lead">Вы собираете нейросеть, машинки учатся проходить трассу, а вы смотрите, как каждая настройка меняет их поведение.</p>
+      <ol class="onb-steps">
+        <li class="onb-step"><span class="n">1</span><span><b>Выберите шаблон сети</b><span>или соберите свою из лучей, датчиков и слоёв</span></span></li>
+        <li class="onb-step"><span class="n">2</span><span><b>Запустите обучение</b><span>эволюцией или PPO — можно оба сразу и сравнить</span></span></li>
+        <li class="onb-step"><span class="n">3</span><span><b>Проверьте лучшую сеть</b><span>на незнакомой трассе или в челлендже со звёздами</span></span></li>
+      </ol>
+      <div class="onb-pick" role="radiogroup" aria-label="Шаблон для первого запуска">
+        <button class="tpl-card" role="radio" aria-checked="true"><b>Простая</b><span>самый быстрый старт, ≈ 2 мин до круга</span></button>
+        <button class="tpl-card" role="radio" aria-checked="false"><b>Осторожная</b><span>реже вылетает, медленнее едет</span></button>
+        <button class="tpl-card" role="radio" aria-checked="false"><b>Гонщик</b><span>быстро и рискованно</span></button>
+      </div>
+      <div class="onb-foot">
+        <label class="switch" style=" font-size: 13px; color: var(--text-2)"><input type="checkbox"><span class="track"></span>Звуки</label>
+        <span class="head-spacer"></span>
+        <button class="btn btn-ghost">Пропустить</button>
+        <a class="btn btn-primary btn-lg" href="lab.html"><svg class="icon"><use href="#i-play"/></svg>Запустить первую эволюцию</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="assets/tracks.js"></script>
+<script src="assets/proto.js"></script>
+<script>
+  if (Proto.params.get('dialog') === '0') document.getElementById('welcome').remove();
+  window.render = function () {
+    Proto.drawScene(document.getElementById('stage'), { track: 'circuit', cars: 0, leader: false, pad: 60 });
+    const art = document.getElementById('art');
+    if (art) Proto.drawScene(art, { track: 'wavy', cars: 40, crashed: 5, progress: 0.42, spread: 70, follow: 1.9, seed: 9, rays: [-60, -20, 20, 60], pad: 10 });
+  };
+</script>
+</body>
+</html>
