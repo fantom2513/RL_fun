@@ -1,4 +1,5 @@
 import argparse
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 from uuid import uuid4
@@ -33,6 +34,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json_atomic(run_dir / "metadata.json", collect_metadata(seed))
         rewards = []
         env = make_environment(config.environment)
+        rollout_error: BaseException | None = None
         try:
             policy = RandomPolicy()
             with JsonlMetricSink(run_dir / "metrics.jsonl") as metrics:
@@ -46,8 +48,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                         episode_index + 1,
                         {"episode/reward": result.reward, "episode/length": float(result.length)},
                     )
+        except BaseException as error:
+            rollout_error = error
+            raise
         finally:
-            env.close()
+            try:
+                env.close()
+            except Exception as cleanup_error:
+                if rollout_error is None:
+                    raise ValueError(
+                        f"Не удалось закрыть среду: {cleanup_error}",
+                    ) from cleanup_error
+                print(f"Не удалось закрыть среду: {cleanup_error}", file=sys.stderr)
     except KeyboardInterrupt:
         return 130
     except (OSError, KeyError, TypeError, ValueError) as error:
