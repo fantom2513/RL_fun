@@ -74,10 +74,10 @@ def _run_random(
             max_episode_steps=total_steps - completed_steps,
         )
         completed_steps += episode.length
+        cumulative_reward += episode.reward
         if episode.reached_safety_limit:
             continue
         completed_episodes += 1
-        cumulative_reward += episode.reward
         metrics.log(
             completed_steps,
             {
@@ -107,9 +107,9 @@ def _run_bandit_greedy(
     metrics: MetricSink,
     parameters: Mapping[str, JSONValue],
 ) -> AlgorithmResult:
-    env.reset(seed=seed)
     bandit = _require_bandit_environment(env, "bandit_greedy")
     _reject_unknown_parameters(parameters, set())
+    env.reset(seed=seed)
     return _bandit_result(run_greedy(bandit, total_steps, rng, metrics))
 
 
@@ -121,9 +121,9 @@ def _run_bandit_epsilon(
     metrics: MetricSink,
     parameters: Mapping[str, JSONValue],
 ) -> AlgorithmResult:
-    env.reset(seed=seed)
     bandit = _require_bandit_environment(env, "bandit_epsilon")
     epsilon = _require_epsilon(parameters)
+    env.reset(seed=seed)
     return _bandit_result(run_epsilon_greedy(bandit, total_steps, rng, metrics, epsilon))
 
 
@@ -137,19 +137,32 @@ def _bandit_result(outcome: BanditOutcome) -> AlgorithmResult:
     )
 
 
-def _require_bandit_environment(env: gym.Env, algorithm_id: str) -> gym.Env:
+def _require_bandit_environment(
+    env: gym.Env, algorithm_id: str, environment_id: str | None = None,
+) -> gym.Env:
     unwrapped = env.unwrapped
-    if not isinstance(unwrapped, StationaryBanditEnv):
-        raise ValueError(f"algorithm {algorithm_id!r} requires a StationaryBanditEnv")
+    identifier = environment_id or (
+        env.spec.id if env.spec is not None else type(unwrapped).__name__
+    )
+    incompatible = not isinstance(unwrapped, StationaryBanditEnv)
+    current = env
+    while isinstance(current, gym.Wrapper):
+        incompatible |= (
+            isinstance(current, gym.ActionWrapper)
+            or current.action_space != unwrapped.action_space
+        )
+        current = current.env
+    if incompatible:
+        raise ValueError(
+            f"algorithm {algorithm_id!r} is incompatible with environment {identifier!r}; "
+            "requires a StationaryBanditEnv with unchanged actions"
+        )
     return env
 
 
 def _validate_bandit(algorithm_id: str) -> AlgorithmValidator:
     def validate(env: gym.Env, environment_id: str) -> None:
-        if not isinstance(env.unwrapped, StationaryBanditEnv):
-            raise ValueError(
-                f"algorithm {algorithm_id!r} is incompatible with environment {environment_id!r}"
-            )
+        _require_bandit_environment(env, algorithm_id, environment_id)
 
     return validate
 

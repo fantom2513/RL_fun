@@ -31,6 +31,8 @@ def run_once(
     write_json_atomic(run_dir / "metadata.json", collect_metadata(seed))
     started = time.perf_counter()
     env: gym.Env | None = None
+    error: str | None = None
+    interruption: KeyboardInterrupt | None = None
     try:
         env = make_environment(config.environment)
         rng = np.random.default_rng(seed)
@@ -45,13 +47,27 @@ def run_once(
         )
     except Exception:
         error = traceback.format_exc()
-        (run_dir / "error.txt").write_text(error, encoding="utf-8")
-        summary = RunSummary(
-            status="failure", seed=seed, run_dir=run_dir, metrics={},
-            elapsed_seconds=time.perf_counter() - started, error=error,
-        )
+    except KeyboardInterrupt as interrupt:
+        interruption = interrupt
+        error = traceback.format_exc()
     finally:
         if env is not None:
-            env.close()
+            try:
+                env.close()
+            except Exception:
+                cleanup_error = traceback.format_exc()
+                error = (
+                    f"{error}\nEnvironment cleanup failed:\n{cleanup_error}"
+                    if error else cleanup_error
+                )
+    if error is not None:
+        (run_dir / "error.txt").write_text(error, encoding="utf-8")
+        summary = RunSummary(
+            status="cancelled" if interruption is not None else "failure",
+            seed=seed, run_dir=run_dir, metrics={},
+            elapsed_seconds=time.perf_counter() - started, error=error,
+        )
     write_json_atomic(run_dir / "summary.json", summary.to_dict())
+    if interruption is not None:
+        raise interruption
     return summary
