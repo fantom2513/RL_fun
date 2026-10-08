@@ -8,8 +8,7 @@ class RunSummary:
     status: Literal["success", "failure", "cancelled"]
     seed: int
     run_dir: Path
-    cumulative_reward: float | None
-    cumulative_regret: float | None
+    metrics: dict[str, float]
     elapsed_seconds: float
     error: str | None = None
 
