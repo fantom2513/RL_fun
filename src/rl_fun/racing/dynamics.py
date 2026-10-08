@@ -26,6 +26,7 @@ class VehicleDynamics(Protocol):
 
     max_speed: float
     max_yaw_rate: float
+    acceleration: float
 
     def step(
         self, state: VehicleState, steer: float, throttle: float, dt: float
