@@ -24,6 +24,9 @@ CURB_WHITE = (235, 235, 235)
 START_LINE = (240, 240, 240)
 CAR = (240, 200, 40)
 CAR_NOSE = (200, 30, 30)
+CAR_DEAD = (95, 88, 60)
+CAR_DEAD_NOSE = (95, 45, 45)
+LEADER_OUTLINE = (255, 255, 255)
 RAY = (255, 255, 0)
 TEXT = (255, 255, 255)
 PANEL_BACKGROUND = (18, 18, 24)
@@ -72,28 +75,41 @@ class Renderer:
         lines: Sequence[str],
     ) -> np.ndarray | None:
         """Draw one frame. Returns an RGB array in `rgb_array` mode, otherwise None."""
-        self._canvas.fill(PANEL_BACKGROUND)
-        self._canvas.blit(self._background, (0, 0))
-        origin = self._to_screen((x, y))
-        for point in ray_points:
-            end = self._to_screen(point)
-            pygame.draw.line(self._canvas, RAY, origin, end, 1)
-            pygame.draw.circle(self._canvas, RAY, end, 3)
+        self._begin_frame()
+        self._draw_rays((x, y), ray_points)
         self._draw_car(x, y, heading)
-        for index, text in enumerate(lines):
-            self._canvas.blit(self._font.render(text, True, TEXT), (12, 10 + index * 24))
-        if self._panel is not None:
-            area = pygame.Rect(GAME_WIDTH, 0, self._panel.width, GAME_HEIGHT)
-            self._panel.draw(
-                self._canvas.subsurface(area), pygame.Rect(0, 0, area.width, area.height)
-            )
-        if self._mode == "human":
-            self._window.blit(self._canvas, (0, 0))
-            pygame.event.pump()
-            pygame.display.flip()
-            self._clock.tick(self._fps)
-            return None
-        return np.transpose(pygame.surfarray.array3d(self._canvas), (1, 0, 2))
+        self._draw_hud(lines)
+        return self._end_frame()
+
+    def draw_fleet(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        heading: np.ndarray,
+        alive: np.ndarray,
+        leader: int | None,
+        ray_points: np.ndarray | None,
+        lines: Sequence[str],
+    ) -> np.ndarray | None:
+        """Draw many cars: crashed ones muted, living ones bright, the leader outlined with rays.
+
+        Rays are drawn for the leader only; `ray_points` has shape (n_rays, 2) in world units.
+        """
+        self._begin_frame()
+        if leader is not None:
+            if ray_points is not None:
+                self._draw_rays((x[leader], y[leader]), ray_points)
+            self._draw_car(x[leader], y[leader], heading[leader], *_car_colors(alive[leader]))
+        # Crashed cars first so living ones end up on top of them.
+        for index in np.argsort(alive, kind="stable"):
+            if index != leader:
+                self._draw_car(x[index], y[index], heading[index], *_car_colors(alive[index]))
+        if leader is not None:
+            # The contour is drawn last so the leader stays marked even under overlapping cars.
+            corners = self._car_corners(x[leader], y[leader], heading[leader])
+            pygame.draw.polygon(self._canvas, LEADER_OUTLINE, corners, 2)
+        self._draw_hud(lines)
+        return self._end_frame()
 
     def close(self) -> None:
         """Release pygame resources."""
@@ -140,7 +156,40 @@ class Renderer:
         )
         return surface
 
-    def _draw_car(self, x: float, y: float, heading: float) -> None:
+    def _begin_frame(self) -> None:
+        self._canvas.fill(PANEL_BACKGROUND)
+        self._canvas.blit(self._background, (0, 0))
+
+    def _draw_rays(self, origin_world: tuple[float, float], ray_points: np.ndarray) -> None:
+        origin = self._to_screen(origin_world)
+        for point in ray_points:
+            end = self._to_screen(point)
+            pygame.draw.line(self._canvas, RAY, origin, end, 1)
+            pygame.draw.circle(self._canvas, RAY, end, 3)
+
+    def _draw_hud(self, lines: Sequence[str]) -> None:
+        for index, text in enumerate(lines):
+            self._canvas.blit(self._font.render(text, True, TEXT), (12, 10 + index * 24))
+
+    def _end_frame(self) -> np.ndarray | None:
+        self._draw_side_panel()
+        if self._mode == "human":
+            self._window.blit(self._canvas, (0, 0))
+            pygame.event.pump()
+            pygame.display.flip()
+            self._clock.tick(self._fps)
+            return None
+        return np.transpose(pygame.surfarray.array3d(self._canvas), (1, 0, 2))
+
+    def _draw_side_panel(self) -> None:
+        if self._panel is not None:
+            area = pygame.Rect(GAME_WIDTH, 0, self._panel.width, GAME_HEIGHT)
+            self._panel.draw(
+                self._canvas.subsurface(area), pygame.Rect(0, 0, area.width, area.height)
+            )
+
+    def _car_corners(self, x: float, y: float, heading: float) -> list[tuple[float, float]]:
+        """Screen-space corners of a car body; the first two are the nose edge."""
         cos, sin = math.cos(heading), math.sin(heading)
         half_length, half_width = CAR_LENGTH / 2, CAR_WIDTH / 2
         corners = [
@@ -149,9 +198,26 @@ class Renderer:
             (-half_length, -half_width),
             (-half_length, half_width),
         ]
-        body = [
+        return [
             self._to_screen((x + cx * cos - cy * sin, y + cx * sin + cy * cos))
             for cx, cy in corners
         ]
-        pygame.draw.polygon(self._canvas, CAR, body)
-        pygame.draw.line(self._canvas, CAR_NOSE, body[0], body[1], 3)
+
+    def _draw_car(
+        self,
+        x: float,
+        y: float,
+        heading: float,
+        body_color: tuple[int, int, int] = CAR,
+        nose_color: tuple[int, int, int] = CAR_NOSE,
+    ) -> None:
+        body = self._car_corners(x, y, heading)
+        pygame.draw.polygon(self._canvas, body_color, body)
+        pygame.draw.line(self._canvas, nose_color, body[0], body[1], 3)
+
+
+def _car_colors(alive: bool) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    """Body and nose colors: bright for living cars, muted for crashed or finished ones."""
+    if alive:
+        return CAR, CAR_NOSE
+    return CAR_DEAD, CAR_DEAD_NOSE
