@@ -6,6 +6,7 @@ import pytest
 from rl_fun.lab.config import RunConfig
 from rl_fun.racing.fitness import PRESETS, FitnessSpec
 from rl_fun.racing.model_spec import ModelSpec
+from rl_fun.racing.track import TRACKS_DIR, available_tracks
 
 CYRILLIC = re.compile(r"[А-Яа-яЁё]")
 
@@ -150,6 +151,43 @@ def test_out_of_range_values_raise_value_error_naming_field(data, field):
     # Assert
     assert field in str(error.value)
     assert CYRILLIC.search(str(error.value))
+
+
+@pytest.mark.parametrize(
+    "track",
+    [
+        "C:/x/y.json",
+        "../secret",
+        "oval.json",
+        str(TRACKS_DIR / "oval.json"),
+    ],
+)
+def test_track_path_is_rejected_and_message_lists_built_in_names(track):
+    # Arrange
+    data = {"track": track}
+
+    # Act
+    with pytest.raises(ValueError) as error:
+        RunConfig.from_dict(data)
+
+    # Assert
+    message = str(error.value)
+    assert "track" in message
+    assert CYRILLIC.search(message)
+    for name in available_tracks():
+        assert name in message
+
+
+@pytest.mark.parametrize("track", available_tracks())
+def test_built_in_track_names_are_accepted(track):
+    # Arrange
+    data = {"track": track}
+
+    # Act
+    config = RunConfig.from_dict(data)
+
+    # Assert
+    assert config.track == track
 
 
 def test_boundary_values_are_accepted():
