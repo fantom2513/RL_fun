@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from rl_fun.lab.manager import RunManager
 
 from . import manager_targets as targets
