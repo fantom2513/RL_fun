@@ -81,3 +81,14 @@ def test_driving_beats_standing_still():
 
     assert result.progress[0] > result.progress[1]
     assert result.best_index == 0
+
+
+def test_result_carries_driving_stats():
+    fleet = RacingFleet(2, max_steps=30)
+
+    result = run_generation(fleet, np.zeros((2, 1)), forward_straight)
+
+    assert result.max_steps == 30
+    assert result.mean_speed.shape == (2,) and result.mean_speed.min() > 0
+    assert result.centering.shape == (2,)
+    assert result.smoothness.shape == (2,)
