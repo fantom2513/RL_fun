@@ -232,7 +232,23 @@ def test_static_files_in_nested_subdirectories_are_served(server: LabServer) -> 
     assert (status, headers["content-type"].split(";")[0], body) == (200, "text/css", b"a{}")
 
 
-@pytest.mark.parametrize("name", ["_probe_test.md", "_probe_test.txt", "_probe_test.py"])
+@pytest.mark.parametrize(
+    ("path", "content_type"),
+    [
+        ("/static/css/tokens.css", "text/css"),
+        ("/static/css/base.css", "text/css"),
+        ("/static/icons.svg", "image/svg+xml"),
+        ("/static/fonts/onest-cyrillic-wght-normal.woff2", "font/woff2"),
+    ],
+)
+def test_design_system_assets_are_served(server: LabServer, path: str, content_type: str) -> None:
+    status, headers, body = request(server, "GET", path)
+
+    assert (status, headers["content-type"].split(";")[0]) == (200, content_type)
+    assert body
+
+
+@pytest.mark.parametrize("name", ["_probe_test.md","_probe_test.txt", "_probe_test.py"])
 def test_static_files_of_unlisted_types_are_404(server: LabServer, name: str) -> None:
     assert _probe(server, name, b"secret")[0] == 404
 
