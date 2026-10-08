@@ -1,0 +1,298 @@
+/* Лаборатория — design tokens (DESIGN.md §5–6, §11.2).
+   The only file with colour literals. Dark scheme is the default; the light scheme applies to
+   :root[data-theme="light"] and, without a manual choice, to a system that prefers light.
+   World colours (track, cars, network board) are identical in both schemes. */
+
+@layer tokens, base, layout, components, screens, utilities;
+
+@layer tokens {
+  :root {
+    color-scheme: dark;
+
+    /* type */
+    --font-display: "Unbounded Variable", "Segoe UI", system-ui, sans-serif;
+    --font-ui: "Onest Variable", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono Variable", "Cascadia Mono", Consolas, monospace;
+    --fs-display-xl: 40px;
+    --lh-display-xl: 44px;
+    --fs-display-l: 26px;
+    --lh-display-l: 32px;
+    --fs-hud: 20px;
+    --lh-hud: 24px;
+    --fs-title-l: 20px;
+    --lh-title-l: 28px;
+    --fs-title-m: 16px;
+    --lh-title-m: 24px;
+    --fs-body: 14px;
+    --lh-body: 20px;
+    --fs-body-s: 13px;
+    --lh-body-s: 18px;
+    --fs-label: 12px;
+    --lh-label: 16px;
+    --fs-scale: 11px;
+    --lh-scale: 14px;
+
+    /* space (4 px grid) */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-8: 32px;
+    --sp-10: 40px;
+    --sp-12: 48px;
+
+    /* sizes */
+    --rail-w: 96px;
+    --runbar-h: 60px;
+    --side-w: 392px;
+    --curves-h: 212px;
+    --control-h: 32px;
+    --control-h-sm: 28px;
+    --control-h-lg: 40px;
+    --icon-s: 16px;
+    --icon-m: 20px;
+    --icon-l: 22px;
+    --focus-ring: 2px;
+
+    /* radii */
+    --r-xs: 4px;
+    --r-s: 6px;
+    --r-m: 10px;
+    --r-l: 14px;
+    --r-pill: 999px;
+
+    /* motion */
+    --t-fast: 120ms;
+    --t-base: 180ms;
+    --t-panel: 240ms;
+    --t-screen: 320ms;
+    --t-pulse: 1.6s;
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
+    --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+
+    /* z */
+    --z-hud: 10;
+    --z-sticky: 20;
+    --z-popover: 40;
+    --z-dialog: 60;
+    --z-toast: 80;
+
+    /* world: identical in both schemes, same values as racing/style.py */
+    --scene-grass: #7a8e9c;
+    --scene-road: #4f616e;
+    --scene-line: #fffffc;
+    --scene-curb: #d62e3e;
+    --scene-curb-white: #fafaf8;
+    --scene-start-dark: #181a20;
+    --car-body: #e2e6eb;
+    --car-wing: #3c424c;
+    --car-wheel: #12141a;
+    --car-cockpit: #282e3a;
+    --car-crashed: #94a0ac;
+    --check-error: #f0566a;
+    --check-warning: #f5a524;
+
+    /* network board ("lightboard"), same hues as the pygame panel */
+    --net-node-ring: #3c4a52;
+    --net-node-neutral: #eceef0;
+    --net-node-pos: #5aff50;
+    --net-node-neg: #fa3e52;
+    --net-edge-pos: #28c83c;
+    --net-edge-neg: #d63246;
+    --board-text: #3c424c;
+    --board-raised: #ffffff;
+    --board-sunken: #f6f8fa;
+    --board-hover: #f1f4f6;
+    --board-tint: rgba(60, 74, 82, 0.08);
+    --board-danger: #c42639;
+    --board-shadow: 0 12px 32px rgba(21, 32, 42, 0.18), 0 2px 6px rgba(21, 32, 42, 0.1);
+
+    /* glass panels over the world (same in both schemes) */
+    --hud-text: #f2f6f8;
+    --hud-text-2: rgba(242, 246, 248, 0.7);
+    --hud-text-strong: #ffffff;
+    --hud-border: rgba(255, 255, 255, 0.08);
+    --hud-divider: rgba(255, 255, 255, 0.1);
+    --hud-hover: rgba(255, 255, 255, 0.14);
+    --hud-raised: rgba(255, 255, 255, 0.16);
+    --hud-sunken: rgba(0, 0, 0, 0.25);
+    --hud-best-bg: rgba(176, 124, 255, 0.3);
+    --hud-best-text: #e6d6ff;
+    --hud-blur: 6px;
+
+    /* ---- dark scheme (default) ---- */
+    --bg: #10171d;
+    --surface-1: #172028;
+    --surface-2: #1e2932;
+    --surface-3: #27343f;
+    --surface-sunken: #0c1217;
+    --border: #2b3944;
+    --border-strong: #3d4e5b;
+    --border-input: #647b8b;
+    --text: #e8eef2;
+    --text-2: #a7b6c2;
+    --text-3: #8296a4;
+    --accent: #f2b33d;
+    --accent-hover: #f7c460;
+    --accent-press: #dca030;
+    --on-accent: #1a1406;
+    --accent-text: #f5c25a;
+    --accent-soft: rgba(242, 179, 61, 0.14);
+    --focus: #f5c25a;
+    --danger: #f0566a;
+    --danger-soft: rgba(240, 86, 106, 0.14);
+    --success: #4cd07d;
+    --success-soft: rgba(76, 208, 125, 0.14);
+    --warning: #f5a524;
+    --warning-soft: rgba(245, 165, 36, 0.14);
+    --info: #6cb6f5;
+    --info-soft: rgba(108, 182, 245, 0.14);
+    --best: #b07cff;
+    --best-soft: rgba(176, 124, 255, 0.18);
+    --star: #f7c04a;
+    --star-empty: #3a4955;
+    --hud-bg: rgba(16, 23, 29, 0.78);
+    --scrim: rgba(6, 10, 13, 0.62);
+    --board: #e3e9ed;
+    --board-muted: #5f6873;
+    --board-line: #c9d2d8;
+    --chart-grid: #26333d;
+    --chart-axis: #8296a4;
+    --run-1: #5db1f2;
+    --run-2: #ff9152;
+    --run-3: #3cc9b8;
+    --run-4: #f57db8;
+    --run-5: #b9d44a;
+    --run-6: #e0c77e;
+    --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Light scheme: the two blocks below must stay identical (a test compares them). */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #dfe6eb;
+    --surface-1: #f6f8fa;
+    --surface-2: #ffffff;
+    --surface-3: #e8eef2;
+    --surface-sunken: #d3dce2;
+    --border: #ccd6dd;
+    --border-strong: #aebdc8;
+    --border-input: #7f92a0;
+    --text: #15202a;
+    --text-2: #485a68;
+    --text-3: #5c6e7c;
+    --accent: #f2b33d;
+    --accent-hover: #f6c25e;
+    --accent-press: #e0a12e;
+    --on-accent: #1a1406;
+    --accent-text: #8a5a00;
+    --accent-soft: rgba(242, 179, 61, 0.22);
+    --focus: #a86b00;
+    --danger: #c42639;
+    --danger-soft: rgba(196, 38, 57, 0.1);
+    --success: #17783f;
+    --success-soft: rgba(23, 120, 63, 0.1);
+    --warning: #9a5b00;
+    --warning-soft: rgba(242, 160, 30, 0.16);
+    --info: #1a68b0;
+    --info-soft: rgba(26, 104, 176, 0.1);
+    --best: #7a3fe0;
+    --best-soft: rgba(122, 63, 224, 0.12);
+    --star: #e9a417;
+    --star-empty: #c3ced6;
+    --hud-bg: rgba(18, 27, 34, 0.74);
+    --scrim: rgba(21, 32, 42, 0.45);
+    --board: #ffffff;
+    --board-muted: #6e7782;
+    --board-line: #dde3e7;
+    --chart-grid: #dfe6eb;
+    --chart-axis: #5c6e7c;
+    --run-1: #1e7bc8;
+    --run-2: #d9601a;
+    --run-3: #0f8f80;
+    --run-4: #c93a86;
+    --run-5: #6a8a0e;
+    --run-6: #93782a;
+    --shadow-1: 0 1px 2px rgba(21, 32, 42, 0.1);
+    --shadow-2: 0 8px 24px rgba(21, 32, 42, 0.16), 0 2px 6px rgba(21, 32, 42, 0.08);
+    --shadow-3: 0 24px 64px rgba(21, 32, 42, 0.24), 0 4px 12px rgba(21, 32, 42, 0.1);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #dfe6eb;
+      --surface-1: #f6f8fa;
+      --surface-2: #ffffff;
+      --surface-3: #e8eef2;
+      --surface-sunken: #d3dce2;
+      --border: #ccd6dd;
+      --border-strong: #aebdc8;
+      --border-input: #7f92a0;
+      --text: #15202a;
+      --text-2: #485a68;
+      --text-3: #5c6e7c;
+      --accent: #f2b33d;
+      --accent-hover: #f6c25e;
+      --accent-press: #e0a12e;
+      --on-accent: #1a1406;
+      --accent-text: #8a5a00;
+      --accent-soft: rgba(242, 179, 61, 0.22);
+      --focus: #a86b00;
+      --danger: #c42639;
+      --danger-soft: rgba(196, 38, 57, 0.1);
+      --success: #17783f;
+      --success-soft: rgba(23, 120, 63, 0.1);
+      --warning: #9a5b00;
+      --warning-soft: rgba(242, 160, 30, 0.16);
+      --info: #1a68b0;
+      --info-soft: rgba(26, 104, 176, 0.1);
+      --best: #7a3fe0;
+      --best-soft: rgba(122, 63, 224, 0.12);
+      --star: #e9a417;
+      --star-empty: #c3ced6;
+      --hud-bg: rgba(18, 27, 34, 0.74);
+      --scrim: rgba(21, 32, 42, 0.45);
+      --board: #ffffff;
+      --board-muted: #6e7782;
+      --board-line: #dde3e7;
+      --chart-grid: #dfe6eb;
+      --chart-axis: #5c6e7c;
+      --run-1: #1e7bc8;
+      --run-2: #d9601a;
+      --run-3: #0f8f80;
+      --run-4: #c93a86;
+      --run-5: #6a8a0e;
+      --run-6: #93782a;
+      --shadow-1: 0 1px 2px rgba(21, 32, 42, 0.1);
+      --shadow-2: 0 8px 24px rgba(21, 32, 42, 0.16), 0 2px 6px rgba(21, 32, 42, 0.08);
+      --shadow-3: 0 24px 64px rgba(21, 32, 42, 0.24), 0 4px 12px rgba(21, 32, 42, 0.1);
+    }
+  }
+
+  /* Wide windows (>= 1700 px) and compact windows (<= 1000 px), DESIGN.md §4. */
+  @media (min-width: 1700px) {
+    :root {
+      --side-w: 452px;
+      --curves-h: 280px;
+      --runbar-h: 64px;
+    }
+  }
+  @media (max-width: 1180px) {
+    :root {
+      --side-w: 340px;
+    }
+  }
+  @media (max-width: 1000px) {
+    :root {
+      --rail-w: 64px;
+      --curves-h: 236px;
+      --runbar-h: 56px;
+    }
+  }
+}

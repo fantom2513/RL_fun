@@ -1,50 +1,17 @@
-/* Lab: slate, game-like and calm. Light and dark follow the system scheme. */
+/* Legacy stylesheet of the current lab screen, kept until the new shell replaces it (DESIGN.md §11.6).
+   It is unlayered and loaded after css/tokens.css and css/base.css. It defines no design token of its
+   own: the few old names below are aliases of the new tokens, so both schemes come from tokens.css. */
 
 :root {
-  color-scheme: light dark;
-  --bg: #d6dee4;
-  --surface: #f3f6f8;
-  --surface-2: #e6ecf0;
-  --line: #bfcbd4;
-  --text: #212d37;
-  --muted: #5a6a77;
-  --accent: #3a6d92;
-  --accent-text: #ffffff;
-  --danger: #c0283b;
-  --curb: #d62e3e;
-  --grass: #7a8e9c;
-  --shadow: 0 1px 2px rgba(25, 40, 52, 0.12), 0 6px 18px rgba(25, 40, 52, 0.1);
-  --font-ui: Bahnschrift, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-data: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", monospace;
-  --radius: 10px;
-  /* network graph (same hues as the pygame panel) */
-  --net-edge-pos: #28c83c;
-  --net-edge-neg: #d63246;
-  --net-node-pos: #5aff50;
-  --net-node-neg: #fa3e52;
-  --net-node-neutral: #eceef0;
-  --net-node-ring: #3c4a52;
-  --net-edge-neutral: #78808a;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #161d23;
-    --surface: #202a32;
-    --surface-2: #2a3640;
-    --line: #38464f;
-    --text: #e4ebf0;
-    --muted: #92a2ae;
-    --accent: #6fa6cc;
-    --accent-text: #0f1a22;
-    --danger: #ec6377;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.28);
-    --net-edge-pos: #3fdc59;
-    --net-edge-neg: #ef5468;
-    --net-node-neutral: #2d3944;
-    --net-node-ring: #8fa2b0;
-    --net-edge-neutral: #92a2ae;
-  }
+  --surface: var(--surface-1);
+  --line: var(--border-strong);
+  --muted: var(--text-2);
+  --curb: var(--scene-curb);
+  --grass: var(--scene-grass);
+  --shadow: var(--shadow-2);
+  --font-data: var(--font-mono);
+  --radius: var(--r-m);
+  --net-edge-neutral: var(--text-3);
 }
 
 * {
@@ -250,7 +217,7 @@ select:disabled {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-text);
+  color: var(--on-accent);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -868,6 +835,10 @@ input[type="range"] {
 .btn-wide {
   width: 100%;
   height: 36px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
 }
 
 .btn-quiet {
