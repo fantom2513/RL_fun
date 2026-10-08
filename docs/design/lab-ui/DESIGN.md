@@ -2,7 +2,7 @@
 
 **Дата:** 2026-10-09
 **Статус:** дизайн-фаза; прототип и скриншоты готовы к просмотру. Рабочее приложение (`src/rl_fun/lab/web/`) не менялось — перенос выполняется отдельными задачами по разделу 11.
-**Где смотреть:** прототип — `prototype/index.html` (открывается двойным щелчком, без сервера и без сети); скриншоты — `screens/*.png`; шрифты и иконки — `ASSETS.md`.
+**Где смотреть:** прототип — `prototype/index.html` (открывается двойным щелчком, без сервера и без сети; клавиша `T` — смена схемы); шрифты и иконки — `ASSETS.md`; скриншоты (Chrome без окна, масштаб 1, имя — экран-ширина-схема) — `screens/`: `challenges-1280-dark.png`, `challenges-1920-light.png`, `compare-1280-dark.png`, `compare-1920-light.png`, `demo-1280-dark.png`, `demo-1920-light.png`, `empty-1280-dark.png`, `index-1280-dark.png`, `lab-1280-dark.png`, `lab-1280-light.png`, `lab-1920-dark.png`, `lab-1920-light.png`, `lab-800-dark.png`, `lab-800-light.png`, `lab-split-1280-light.png`, `lab-split-1920-dark.png`, `lab-toast-1280-dark.png`, `network-editor-1280-dark.png`, `network-editor-1920-light.png`, `new-run-1280-dark.png`, `new-run-1920-dark-full.png`, `new-run-800-light.png`, `onboarding-1280-dark.png`, `onboarding-1280-light.png`, `track-editor-1280-dark.png`, `track-editor-1920-light.png`.
 
 Документ опирается на цель и критерии U1–U6, S1–S11, Q1–Q3 из `docs/superpowers/plans/2026-10-08-lab-iterations.md` и на контракты бэкенда (`lab/catalog.py`, `lab/config.py`, `lab/protocol.py`, `racing/model_spec.py`, `racing/fitness.py`, `racing/style.py`). Там, где экран требует того, чего бэкенд ещё не умеет, это помечено **[нужен бэкенд]**.
 

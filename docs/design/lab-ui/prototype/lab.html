@@ -57,6 +57,7 @@
           <button aria-pressed="false">×1</button><button aria-pressed="true">×2</button><button aria-pressed="false">×4</button><button aria-pressed="false">×8</button><button aria-pressed="false">макс</button>
         </div>
         <button class="btn speed-menu" title="Скорость симуляции (1–5)" aria-haspopup="menu"><svg class="icon"><use href="#i-fast-forward"/></svg><span class="mono">×2</span><svg class="icon"><use href="#i-chevron-down"/></svg></button>
+        <button class="btn btn-icon show-narrow" title="Настройки на ходу" aria-label="Настройки на ходу"><svg class="icon"><use href="#i-sliders-horizontal"/></svg></button>
         <button class="btn btn-icon" title="Остановить" aria-label="Остановить"><svg class="icon"><use href="#i-square"/></svg></button>
         <button class="btn btn-icon btn-ghost" title="Ещё" aria-label="Ещё действия" aria-haspopup="menu"><svg class="icon"><use href="#i-ellipsis"/></svg></button>
       </div>
@@ -73,6 +74,7 @@
               <dt>Живых</dt><dd>41 / 60</dd>
               <dt class="hud-extra">Скорость лидера</dt><dd class="hud-extra">21,3 м/с</dd>
               <dt>Прогресс лидера</dt><dd>61 %</dd>
+              <dt class="split-only">Шаг</dt><dd class="split-only">812 / 1500</dd>
               <div class="hud-lap hud-extra"><span style="color: rgba(242,246,248,.68)">Лучший круг</span><span style="color: rgba(242,246,248,.68)">нет финиша</span></div>
             </dl>
           </div>
@@ -178,7 +180,8 @@
       <section class="card curves" aria-labelledby="curves-title">
         <header class="card-head">
           <h2 class="card-title" id="curves-title">Кривые</h2>
-          <div class="seg seg-sm" data-seg role="group" aria-label="Показатель">
+          <select class="select show-narrow" aria-label="Показатель" style="height: 28px"><option>Лучший прогресс</option><option>Средний</option><option>Финишировали</option><option>Время круга</option></select>
+          <div class="seg seg-sm hide-narrow" data-seg role="group" aria-label="Показатель">
             <button aria-pressed="true">Лучший прогресс</button><button aria-pressed="false">Средний</button><button aria-pressed="false">Финиш</button><button aria-pressed="false">Время круга</button>
           </div>
           <div class="legend" aria-label="Запуски на графике">
@@ -215,8 +218,8 @@
   }
   window.render = function () {
     const C = Proto.css;
-    Proto.drawScene(document.getElementById('stageA'), { track: 'circuit', cars: 60, crashed: 9, progress: 0.61, spread: 70, seed: 11, padTop: 40, pad: 36, padLeft: split ? 36 : 210, padBottom: 64 });
-    if (split) Proto.drawScene(document.getElementById('stageB'), { track: 'circuit', cars: 32, crashed: 0, progress: 0.54, spread: 120, seed: 5, padTop: 120, pad: 30, padBottom: 30 });
+    Proto.drawScene(document.getElementById('stageA'), { track: 'circuit', cars: 60, crashed: 9, progress: 0.61, spread: 70, seed: 11, padTop: 40, pad: 36, padLeft: split ? 36 : 210, padBottom: split ? 70 : 64 });
+    if (split) Proto.drawScene(document.getElementById('stageB'), { track: 'circuit', cars: 32, crashed: 0, progress: 0.54, spread: 120, seed: 5, padTop: 120, pad: 30, padBottom: 70 });
     Proto.drawNetwork(document.getElementById('net'), {
       inputs: ['↑ −90°', '↑ −30°', '↑ 0°', '↑ 30°', '↑ 90°', 'Скор.', 'Бок.', 'Угл.'],
       hidden: [6, 5], outputs: ['Руль', 'Газ'], seed: 21,

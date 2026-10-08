@@ -328,14 +328,15 @@
     const inLabels = o.inputs;
     const sizes = [inLabels.length].concat(o.hidden, [o.outputs.length]);
     const L = sizes.length;
-    const fs = o.small ? 10.5 : 12;
+    let fs = o.small ? 10.5 : 12;
     const gutL = o.small ? 46 : (edit ? 128 : 64), gutR = o.small ? 46 : (edit ? 120 : 58);
-    const top = edit ? 84 : (o.small ? 26 : 34), bottom = edit ? 40 : (o.small ? 12 : 16);
+    const top = edit ? 84 : (o.small ? 26 : 34), bottom = edit ? 40 : (o.small ? 18 : 16);
     const xs = sizes.map((_, i) => gutL + ((W - gutL - gutR) * i) / (L - 1));
     const maxN = Math.max.apply(null, sizes);
     const gap = Math.min(edit ? (H > 700 ? 58 : 46) : (H > 420 ? 46 : 38), (H - top - bottom) / Math.max(1, maxN - 1 + (edit ? 1 : 0)));
     const nr = Math.max(4.5, Math.min(edit ? 11 : 9, gap * 0.3));
     const compact = !o.small && gap < 28, tiny = gap < 12;
+    if (compact && gap < 18) fs = 10.5;
     const ys = sizes.map((n) => Array.from({ length: n }, (_, j) => top + (H - top - bottom - gap * (n - 1)) / 2 + j * gap));
     const topY = Math.min.apply(null, ys.map((c) => c[0]));
     const botY = Math.max.apply(null, ys.map((c) => c[c.length - 1]));

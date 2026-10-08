@@ -811,6 +811,10 @@ input[type="range"].range::-moz-range-thumb { width: 12px; height: 12px; border-
 }
 .stage-wrap { grid-area: stage; min-height: 0; display: grid; gap: var(--sp-3); grid-template-columns: minmax(0, 1fr); }
 .lab-body[data-view="split"] .stage-wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lab-body[data-view="split"] .stage-overlay.tr { top: auto; bottom: var(--sp-3); }
+.split-only { display: none; }
+.lab-body[data-view="split"] .split-only { display: block; }
+.lab-body[data-view="split"] .stage-overlay.bl, .lab-body[data-view="split"] .stage-overlay.br { display: none; }
 .stage {
   position: relative; min-height: 0; min-width: 0;
   border-radius: var(--r-m);
