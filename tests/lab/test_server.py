@@ -205,6 +205,38 @@ def test_static_content_types(server: LabServer) -> None:
     assert headers["content-type"].startswith("image/svg+xml")
 
 
+def _probe(server: LabServer, relative: str, data: bytes) -> tuple[int, dict[str, str], bytes]:
+    """Serve a temporary file placed at `relative` below web/ and remove it (and new dirs) after."""
+    web = Path(__file__).resolve().parents[2] / "src" / "rl_fun" / "lab" / "web"
+    probe = web / relative
+    created = [d for d in reversed(probe.relative_to(web).parents) if not (web / d).exists()]
+    probe.parent.mkdir(parents=True, exist_ok=True)
+    probe.write_bytes(data)
+    try:
+        return request(server, "GET", f"/static/{relative}")
+    finally:
+        probe.unlink()
+        for directory in reversed(created):
+            (web / directory).rmdir()
+
+
+def test_static_font_is_served_as_woff2(server: LabServer) -> None:
+    status, headers, body = _probe(server, "_probe_test.woff2", b"wOF2probe")
+
+    assert (status, headers["content-type"], body) == (200, "font/woff2", b"wOF2probe")
+
+
+def test_static_files_in_nested_subdirectories_are_served(server: LabServer) -> None:
+    status, headers, body = _probe(server, "_probe_dir/inner/probe.css", b"a{}")
+
+    assert (status, headers["content-type"].split(";")[0], body) == (200, "text/css", b"a{}")
+
+
+@pytest.mark.parametrize("name", ["_probe_test.md", "_probe_test.txt", "_probe_test.py"])
+def test_static_files_of_unlisted_types_are_404(server: LabServer, name: str) -> None:
+    assert _probe(server, name, b"secret")[0] == 404
+
+
 # ---- host header -----------------------------------------------------------------------------
 
 

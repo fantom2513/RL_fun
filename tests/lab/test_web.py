@@ -10,7 +10,15 @@ import pytest
 from rl_fun.lab.server import WEB_DIR
 
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
-WEB_FILES = sorted(p for p in WEB_DIR.iterdir() if p.suffix in {".html", ".css", ".js"})
+WEB_FILES = sorted(
+    p for p in WEB_DIR.rglob("*") if p.is_file() and p.suffix in {".html", ".css", ".js"}
+)
+
+
+def _rel(path: Path) -> str:
+    return path.relative_to(WEB_DIR).as_posix()
+
+
 EXPECTED = (
     "index.html",
     "style.css",
@@ -78,7 +86,22 @@ def test_index_html_references_only_existing_local_files() -> None:
     assert {t.name for t in targets} >= {"style.css", "app.js"}
 
 
-@pytest.mark.parametrize("path", [p for p in WEB_FILES if p.suffix == ".js"], ids=lambda p: p.name)
+@pytest.mark.parametrize("path", [p for p in WEB_FILES if p.suffix == ".html"], ids=_rel)
+def test_html_pages_reference_only_existing_files_below_static(path: Path) -> None:
+    html = _strip_comments(path, path.read_text("utf-8"))
+
+    targets = [_resolve(_url_of(path), reference) for reference in _ATTRIBUTE.findall(html)]
+
+    assert [t for t in targets if not t.is_file()] == []
+
+
+def test_web_tree_scan_includes_subdirectories() -> None:
+    nested = [p for p in WEB_DIR.rglob("*") if p.is_file() and p.parent != WEB_DIR]
+
+    assert {p for p in nested if p.suffix in {".html", ".css", ".js"}} <= set(WEB_FILES)
+
+
+@pytest.mark.parametrize("path", [p for p in WEB_FILES if p.suffix == ".js"], ids=_rel)
 def test_js_module_imports_resolve_to_existing_files(path: Path) -> None:
     source = _strip_comments(path, path.read_text("utf-8"))
 
@@ -104,7 +127,7 @@ def test_network_view_module_is_preloaded_by_index_html() -> None:
     assert "/static/network_view.js" in html
 
 
-@pytest.mark.parametrize("path", [p for p in WEB_FILES if p.suffix == ".css"], ids=lambda p: p.name)
+@pytest.mark.parametrize("path", [p for p in WEB_FILES if p.suffix == ".css"], ids=_rel)
 def test_css_references_resolve_to_existing_files(path: Path) -> None:
     css = _strip_comments(path, path.read_text("utf-8"))
 
@@ -117,7 +140,7 @@ def test_css_references_resolve_to_existing_files(path: Path) -> None:
     assert [t for t in targets if not t.is_file()] == []
 
 
-@pytest.mark.parametrize("path", WEB_FILES, ids=lambda p: p.name)
+@pytest.mark.parametrize("path", WEB_FILES, ids=_rel)
 def test_web_files_contain_no_external_urls(path: Path) -> None:
     text = _strip_comments(path, path.read_text("utf-8")).replace(SVG_NAMESPACE, "")
 
