@@ -33,6 +33,7 @@ DRAIN_LIMIT_BYTES = 4 * 1024 * 1024
 DRAIN_SECONDS = 2.0
 REQUEST_TIMEOUT = 30.0
 _STREAM_QUEUE_SIZE = 8
+_PUMP_IDLE_SECONDS = 0.5
 _SSE_KINDS = ("frame", "gen", "status", "notice")
 _END = object()
 
@@ -374,7 +375,11 @@ class _Handler(BaseHTTPRequestHandler):
             name, _, value = pair.partition("=")
             if name == "from" and value.isascii() and value.isdigit():
                 from_index = int(value)
-        events = self._found(lambda: self.server.manager.subscribe(run_id, from_index))
+        events = self._found(
+            lambda: self.server.manager.subscribe(
+                run_id, from_index, idle_timeout=_PUMP_IDLE_SECONDS
+            )
+        )
 
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -414,7 +419,11 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def _pump(events: Iterator[tuple[str, dict[str, Any]]], feed: queue.Queue[Any], stop: Any) -> None:
-    """Move events from the manager into a small queue; stops when the handler is gone."""
+    """Move events from the manager into a small queue; stops when the handler is gone.
+
+    The manager yields an `("idle", None)` item at least every `_PUMP_IDLE_SECONDS` on a quiet
+    run; it is never forwarded, it only lets this loop notice `stop` and exit.
+    """
 
     def put(item: Any) -> bool:
         while not stop.is_set():
@@ -427,6 +436,8 @@ def _pump(events: Iterator[tuple[str, dict[str, Any]]], feed: queue.Queue[Any], 
 
     try:
         for kind, payload in events:
+            if stop.is_set():
+                return
             if kind in _SSE_KINDS and not put((kind, payload)):
                 return
         put(_END)

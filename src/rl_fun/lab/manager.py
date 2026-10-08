@@ -190,16 +190,22 @@ class RunManager:
             self._cond.notify_all()
         self._stop_runs([run])
 
-    def subscribe(self, run_id: str, from_index: int = 0) -> Iterator[Event]:
+    def subscribe(
+        self, run_id: str, from_index: int = 0, *, idle_timeout: float | None = None
+    ) -> Iterator[Event | tuple[str, None]]:
         """Events for SSE as `(kind, payload)`: the log of generations/status/notices (skipping
         the first `from_index` generations), then the latest frame, then everything new.
 
         Ends after the terminal status was delivered, or when the run is deleted / the manager
         shuts down and nothing is left to deliver. Raises KeyError right away for unknown ids.
+
+        With `idle_timeout` set, whenever that many seconds pass with nothing to deliver the
+        generator yields the sentinel `("idle", None)` so the caller gets a chance to notice that
+        it should stop (otherwise it would stay parked on a quiet run). Without it, no sentinel.
         """
         with self._cond:
             run = self._lookup(run_id)
-        return self._events(run, max(0, int(from_index)))
+        return self._events(run, max(0, int(from_index)), idle_timeout)
 
     def shutdown(self) -> None:
         """Stop every worker (gracefully first), wait for them and the reader threads.
@@ -215,13 +221,16 @@ class RunManager:
 
     # ---- subscribers -------------------------------------------------------------------------
 
-    def _events(self, run: _Run, from_index: int) -> Iterator[Event]:
+    def _events(
+        self, run: _Run, from_index: int, idle_timeout: float | None
+    ) -> Iterator[Event | tuple[str, None]]:
         position = 0
         seen_frame = 0
         gens_seen = 0
         while True:
-            batch: list[Event] = []
+            batch: list[Event | tuple[str, None]] = []
             done = False
+            idle_deadline = None if idle_timeout is None else time.monotonic() + idle_timeout
             with self._cond:
                 while True:
                     has_events = position < len(run.events)
@@ -230,8 +239,18 @@ class RunManager:
                         break
                     if run.deleted or self._closed:
                         return
-                    self._cond.wait(timeout=1.0)
-                frame = run.last_frame if has_frame else None
+                    if idle_deadline is None:
+                        self._cond.wait(timeout=1.0)
+                        continue
+                    remaining = idle_deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    self._cond.wait(timeout=remaining)
+                if not (has_events or has_frame):
+                    batch.append(("idle", None))
+                    frame = None
+                else:
+                    frame = run.last_frame if has_frame else None
                 seen_frame = run.frame_seq
                 for kind, payload in run.events[position:]:
                     if kind == "gen":

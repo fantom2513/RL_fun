@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from rl_fun.lab.server import LabServer, make_server
 
 from rl_fun.lab.manager import RunManager
+from rl_fun.lab.server import LabServer, make_server
 
 from . import manager_targets as targets
 

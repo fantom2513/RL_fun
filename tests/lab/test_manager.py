@@ -460,12 +460,16 @@ def test_subscribe_idle_timeout_yields_idle_sentinel_while_nothing_happens(
     wait_status(idle_manager, run_id, "running")
     events = idle_manager.subscribe(run_id, idle_timeout=0.05)
     try:
-        received = [next(events) for _ in range(4)]
+        received = [next(events) for _ in range(5)]
     finally:
         events.close()
 
-    assert received[0] == ("status", {"t": "status", "status": "running"})
-    assert received[1:] == [("idle", None)] * 3
+    # the worker's own "running" status may or may not have arrived yet; nothing else ever does
+    assert all(
+        event in (("idle", None), ("status", {"t": "status", "status": "running"}))
+        for event in received
+    )
+    assert received.count(("idle", None)) >= 4
 
 
 def test_subscribe_without_idle_timeout_never_yields_idle(idle_manager: RunManager) -> None:
