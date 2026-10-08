@@ -105,6 +105,7 @@ class RacingFleet:
         self._speed_total = np.zeros(count)
         self._centering_total = np.zeros(count)
         self._steer_change_total = np.zeros(count)
+        self.progress_delta = np.zeros(count)
         self.lateral_offset = np.zeros(count)
         self.steer_change = np.zeros(count)
         self.just_crashed = np.zeros(count, dtype=bool)
@@ -145,6 +146,7 @@ class RacingFleet:
             self._speed_total,
             self._centering_total,
             self._steer_change_total,
+            self.progress_delta,
             self.lateral_offset,
             self.steer_change,
         ):
@@ -192,6 +194,7 @@ class RacingFleet:
         self._arclength = np.where(moving, arclength, self._arclength)
         self._travelled = self._travelled + delta
         rewards = delta / self.track.length
+        self.progress_delta = rewards
 
         centering = 1.0 - np.clip(offset / (self.track.width / 2), 0.0, 1.0)
         raw_change = np.abs(steer - self._steering)
