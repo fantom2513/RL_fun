@@ -354,7 +354,7 @@ class FleetView:
         mode: str = "human",
         show_network: bool = True,
         input_labels: Sequence[str] | None = None,
-        output_labels: Sequence[str] = ("Руль", "Газ"),
+        output_labels: Sequence[str] | None = None,
         camera: str = "fit",
         zoom: float = 1.0,
         resizable: bool = True,
@@ -364,10 +364,9 @@ class FleetView:
         self._mode = mode
         self.panel: NetworkPanel | None = None
         if show_network:
-            labels = (
-                input_labels if input_labels is not None else default_input_labels(fleet.ray_angles)
-            )
-            self.panel = NetworkPanel(labels, output_labels)
+            labels = input_labels if input_labels is not None else fleet.model.input_labels
+            outputs = output_labels if output_labels is not None else fleet.model.output_labels
+            self.panel = NetworkPanel(labels, outputs)
         self._renderer = Renderer(
             fleet.track,
             mode,

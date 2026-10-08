@@ -7,13 +7,22 @@ The weights of one network live in a flat vector, layer after layer: a matrix of
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 
+from rl_fun.racing.fitness import FitnessSpec
 from rl_fun.racing.fleet import RacingFleet
 from rl_fun.racing.generation import FleetDrawable, run_generation
+from rl_fun.racing.model_spec import ModelSpec
+
+_HIDDEN_ACTIVATIONS: dict[str, Callable[[np.ndarray], np.ndarray]] = {
+    "tanh": np.tanh,
+    "relu": lambda x: np.maximum(x, 0.0),
+    "sigmoid": lambda x: 1.0 / (1.0 + np.exp(-x)),
+}
 
 
 @dataclass(frozen=True)
@@ -75,25 +84,42 @@ def _unpack(weights: np.ndarray, sizes: list[int]) -> list[tuple[np.ndarray, np.
     return layers
 
 
-def forward(weights: np.ndarray, observation: np.ndarray, sizes: list[int]) -> np.ndarray:
-    """Network output [steer, throttle] in [-1, 1]."""
-    activation = np.asarray(observation, dtype=np.float64)
-    for matrix, bias in _unpack(weights, sizes):
-        activation = np.tanh(matrix @ activation + bias)
-    return activation
+def _hidden_activation(name: str) -> Callable[[np.ndarray], np.ndarray]:
+    try:
+        return _HIDDEN_ACTIVATIONS[name]
+    except KeyError as error:
+        raise ValueError(
+            f"unknown activation {name!r}; supported: {tuple(_HIDDEN_ACTIVATIONS)}"
+        ) from error
+
+
+def forward(
+    weights: np.ndarray, observation: np.ndarray, sizes: list[int], activation: str = "tanh"
+) -> np.ndarray:
+    """Network output in [-1, 1]. Hidden layers use `activation`; the output layer is tanh."""
+    hidden = _hidden_activation(activation)
+    layers = _unpack(weights, sizes)
+    values = np.asarray(observation, dtype=np.float64)
+    for index, (matrix, bias) in enumerate(layers):
+        pre = matrix @ values + bias
+        values = np.tanh(pre) if index == len(layers) - 1 else hidden(pre)
+    return values
 
 
 def inspect(
-    weights: np.ndarray, observation: np.ndarray, sizes: list[int]
+    weights: np.ndarray, observation: np.ndarray, sizes: list[int], activation: str = "tanh"
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """Weight matrices (without biases) and activations [input, layer1, ..., output]."""
-    activation = np.asarray(observation, dtype=np.float64)
+    hidden = _hidden_activation(activation)
+    layers = _unpack(weights, sizes)
+    values = np.asarray(observation, dtype=np.float64)
     matrices = []
-    activations = [activation]
-    for matrix, bias in _unpack(weights, sizes):
-        activation = np.tanh(matrix @ activation + bias)
+    activations = [values]
+    for index, (matrix, bias) in enumerate(layers):
+        pre = matrix @ values + bias
+        values = np.tanh(pre) if index == len(layers) - 1 else hidden(pre)
         matrices.append(matrix)
-        activations.append(activation)
+        activations.append(values)
     return matrices, activations
 
 
@@ -114,10 +140,7 @@ def next_generation(
     return np.concatenate([elite, children], axis=0)
 
 
-def _fitness(progress: np.ndarray, finished: np.ndarray, lap_steps: np.ndarray, max_steps: int):
-    lap_time = np.where(finished, lap_steps, max_steps)
-    bonus = np.where(finished, 1.0 - lap_time / max_steps, 0.0)
-    return progress + bonus
+DEFAULT_FITNESS = FitnessSpec({"progress": 1.0, "lap_bonus": 1.0})
 
 
 def train(
@@ -127,12 +150,25 @@ def train(
     params: EvolutionParams | None = None,
     fleet_kwargs: dict[str, Any] | None = None,
     view: FleetDrawable | None = None,
+    model: ModelSpec | None = None,
+    fitness: FitnessSpec | None = None,
 ) -> ReferenceRun:
-    """Evolve a population on `track` and record best/mean progress per generation."""
+    """Evolve a population on `track` and record best/mean progress per generation.
+
+    With `model`, the fleet and the network follow it: its layer sizes and activation replace
+    `params.hidden` and the default tanh. `fitness` defaults to progress plus lap bonus, the
+    formula the stored benchmark was made with.
+    """
     params = params or EvolutionParams()
+    scoring = DEFAULT_FITNESS if fitness is None else fitness
     rng = np.random.default_rng(seed)
-    fleet = RacingFleet(params.population, track=track, **(fleet_kwargs or {}))
-    sizes = layer_sizes(fleet.observation_size, params.hidden)
+    fleet = RacingFleet(params.population, track=track, model=model, **(fleet_kwargs or {}))
+    if model is None:
+        sizes = layer_sizes(fleet.observation_size, params.hidden, fleet.action_size)
+        activation = "tanh"
+    else:
+        sizes = model.layer_sizes
+        activation = model.activation
     population = init_population(rng, params.population, sizes, params.init_scale)
 
     history: list[dict[str, Any]] = []
@@ -142,12 +178,12 @@ def train(
         result = run_generation(
             fleet,
             population,
-            lambda w, o: forward(w, o, sizes),
+            lambda w, o: forward(w, o, sizes, activation),
             view=view,
-            inspect=lambda w, o: inspect(w, o, sizes),
+            inspect=lambda w, o: inspect(w, o, sizes, activation),
             label=f"Эталон, поколение {generation + 1}/{generations}",
         )
-        fitness = _fitness(result.progress, result.finished, result.lap_steps, fleet.max_steps)
+        fitness_values = scoring.score(result)
         history.append(
             {
                 "generation": generation,
@@ -156,10 +192,10 @@ def train(
                 "finished": int(result.finished.sum()),
             }
         )
-        top = int(np.argmax(fitness))
-        if fitness[top] > best_fitness:
-            best_fitness = float(fitness[top])
+        top = int(np.argmax(fitness_values))
+        if fitness_values[top] > best_fitness:
+            best_fitness = float(fitness_values[top])
             best_weights = population[top].copy()
-        population = next_generation(population, fitness, rng, params)
+        population = next_generation(population, fitness_values, rng, params)
 
     return ReferenceRun(history, best_weights, sizes, params, seed, track, best_fitness)
