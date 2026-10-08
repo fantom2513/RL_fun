@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -494,3 +497,158 @@ def test_every_icon_used_by_the_web_files_is_in_the_sprite() -> None:
     }
 
     assert sorted(used - _sprite_ids()) == []
+
+
+# ---- components and the dev showcase (DESIGN.md sections 8, 11.1, 11.6 task 3) ---------------
+
+COMPONENT_FILES = (
+    "css/components.css",
+    "core/dom.js",
+    "core/format.js",
+    "ui/param.js",
+    "ui/seg.js",
+    "ui/stepper.js",
+    "ui/toast.js",
+    "dev/components.html",
+    "dev/components.js",
+    "dev/components.css",
+)
+CUSTOM_ELEMENTS = {
+    "lab-param": "ui/param.js",
+    "lab-seg": "ui/seg.js",
+    "lab-stepper": "ui/stepper.js",
+    "lab-toast-host": "ui/toast.js",
+}
+COMPONENT_VARIANTS = (
+    "btn-primary", "btn-ghost", "btn-danger", "btn-icon", "btn-sm", "btn-lg", "is-loading",
+    "seg-sm", "seg-mono", "seg-glass", "chip-dashed", "is-locked", "param-compact", "is-changed",
+    "range", "range-scale", "tag-live", "tag-ok", "tag-warn", "tag-err", "tag-best", "tag-info",
+    "dot-running", "dot-paused", "dot-finished", "dot-error", "toast-error", "popover-board",
+    "menu-item", "kbd", "callout", "skeleton", "empty", "stars-lg", "cell-best", "board",
+    "glass", "tpl-card", "learner-card", "track-card", "field", "input", "legend",
+)
+SHOWCASE = WEB_DIR / "dev" / "components.html"
+
+
+def _design_components() -> list[str]:
+    text = (DESIGN_DIR / "DESIGN.md").read_text("utf-8")
+    section = text.split("## 8. Компоненты", 1)[1].split("\n## ", 1)[0]
+    return re.findall(r"^\| [^|]*?`(?:[a-z]+)?\.([a-z-]+)`", section, re.MULTILINE)
+
+
+def _showcase_text() -> str:
+    return SHOWCASE.read_text("utf-8") + (WEB_DIR / "dev" / "components.js").read_text("utf-8")
+
+
+def _component_selectors() -> str:
+    return " ".join(selector for _, selector, _ in _rules(_css(CSS_DIR / "components.css")))
+
+
+def test_component_files_exist() -> None:
+    assert [n for n in COMPONENT_FILES if not (WEB_DIR / n).is_file()] == []
+
+
+def test_design_component_table_was_found() -> None:
+    assert len(_design_components()) >= 19
+
+
+@pytest.mark.parametrize("name", _design_components() + list(COMPONENT_VARIANTS))
+def test_components_stylesheet_styles_every_component(name: str) -> None:
+    assert re.search(rf"\.{re.escape(name)}(?![\w-])", _component_selectors())
+
+
+@pytest.mark.parametrize("name", _design_components() + list(COMPONENT_VARIANTS))
+def test_showcase_renders_every_component(name: str) -> None:
+    assert re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", _showcase_text())
+
+
+def test_component_selectors_have_no_ids() -> None:
+    assert re.findall(r"#[a-zA-Z][\w-]*", _component_selectors()) == []
+
+
+@pytest.mark.parametrize(("tag", "module"), CUSTOM_ELEMENTS.items())
+def test_custom_elements_are_defined_in_light_dom(tag: str, module: str) -> None:
+    source = (WEB_DIR / module).read_text("utf-8")
+
+    assert re.search(rf"""customElements\.define\(\s*['"]{tag}['"]""", source)
+    assert "attachShadow" not in source
+
+
+@pytest.mark.parametrize("tag", CUSTOM_ELEMENTS)
+def test_showcase_uses_every_custom_element(tag: str) -> None:
+    assert f"<{tag}" in _showcase_text() or f"'{tag}'" in _showcase_text()
+
+
+def test_showcase_loads_the_layers_and_not_the_legacy_stylesheet() -> None:
+    html = SHOWCASE.read_text("utf-8")
+    sheets = re.findall(r"""<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']""", html)
+
+    assert sheets == [
+        "/static/css/tokens.css",
+        "/static/css/base.css",
+        "/static/css/components.css",
+        "/static/dev/components.css",
+    ]
+    assert '<script type="module" src="/static/dev/components.js"></script>' in html
+
+
+def test_showcase_switches_between_both_colour_schemes() -> None:
+    script = (WEB_DIR / "dev" / "components.js").read_text("utf-8")
+
+    assert "dataset.theme" in script and "'light'" in script and "'dark'" in script
+
+
+def test_showcase_is_not_part_of_the_app_navigation() -> None:
+    app_sources = [WEB_DIR / "index.html", *WEB_DIR.glob("*.js")]
+
+    assert [p.name for p in app_sources if "dev/" in p.read_text("utf-8")] == []
+
+
+_NODE = shutil.which("node")
+
+
+def _node(script: str) -> str:
+    assert _NODE is not None
+    result = subprocess.run(
+        [_NODE, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_format_helpers_follow_the_russian_number_rules() -> None:
+    url = (WEB_DIR / "core" / "format.js").as_uri()
+    script = (
+        f"import * as f from {json.dumps(url)};"
+        "console.log(JSON.stringify([f.number(0.2, 2), f.number(-1.5, 1), f.number(36.9, 2, 'с'),"
+        " f.percent(0.613), f.number(12345, 0), f.number(1e-4, 'auto')]));"
+    )
+
+    assert json.loads(_node(script)) == [
+        "0,20",
+        "\u22121,5",
+        "36,90\u00a0с",
+        "61\u00a0%",
+        "12\u00a0345",
+        "1e\u22124",
+    ]
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_log_scale_maps_slider_positions_to_values_and_back() -> None:
+    url = (WEB_DIR / "core" / "format.js").as_uri()
+    script = (
+        f"import * as f from {json.dumps(url)};"
+        "const s = f.logScale(1e-5, 1e-2);"
+        "console.log(JSON.stringify([s.toValue(0), s.toValue(1), s.toPosition(1e-2),"
+        " Math.round(s.toPosition(3e-4) * 1000) / 1000, s.toValue(s.toPosition(3e-4))]));"
+    )
+
+    lo, hi, top, mid, back = json.loads(_node(script))
+
+    assert (lo, hi, top, mid) == (1e-5, 1e-2, 1, 0.492) and abs(back - 3e-4) < 1e-12
