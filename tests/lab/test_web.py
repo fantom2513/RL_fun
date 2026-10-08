@@ -97,15 +97,6 @@ def test_app_module_imports_form_and_charts_modules() -> None:
     assert {"api.js", "track_view.js", "params_form.js", "charts.js"} <= imported
 
 
-def test_app_module_imports_form_and_charts_modules() -> None:
-    path = WEB_DIR / "app.js"
-    source = _strip_comments(path, path.read_text("utf-8"))
-
-    imported = {_resolve(_url_of(path), s).name for s in _JS_IMPORT.findall(source)}
-
-    assert {"api.js", "track_view.js", "params_form.js", "charts.js"} <= imported
-
-
 @pytest.mark.parametrize("path", [p for p in WEB_FILES if p.suffix == ".css"], ids=lambda p: p.name)
 def test_css_references_resolve_to_existing_files(path: Path) -> None:
     css = _strip_comments(path, path.read_text("utf-8"))

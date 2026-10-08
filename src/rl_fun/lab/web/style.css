@@ -275,7 +275,7 @@ select {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(220px, 290px) minmax(0, 1fr) minmax(260px, 340px);
+  grid-template-columns: minmax(260px, 330px) minmax(0, 1fr) minmax(260px, 340px);
   grid-template-rows: minmax(0, 1fr) clamp(150px, 24vh, 240px);
   grid-template-areas:
     "params stage network"
@@ -481,6 +481,495 @@ select {
   }
 }
 
+/* ---- parameters form ------------------------------------------------------------------------ */
+
+.params {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+.params-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.params-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.form-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.run-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.model-summary {
+  padding: 10px 10px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.net-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 3px;
+}
+
+.net-node {
+  display: grid;
+  min-width: 36px;
+  padding: 2px 5px 3px;
+  text-align: center;
+  line-height: 1.1;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.net-node b {
+  font: 700 16px var(--font-data);
+}
+
+.net-node small {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.net-node.is-edge {
+  border-color: var(--accent);
+}
+
+.net-arrow {
+  color: var(--muted);
+}
+
+.net-text {
+  margin-top: 6px;
+  font: 12px/1.35 var(--font-data);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.lock-note,
+.live-note {
+  padding: 6px 9px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+}
+
+.live-note:empty {
+  display: none;
+}
+
+.group {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.group > summary {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.group[open] > summary {
+  margin-bottom: 10px;
+}
+
+.group > .field,
+.group > .sub,
+.group > .live-note,
+.group > .terms {
+  margin-bottom: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.field > label {
+  font-weight: 600;
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.err {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--danger);
+}
+
+.form-error {
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+input[type="number"] {
+  font-family: var(--font-data);
+}
+
+input[type="text"]:hover:not(:disabled),
+input[type="number"]:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+input[aria-invalid],
+select[aria-invalid] {
+  border-color: var(--danger);
+}
+
+input:disabled {
+  opacity: 0.55;
+}
+
+input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+.slide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 74px;
+  align-items: center;
+  gap: 10px;
+}
+
+.field > select,
+.field > input[type="number"],
+.field > input[type="text"] {
+  width: 100%;
+}
+
+.field > input[type="number"] {
+  max-width: 150px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.field-grid > .field > input[type="number"] {
+  max-width: none;
+}
+
+.terms {
+  display: grid;
+  gap: 8px;
+}
+
+.term > label {
+  font-weight: 500;
+}
+
+.sub {
+  display: grid;
+  gap: 6px;
+}
+
+.sub h3,
+.sub h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sub h4 {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.checks {
+  display: grid;
+  gap: 4px;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+.check input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.check-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.check-text small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.check-text code {
+  justify-self: start;
+  font: 11px var(--font-data);
+  color: var(--muted);
+}
+
+.check:has(input:disabled) {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.rays,
+.layers {
+  display: grid;
+  gap: 5px;
+}
+
+.ray,
+.layer {
+  display: grid;
+  grid-template-columns: 74px 16px 28px;
+  justify-content: start;
+  align-items: center;
+  gap: 0 6px;
+}
+
+.layer {
+  grid-template-columns: 54px 74px 38px 28px;
+}
+
+.ray .err,
+.layer .err {
+  grid-column: 1 / -1;
+}
+
+.layer-name,
+.unit {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-btn,
+.icon-btn {
+  height: 28px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.icon-btn {
+  width: 28px;
+  padding: 0;
+  border-radius: 8px;
+  line-height: 1;
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.chip-btn:hover:not(:disabled),
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.chip-btn:disabled,
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.form-actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 6px;
+  margin: auto -14px 0;
+  padding: 10px 14px 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+
+.btn-wide {
+  width: 100%;
+  height: 36px;
+}
+
+.btn-quiet {
+  height: 28px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+/* ---- learning curves ------------------------------------------------------------------------- */
+
+.curves {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.curves-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.curves-head .panel-title {
+  margin: 0;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 2px;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.segment {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.segment[aria-checked="true"] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 22ch;
+  padding: 2px 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.legend-item::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--run);
+}
+
+.legend-item[aria-pressed="true"] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.legend-item:hover {
+  color: var(--text);
+}
+
+.curves-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.curves-body canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
 /* ---- narrow windows: columns stack ------------------------------------------------------------ */
 
 @media (max-width: 980px) {
@@ -510,7 +999,7 @@ select {
   }
 
   .curves {
-    min-height: 180px;
+    min-height: 260px;
   }
 
   .banner {

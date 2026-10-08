@@ -1,7 +1,9 @@
-// Lab shell: run tabs, run controls and the track view. Parameters, network and curves panels are
-// placeholders for now.
+// Lab shell: run tabs, run controls, the track view, the parameters form and the learning curves.
+// The network panel is a placeholder for now.
 
 import * as api from './api.js';
+import { Chart, METRICS } from './charts.js';
+import { ParamsForm } from './params_form.js';
 import { TrackView } from './track_view.js';
 
 const RUN_COLORS = ['#3b82c4', '#e08a3c', '#2fa59a', '#9a6fd0', '#d05d8f', '#8fa83a', '#5ab4e0', '#a8795a'];
@@ -36,6 +38,11 @@ const el = {
   zoomOut: $('zoom-out'),
   hint: $('stage-hint'),
   toasts: $('toasts'),
+  paramsPanel: document.querySelector('.params'),
+  paramsBody: $('params-body'),
+  chart: $('chart'),
+  metrics: $('metrics'),
+  legend: $('legend'),
 };
 
 const state = {
@@ -48,6 +55,8 @@ const state = {
 };
 
 let view = null;
+let form = null;
+let chart = null;
 
 // ---- notifications ------------------------------------------------------------------------
 
@@ -90,6 +99,8 @@ function addRun(row) {
       run.gens.push(gen);
       run.best = Math.max(run.best ?? 0, gen.best);
       renderTabs();
+      chart.update();
+      form.onGen(run);
     },
     status: (message) => {
       run.status = message.status;
@@ -97,6 +108,7 @@ function addRun(row) {
       renderTabs();
       renderControls();
       renderBanner();
+      if (run.id === state.activeId) form.refreshLock();
     },
     notice: (message) => toast(message.text),
     open: () => setConnection(run, 'open'),
@@ -134,17 +146,20 @@ async function select(id) {
   renderTabs();
   renderControls();
   renderBanner();
+  chart.setHighlight(id);
   const run = activeRun();
   el.empty.hidden = Boolean(run);
   if (!run) {
     view.clearTrack();
     el.loading.hidden = true;
+    form.showNew({ name: nextRunName() });
     return;
   }
   el.speed.value = run.speed;
   try {
     const config = await ensureConfig(run);
     if (state.activeId !== id) return;
+    form.showRun(run, config);
     if (view.trackName !== config.track) {
       el.loading.hidden = false;
       view.clearTrack();
@@ -174,22 +189,49 @@ function nextRunName() {
   return `Запуск ${number}`;
 }
 
-async function newRun() {
-  if (state.creating || !state.catalog) return;
+// "+ new run" opens the form in new-run mode (it keeps the unsent draft) instead of creating at once.
+function openNewForm() {
+  if (!state.catalog) return;
+  form.showNew({ name: nextRunName() });
+  el.paramsPanel.scrollIntoView({ block: 'nearest' });
+  form.focusName();
+}
+
+function copySettings(run) {
+  if (!run?.config) return;
+  const config = structuredClone(run.config);
+  const names = new Set([...state.runs.values()].map((item) => item.name));
+  let name = `${run.name} копия`.slice(0, 40);
+  for (let n = 2; names.has(name); n += 1) name = `${run.name} копия ${n}`.slice(0, 40);
+  form.showNew({ config: { ...config, name } });
+  el.paramsPanel.scrollIntoView({ block: 'nearest' });
+  form.focusName();
+}
+
+// Called by the form on submit; resolves to true when the run was created.
+async function createFromForm(config) {
+  if (state.creating) return false;
   state.creating = true;
   renderControls();
   try {
-    const config = { ...state.catalog.defaults, name: nextRunName() };
     const { id } = await api.createRun(config);
     const run = addRun({ id, name: config.name, status: 'running', best: null });
-    run.config = config;
     await select(run.id);
-  } catch {
-    // the error was already shown to the user
+    return true;
+  } catch (error) {
+    form.showServerError(error.message);
+    return false;
   } finally {
     state.creating = false;
     renderControls();
   }
+}
+
+// Live-editable parameters of a running run; the server echoes them back with the next generation.
+async function liveUpdate(run, params) {
+  const ok = await sendCommand(run, { cmd: 'update', params });
+  if (ok && run.config) Object.assign(run.config, params);
+  return ok;
 }
 
 async function sendCommand(run, cmd) {
@@ -248,6 +290,39 @@ function renderTabs() {
     fragment.append(tab);
   }
   el.tabs.replaceChildren(fragment);
+  renderLegend();
+}
+
+function renderLegend() {
+  const items = [...state.runs.values()].map((run) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'legend-item';
+    button.dataset.id = run.id;
+    button.style.setProperty('--run', run.color);
+    button.setAttribute('aria-pressed', String(run.id === state.activeId));
+    button.title = `Открыть запуск «${run.name}»`;
+    button.textContent = run.name;
+    const item = document.createElement('li');
+    item.append(button);
+    return item;
+  });
+  el.legend.replaceChildren(...items);
+}
+
+function renderMetrics() {
+  el.metrics.replaceChildren(
+    ...METRICS.map((metric) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'segment';
+      button.setAttribute('role', 'radio');
+      button.setAttribute('aria-checked', String(metric.id === chart.metric));
+      button.dataset.metric = metric.id;
+      button.textContent = metric.label;
+      return button;
+    }),
+  );
 }
 
 function renderControls() {
@@ -302,11 +377,23 @@ function zoom(factor) {
 }
 
 function wire() {
-  el.newRun.addEventListener('click', newRun);
-  el.emptyNew.addEventListener('click', newRun);
+  el.newRun.addEventListener('click', openNewForm);
+  el.emptyNew.addEventListener('click', openNewForm);
   el.tabs.addEventListener('click', (event) => {
     const tab = event.target.closest('.tab');
-    if (tab && tab.dataset.id !== state.activeId) select(tab.dataset.id);
+    if (!tab) return;
+    if (tab.dataset.id !== state.activeId) select(tab.dataset.id);
+    else if (form.mode === 'new') form.showRun(activeRun(), activeRun().config);
+  });
+  el.legend.addEventListener('click', (event) => {
+    const item = event.target.closest('.legend-item');
+    if (item && item.dataset.id !== state.activeId) select(item.dataset.id);
+  });
+  el.metrics.addEventListener('click', (event) => {
+    const segment = event.target.closest('.segment');
+    if (!segment) return;
+    chart.setMetric(segment.dataset.metric);
+    renderMetrics();
   });
   el.pause.addEventListener('click', async () => {
     const run = activeRun();
@@ -363,7 +450,9 @@ function wire() {
 
 async function init() {
   view = new TrackView(el.canvas, { onModeChange: renderHint });
-  window.__lab = { state, view }; // handle for debugging in the browser console
+  chart = new Chart(el.chart, () => [...state.runs.values()]);
+  window.__lab = { state, view, chart }; // handle for debugging in the browser console
+  renderMetrics();
   wire();
   renderHint();
   renderControls();
@@ -374,6 +463,13 @@ async function init() {
     el.empty.querySelector('p').textContent = 'Не удалось загрузить каталог. Обновите страницу, когда сервер будет доступен.';
     return;
   }
+  form = new ParamsForm(el.paramsBody, state.catalog, {
+    onCreate: createFromForm,
+    onCopy: copySettings,
+    onLiveUpdate: liveUpdate,
+  });
+  window.__lab.form = form;
+  form.showNew({ name: nextRunName() });
   document.documentElement.style.setProperty('--grass', state.catalog.style.grass);
   view.setStyle(state.catalog.style);
   renderControls();

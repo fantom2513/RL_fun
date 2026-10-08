@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="/static/style.css">
   <link rel="modulepreload" href="/static/api.js">
   <link rel="modulepreload" href="/static/track_view.js">
+  <link rel="modulepreload" href="/static/params_form.js">
+  <link rel="modulepreload" href="/static/charts.js">
 </head>
 <body>
   <div class="app">
@@ -45,7 +47,7 @@
     <main class="layout">
       <aside class="panel params" aria-labelledby="params-title">
         <h2 id="params-title" class="panel-title">Параметры</h2>
-        <p class="placeholder">Форма параметров запуска появится здесь.</p>
+        <div id="params-body" class="params-body"></div>
       </aside>
 
       <section class="stage" aria-label="Трасса">
@@ -76,8 +78,14 @@
       </aside>
 
       <section class="panel curves" aria-labelledby="curves-title">
-        <h2 id="curves-title" class="panel-title">Кривые обучения</h2>
-        <p class="placeholder">Графики по поколениям появятся здесь.</p>
+        <div class="curves-head">
+          <h2 id="curves-title" class="panel-title">Кривые обучения</h2>
+          <div id="metrics" class="segmented" role="radiogroup" aria-label="Показатель кривых"></div>
+          <ul id="legend" class="legend" aria-label="Запуски на графике"></ul>
+        </div>
+        <div class="curves-body">
+          <canvas id="chart" aria-label="Кривые обучения по поколениям для всех запусков"></canvas>
+        </div>
       </section>
     </main>
 
