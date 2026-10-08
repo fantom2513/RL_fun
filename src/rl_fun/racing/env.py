@@ -52,6 +52,8 @@ class RacingEnv(gym.Env[np.ndarray, np.ndarray]):
         self.render_mode = render_mode
         self.metadata = {**RacingEnv.metadata, "render_fps": round(1 / self.dt)}
         self.side_panel = None  # optional rl_fun.racing.render.SidePanel, set before first render
+        self.render_camera = "fit"  # "fit" or "follow"; set before the first render
+        self.render_zoom = 1.0  # zoom of the follow camera relative to the fit scale
 
         self._angles = np.radians(np.asarray(ray_angles_deg, dtype=np.float64))
         n_rays = len(self._angles)
@@ -118,7 +120,12 @@ class RacingEnv(gym.Env[np.ndarray, np.ndarray]):
             from rl_fun.racing.render import Renderer
 
             self._renderer = Renderer(
-                self.track, self.render_mode, self.metadata["render_fps"], self.side_panel
+                self.track,
+                self.render_mode,
+                self.metadata["render_fps"],
+                self.side_panel,
+                camera=self.render_camera,
+                zoom=self.render_zoom,
             )
         state = self._state
         directions = np.stack(
@@ -131,6 +138,10 @@ class RacingEnv(gym.Env[np.ndarray, np.ndarray]):
             f"Шаг: {self._steps}",
         ]
         return self._renderer.draw(state.x, state.y, state.heading, ray_points, lines)
+
+    def handle_render_event(self, event) -> bool:  # noqa: ANN001
+        """Pass a pygame event (zoom keys, mouse wheel, window resize) to the renderer."""
+        return self._renderer is not None and self._renderer.handle_event(event)
 
     def close(self) -> None:
         if self._renderer is not None:

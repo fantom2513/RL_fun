@@ -45,13 +45,15 @@ EDGE_POSITIVE: Color = (40, 200, 60)
 EDGE_NEGATIVE: Color = (214, 50, 70)
 
 EDGE_VISIBLE_FRACTION = 0.08  # edges weaker than this share of the layer's largest |w| are hidden
+EDGE_VISIBLE_FRACTION_FIRST = 0.15  # the busy input layer hides more of its weak edges
+EDGE_ALPHA_FIRST = 0.6  # and draws the rest more faintly
 
 # Legend under the network panel: (swatch kind, text).
 LEGEND_ENTRIES: tuple[tuple[str, str], ...] = (
-    ("positive", "Зелёная линия — положительный вес (усиливает сигнал)"),
-    ("negative", "Красная линия — отрицательный вес (ослабляет сигнал)"),
+    ("positive", "Зелёная линия — вес положительный (усиливает)"),
+    ("negative", "Красная линия — вес отрицательный (ослабляет)"),
     ("thickness", "Толщина линии — сила связи"),
-    ("node", "Цвет узла — знак и сила активации (зелёный +, красный −)"),
+    ("node", "Узел: зелёный — плюс, красный — минус"),
 )
 
 
@@ -61,6 +63,11 @@ def network_column_titles(layer_count: int) -> list[str]:
         return ["Вход"][:layer_count]
     hidden = [f"Скрытый {index}" for index in range(1, layer_count - 1)]
     return ["Вход", *hidden, "Выход"]
+
+
+def edge_threshold(layer_index: int) -> float:
+    """Share of the layer's largest |w| below which edges are hidden; stricter for layer 0."""
+    return EDGE_VISIBLE_FRACTION_FIRST if layer_index == 0 else EDGE_VISIBLE_FRACTION
 
 
 def visible_edges(

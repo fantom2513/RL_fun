@@ -201,7 +201,8 @@ def test_resize_recomputes_viewport_and_panel_rects():
 def test_videoresize_event_resizes_the_layout():
     r = renderer()
     try:
-        consumed = r.handle_event(pygame.event.Event(pygame.VIDEORESIZE, size=(1000, 700), w=1000, h=700))
+        event = pygame.event.Event(pygame.VIDEORESIZE, size=(1000, 700), w=1000, h=700)
+        consumed = r.handle_event(event)
         frame = r.draw(30.0, 5.0, 0.0, np.array([[40.0, 5.0]]), [])
     finally:
         r.close()
@@ -338,10 +339,44 @@ def test_crash_marker_persists_after_the_dead_car_is_the_only_trace():
 def test_fleet_view_accepts_camera_options_and_forwards_steps():
     fleet = RacingFleet(5, track="circuit")
     fleet.reset()
-    view = FleetView(fleet, mode="rgb_array", show_network=False, camera="follow", zoom=3.0, resizable=True)
+    view = FleetView(
+        fleet, mode="rgb_array", show_network=False, camera="follow", zoom=3.0, resizable=True
+    )
     try:
         frame = view.draw(fleet, [], None)
     finally:
         view.close()
 
     assert frame.shape == (GAME_HEIGHT, GAME_WIDTH, 3)
+
+
+def test_view_partly_outside_the_background_is_filled_with_grass():
+    from rl_fun.racing.style import GRASS
+
+    r = renderer(camera="follow", zoom=0.5)
+    try:
+        x, y, heading = np.array([195.0]), np.array([104.0]), np.array([0.0])
+        frame = r.draw_fleet(x, y, heading, np.array([True]), 0, None, [])
+    finally:
+        r.close()
+
+    for corner in (frame[2, GAME_WIDTH - 3], frame[GAME_HEIGHT - 3, 2]):
+        assert np.abs(corner.astype(int) - np.array(GRASS)).max() <= 4
+
+
+def test_sixty_cars_in_follow_mode_render_quickly():
+    import time
+
+    fleet = RacingFleet(60, track="circuit")
+    fleet.reset()
+    view = FleetView(fleet, mode="rgb_array", show_network=True, camera="follow", zoom=3.0)
+    try:
+        view.draw(fleet, [], None)
+        start = time.perf_counter()
+        for _ in range(10):
+            view.draw(fleet, [], None)
+        per_frame = (time.perf_counter() - start) / 10
+    finally:
+        view.close()
+
+    assert per_frame < 0.1  # loose bound; typically around 15 ms

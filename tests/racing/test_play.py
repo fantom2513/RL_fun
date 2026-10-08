@@ -61,3 +61,15 @@ def test_script_help_is_in_russian():
 
     assert result.returncode == 0
     assert "трасс" in result.stdout.lower()
+
+
+def test_parse_args_camera_defaults_and_options():
+    defaults = parse_args([])
+    chosen = parse_args(["--camera", "follow", "--zoom", "3"])
+
+    assert (defaults.camera, defaults.zoom) == ("fit", 2.0)
+    assert (chosen.camera, chosen.zoom) == ("follow", 3.0)
+
+
+def test_main_runs_with_follow_camera():
+    assert main(["--camera", "follow", "--max-frames", "3"]) == 0

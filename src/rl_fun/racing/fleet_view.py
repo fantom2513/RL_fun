@@ -10,8 +10,9 @@ import pygame
 from pygame import gfxdraw
 
 from rl_fun.racing.fleet import RacingFleet
-from rl_fun.racing.render import GAME_HEIGHT, Renderer
+from rl_fun.racing.render import Renderer
 from rl_fun.racing.style import (
+    EDGE_ALPHA_FIRST,
     EDGE_NEGATIVE,
     EDGE_POSITIVE,
     LEGEND_ENTRIES,
@@ -22,14 +23,15 @@ from rl_fun.racing.style import (
     PANEL_BACKGROUND,
     PANEL_MUTED,
     PANEL_TEXT,
+    edge_threshold,
     network_column_titles,
     visible_edges,
 )
 
-EDGE_MIN_STRENGTH = 0.05
 NODE_RADIUS = 11
 PANEL_TOP = 100
-PANEL_BOTTOM = GAME_HEIGHT - 178
+LEGEND_PADDING = 14  # px below the legend and between legend and network
+LEGEND_GAP = 8  # px between legend entries
 LABEL_GUTTER = 84
 VALUE_GUTTER = 84
 PANEL_SUPERSAMPLE = 2  # shapes are drawn this much larger, then smoothed down; text stays crisp
@@ -37,7 +39,7 @@ GLOW_THRESHOLD = 0.5  # |activation| above which a node gets a soft glow
 EDGE_CURVE = 0.42  # share of the column gap used as horizontal tangent: 0 = straight lines
 EDGE_SAMPLES = 16
 FONT_NAMES = ["segoeui", "arial", "dejavusans", "freesans"]
-LEGEND_HEIGHT = 150
+LEGEND_TEXT_LEFT = 56
 
 Point = tuple[float, float]
 
@@ -62,9 +64,9 @@ def _layer_xs(count: int, left: int, right: int) -> list[float]:
     return [left + i * step for i in range(count)]
 
 
-def _node_ys(count: int) -> list[float]:
-    spacing = (PANEL_BOTTOM - PANEL_TOP) / count
-    return [PANEL_TOP + (i + 0.5) * spacing for i in range(count)]
+def _node_ys(count: int, top: float, bottom: float) -> list[float]:
+    spacing = (bottom - top) / count
+    return [top + (i + 0.5) * spacing for i in range(count)]
 
 
 def _load_font(size: int, bold: bool = False) -> pygame.font.Font:
@@ -120,7 +122,7 @@ class NetworkPanel:
         self._value_font = _load_font(13)
         self._title_font = _load_font(22, bold=True)
         self._header_font = _load_font(14, bold=True)
-        self._legend_font = _load_font(13)
+        self._legend_font = _load_font(15)
         self._big: pygame.Surface | None = None
 
     def update(self, matrices: Sequence[np.ndarray], activations: Sequence[np.ndarray]) -> None:
@@ -138,19 +140,23 @@ class NetworkPanel:
         big.fill(PANEL_BACKGROUND)
         positions: list[list[Point]] = []
         if self._activations is not None and self._matrices is not None:
+            bottom = max(PANEL_TOP + 60, self._legend_top(rect.width, rect.height) - 18)
             xs = _layer_xs(len(self._activations), LABEL_GUTTER, rect.width - VALUE_GUTTER)
             positions = [
-                [(x, y) for y in _node_ys(len(layer))]
+                [(x, y) for y in _node_ys(len(layer), PANEL_TOP, bottom)]
                 for x, layer in zip(xs, self._activations, strict=True)
             ]
-            for matrix, src, dst in zip(self._matrices, positions[:-1], positions[1:], strict=True):
-                self._draw_edges(big, matrix, src, dst)
+            for index, (matrix, src, dst) in enumerate(
+                zip(self._matrices, positions[:-1], positions[1:], strict=True)
+            ):
+                self._draw_edges(big, matrix, src, dst, index)
             for layer_index, layer in enumerate(positions):
                 for node_index, center in enumerate(layer):
                     value = float(self._activations[layer_index][node_index])
                     self._draw_node(big, center, value)
-        legend = self._legend_layout(rect.width)
-        self._draw_legend_swatches(big, legend, rect.width)
+        legend = self._legend_layout(rect.width, rect.height)
+        divider = self._legend_top(rect.width, rect.height)
+        self._draw_legend_swatches(big, legend, rect.width, divider)
         panel = pygame.transform.smoothscale(big, (rect.width, rect.height))
         self._draw_text(panel, positions, legend)
         surface.blit(panel, rect.topleft)
@@ -158,9 +164,15 @@ class NetworkPanel:
     # -- shapes (drawn on the supersampled surface) ------------------------------------------
 
     def _draw_edges(
-        self, big: pygame.Surface, matrix: np.ndarray, src: list[Point], dst: list[Point]
+        self,
+        big: pygame.Surface,
+        matrix: np.ndarray,
+        src: list[Point],
+        dst: list[Point],
+        layer_index: int = 1,
     ) -> None:
-        shown = visible_edges(matrix)
+        shown = visible_edges(matrix, edge_threshold(layer_index))
+        fade = EDGE_ALPHA_FIRST if layer_index == 0 else 1.0
         largest = float(np.abs(matrix).max()) if matrix.size else 0.0
         edges = []
         for out_index, end in enumerate(dst):
@@ -169,14 +181,19 @@ class NetworkPanel:
                     weight = float(matrix[out_index, in_index])
                     edges.append((abs(weight) / largest, weight > 0, start, end))
         for strength, positive, start, end in sorted(edges, key=lambda edge: edge[0]):
-            self._fill_edge(big, start, end, strength, positive)
+            self._fill_edge(big, start, end, strength, positive, fade)
 
     @staticmethod
     def _fill_edge(
-        big: pygame.Surface, start: Point, end: Point, strength: float, positive: bool
+        big: pygame.Surface,
+        start: Point,
+        end: Point,
+        strength: float,
+        positive: bool,
+        fade: float = 1.0,
     ) -> None:
         base = EDGE_POSITIVE if positive else EDGE_NEGATIVE
-        alpha = int(70 + 150 * strength)
+        alpha = int((70 + 150 * strength) * fade)
         polygon = _edge_polygon(start, end, 0.9 + 4.4 * strength, PANEL_SUPERSAMPLE)
         gfxdraw.filled_polygon(big, polygon, (*base, alpha))
         gfxdraw.aapolygon(big, polygon, (*base, alpha))
@@ -200,10 +217,9 @@ class NetworkPanel:
 
     # -- legend -------------------------------------------------------------------------------
 
-    def _legend_layout(self, width: int) -> list[tuple[str, float, list[str]]]:
-        """(kind, centre y, wrapped lines) for each legend entry, stacked at the panel bottom."""
-        text_left = 56
-        limit = width - text_left - 10
+    def _legend_entries(self, width: int) -> tuple[list[tuple[str, list[str]]], float]:
+        """Legend entries wrapped to the panel width and the total height of the block."""
+        limit = width - LEGEND_TEXT_LEFT - 10
         line_height = self._legend_font.get_linesize()
         entries = []
         for kind, text in LEGEND_ENTRIES:
@@ -218,21 +234,34 @@ class NetworkPanel:
                     current = trial
             lines.append(current)
             entries.append((kind, lines))
-        gap = 8
-        total = sum(len(lines) * line_height + gap for _, lines in entries) - gap
-        top = GAME_HEIGHT - LEGEND_HEIGHT + 30 + (LEGEND_HEIGHT - 38 - total) / 2
+        total = sum(len(lines) * line_height + LEGEND_GAP for _, lines in entries) - LEGEND_GAP
+        return entries, total
+
+    def _legend_top(self, width: int, height: int) -> float:
+        """y of the divider line above the legend block, which sits at the bottom of the panel."""
+        _, total = self._legend_entries(width)
+        return height - LEGEND_PADDING - total - LEGEND_PADDING
+
+    def _legend_layout(self, width: int, height: int) -> list[tuple[str, float, list[str]]]:
+        """(kind, centre y, wrapped lines) for each legend entry, stacked at the panel bottom."""
+        entries, _ = self._legend_entries(width)
+        line_height = self._legend_font.get_linesize()
+        top = self._legend_top(width, height) + LEGEND_PADDING
         laid_out = []
         for kind, lines in entries:
-            height = len(lines) * line_height
-            laid_out.append((kind, top + height / 2, lines))
-            top += height + gap
+            block = len(lines) * line_height
+            laid_out.append((kind, top + block / 2, lines))
+            top += block + LEGEND_GAP
         return laid_out
 
     def _draw_legend_swatches(
-        self, big: pygame.Surface, legend: list[tuple[str, float, list[str]]], width: int
+        self,
+        big: pygame.Surface,
+        legend: list[tuple[str, float, list[str]]],
+        width: int,
+        divider: float,
     ) -> None:
         k = PANEL_SUPERSAMPLE
-        divider = GAME_HEIGHT - LEGEND_HEIGHT + 4
         line = ((12 * k, divider * k), ((width - 12) * k, divider * k))
         pygame.draw.line(big, (214, 218, 224), *line, k)
         for kind, y, _ in legend:
@@ -272,7 +301,7 @@ class NetworkPanel:
             top = y - len(lines) * line_height / 2
             for index, line in enumerate(lines):
                 text = self._legend_font.render(line, True, PANEL_TEXT)
-                panel.blit(text, (56, top + index * line_height))
+                panel.blit(text, (LEGEND_TEXT_LEFT, top + index * line_height))
 
     def _draw_labels(self, surface: pygame.Surface, positions: list[list[Point]]) -> None:
         inputs = self._activations[0] if self._activations else np.zeros(0)
@@ -326,6 +355,10 @@ class FleetView:
         show_network: bool = True,
         input_labels: Sequence[str] | None = None,
         output_labels: Sequence[str] = ("Руль", "Газ"),
+        camera: str = "fit",
+        zoom: float = 1.0,
+        resizable: bool = True,
+        size: tuple[int, int] | None = None,
     ) -> None:
         self._fleet = fleet
         self._mode = mode
@@ -335,7 +368,16 @@ class FleetView:
                 input_labels if input_labels is not None else default_input_labels(fleet.ray_angles)
             )
             self.panel = NetworkPanel(labels, output_labels)
-        self._renderer = Renderer(fleet.track, mode, fps=round(1 / fleet.dt), side_panel=self.panel)
+        self._renderer = Renderer(
+            fleet.track,
+            mode,
+            fps=round(1 / fleet.dt),
+            side_panel=self.panel,
+            camera=camera,
+            zoom=zoom,
+            resizable=resizable,
+            size=size,
+        )
 
     def draw(self, fleet: RacingFleet, lines: list[str], network: Any) -> np.ndarray | None:
         """Draw one frame. `network` is `(matrices, activations)` of the leader, or None."""
@@ -345,11 +387,26 @@ class FleetView:
         leader = self._leader(fleet)
         ray_points = self._ray_points(fleet, leader)
         frame = self._renderer.draw_fleet(
-            fleet.x, fleet.y, fleet.heading, fleet.alive, leader, ray_points, lines
+            fleet.x,
+            fleet.y,
+            fleet.heading,
+            fleet.alive,
+            leader,
+            ray_points,
+            lines,
+            steps=fleet.steps,
+            finished=fleet.finished,
         )
-        if self._mode == "human" and any(event.type == pygame.QUIT for event in pygame.event.get()):
-            raise ViewClosed
+        if self._mode == "human":
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    raise ViewClosed
+                self._renderer.handle_event(event)
         return frame
+
+    def handle_event(self, event: pygame.event.Event) -> bool:
+        """Forward a pygame event (zoom, camera, resize) to the renderer."""
+        return self._renderer.handle_event(event)
 
     def close(self) -> None:
         """Release the window and pygame resources."""

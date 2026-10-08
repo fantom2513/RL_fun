@@ -21,7 +21,20 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Ручное вождение по гоночной трассе. Стрелки или WASD — управление, "
-        "R — перезапуск, Esc — выход."
+        "R — перезапуск, Esc — выход. Колесо мыши или +/- — масштаб, C — переключить камеру "
+        "(вся трасса / слежение за машиной). Размер окна можно менять мышью.",
+    )
+    parser.add_argument(
+        "--camera",
+        choices=("fit", "follow"),
+        default="fit",
+        help="Камера: fit — вся трасса, follow — слежение за машиной (по умолчанию fit)",
+    )
+    parser.add_argument(
+        "--zoom",
+        type=float,
+        default=2.0,
+        help="Масштаб камеры слежения от 0.5 до 6 (по умолчанию 2)",
     )
     parser.add_argument(
         "track", nargs="?", default="oval", help="Имя встроенной трассы или путь к JSON-файлу"
@@ -56,11 +69,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (OSError, ValueError) as error:
         parser.error(f"Не удалось создать среду: {error}")
 
+    env.unwrapped.render_camera = arguments.camera
+    env.unwrapped.render_zoom = arguments.zoom
     frames = 0
     try:
         env.reset()
         while arguments.max_frames is None or frames < arguments.max_frames:
             for event in pygame.event.get():
+                env.unwrapped.handle_render_event(event)
                 if event.type == pygame.QUIT:
                     return 0
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:

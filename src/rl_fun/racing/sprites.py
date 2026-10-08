@@ -47,19 +47,19 @@ _PALETTES: dict[str, dict[str, Color]] = {
         "stripe": (226, 232, 240),
     },
     "dead": {
-        "top": (168, 178, 190),
-        "side": (124, 136, 150),
-        "wing": (80, 92, 106),
-        "wing_light": (104, 116, 130),
-        "wheel": (54, 64, 76),
-        "rim": (96, 108, 120),
-        "cockpit": (72, 84, 98),
-        "outline": (70, 82, 96),
-        "helmet": (132, 120, 126),
-        "stripe": (150, 160, 172),
+        "top": (150, 156, 166),
+        "side": (108, 116, 128),
+        "wing": (66, 74, 86),
+        "wing_light": (110, 118, 130),
+        "wheel": (30, 34, 42),
+        "rim": (80, 88, 100),
+        "cockpit": (46, 52, 64),
+        "outline": (40, 46, 58),
+        "helmet": (150, 96, 100),
+        "stripe": (132, 140, 152),
     },
 }
-_DEAD_OPACITY = 0.62
+_DEAD_OPACITY = 0.88
 
 # Half outline of the body in the car frame (metres, nose +x, y to the left), nose to tail.
 _BODY_HALF = (
