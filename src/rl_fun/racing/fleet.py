@@ -210,7 +210,9 @@ class RacingFleet:
         self.lateral_offset = offset
         self.steer_change = np.where(moving, raw_change, 0.0)
         self.finished |= finished_now
-        self.lap_steps = np.where(finished_now, float(self.steps), self.lap_steps)
+        # A finishing car has moved on every step since its (re)spawn, so its own step count is
+        # the lap time; for cars started by `reset` it equals the fleet step counter.
+        self.lap_steps = np.where(finished_now, self.steps_alive.astype(float), self.lap_steps)
         self.alive = moving & on_road & ~finished_now
 
         self._distances = self._cast()

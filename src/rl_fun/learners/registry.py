@@ -14,7 +14,9 @@ def _evolution() -> Learner:
 
 
 def _ppo() -> Learner:
-    raise ValueError("обучатель ppo ещё не реализован")
+    from rl_fun.learners.ppo import PPOLearner
+
+    return PPOLearner()
 
 
 _FACTORIES: dict[str, Callable[[], Learner]] = {

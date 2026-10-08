@@ -124,7 +124,7 @@ def test_policy_output_has_the_model_shape_bounds_and_initial_std():
 
     # Assert
     assert tuple(mean.shape) == (64, 2)
-    assert float(mean.abs().max()) <= 1.0
+    assert float(mean.detach().abs().max()) <= 1.0
     assert tuple(log_prob.shape) == (64,)
     assert policy.std().detach().numpy() == pytest.approx([0.6, 0.6])
 
@@ -226,10 +226,10 @@ def test_episodes_cut_by_the_time_limit_are_counted_and_cars_respawn():
 
 def test_dead_cars_are_respawned_during_the_rollout():
     # Arrange
-    config = _config(
-        max_steps=1000, ppo={"rollout_steps": 256, "minibatch_size": 256, "initial_std": 2.0}
-    )
+    config = _config(max_steps=1000, ppo={"rollout_steps": 64, "minibatch_size": 64})
     learner, fleet = _learner(config)
+    fleet.heading[0] += np.pi / 2  # car 0 points at the edge at full speed and must crash
+    fleet.v_long[0] = fleet.dynamics.max_speed
     calls: list[tuple[np.ndarray, np.ndarray]] = []
     original = fleet.respawn
 
@@ -243,7 +243,7 @@ def test_dead_cars_are_respawned_during_the_rollout():
     learner.run_iteration(0)
 
     # Assert
-    assert any((~alive).any() for _, alive in calls)
+    assert any(not alive[0] for _, alive in calls)
     for mask, alive in calls:
         assert mask[~alive].all()
     assert fleet.alive.all()
