@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from rl_fun.rollouts import EpisodeResult
+
 
 def cartpole_values(tmp_path: Path) -> dict[str, object]:
     return {
@@ -152,6 +154,53 @@ def test_evaluate_closes_environment_on_rollout_failure(
             module.main([str(config)])
     # Assert
     assert closed == [True]
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_status", "expected_diagnostic"),
+    [
+        pytest.param(
+            KeyboardInterrupt("evaluation interrupted"), 130, "cleanup failed", id="interrupted",
+        ),
+        pytest.param(None, 2, "cleanup failed", id="successful-rollout"),
+        pytest.param(ValueError("rollout failed"), 2, "rollout failed", id="failed-rollout"),
+    ],
+)
+def test_evaluate_preserves_status_and_diagnostics_when_close_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    failure: BaseException | None, expected_status: int, expected_diagnostic: str,
+) -> None:
+    # Arrange
+    spec = importlib.util.spec_from_file_location("evaluate_cli", "scripts/evaluate.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    closed = []
+
+    class Environment:
+        def close(self) -> None:
+            closed.append(True)
+            raise RuntimeError("cleanup failed")
+
+    def rollout(*args: object, **kwargs: object) -> EpisodeResult:
+        if failure is not None:
+            raise failure
+        return EpisodeResult(1.0, 1, True, False, False)
+
+    monkeypatch.setattr(module, "make_environment", lambda config: Environment())
+    monkeypatch.setattr(module, "rollout_episode", rollout)
+    config = write_config(tmp_path, cartpole_values(tmp_path))
+    # Act
+    try:
+        status = module.main([str(config)])
+    except SystemExit as error:
+        status = error.code
+    stderr = capsys.readouterr().err
+    # Assert
+    assert (
+        status, closed, expected_diagnostic in stderr,
+        "cleanup failed" in stderr, "Traceback" in stderr,
+    ) == (expected_status, [True], True, True, False)
 
 
 def test_compare_accepts_arbitrary_metric_and_writes_neutral_columns(tmp_path: Path) -> None:
