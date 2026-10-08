@@ -4,9 +4,9 @@ import multiprocessing
 from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass
 
-from rl_fun.experiments.bandit import run_bandit_once
 from rl_fun.experiments.config import ExperimentConfig
 from rl_fun.experiments.result import RunSummary
+from rl_fun.experiments.run import run_once
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,24 +24,24 @@ class BatchSummary:
 
 def _run_seed(config_dict: dict[str, object], seed: int) -> RunSummary:
     config = ExperimentConfig.from_dict(config_dict)
-    return run_bandit_once(config, seed)
+    return run_once(config, seed)
 
 
 def run_many(config: ExperimentConfig) -> BatchSummary:
     config.validate()
-    if config.workers == 1:
-        runs = tuple(run_bandit_once(config, seed) for seed in config.seeds)
+    if config.run.workers == 1:
+        runs = tuple(_run_seed(config.to_dict(), seed) for seed in config.run.seeds)
     else:
         context = multiprocessing.get_context("spawn")
         futures: list[Future[RunSummary]] = []
         with ProcessPoolExecutor(
-            max_workers=min(config.workers, len(config.seeds)),
+            max_workers=min(config.run.workers, len(config.run.seeds)),
             mp_context=context,
         ) as pool:
             try:
                 futures = [
                     pool.submit(_run_seed, config.to_dict(), seed)
-                    for seed in config.seeds
+                    for seed in config.run.seeds
                 ]
                 runs = tuple(future.result() for future in futures)
             except KeyboardInterrupt:
