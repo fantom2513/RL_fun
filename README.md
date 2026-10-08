@@ -90,6 +90,24 @@ uv run --all-groups python scripts/play.py wavy
 
 Для сравнения с готовым решением в библиотеке лежит эталон (`rl_fun.racing.reference`) с зафиксированным бенчмарком (`src/rl_fun/racing/benchmarks/oval.json`): ноутбук в разделе «Сравнение с эталоном» накладывает вашу кривую обучения на эталонную. Бенчмарк пересоздаётся командой `uv run --all-groups python scripts/make_reference.py`. Всё считается на CPU и не требует видеокарты.
 
+Сеть машинки описывается данными — `ModelSpec` (`rl_fun.racing.model_spec`): входы, скрытые слои, выходы и активация скрытых слоёв (`tanh`, `relu` или `sigmoid`). Входы: лучи `ray:<угол>` (от −180 до 180 градусов), `speed`, `lateral_speed`, `yaw_rate`, `acceleration` (продольное ускорение) и `steering_angle` (последний угол руля). Выходы: `steer` (руль) обязателен; газ задаётся либо `throttle` (от −1 до 1, отрицательный — тормоз), либо парой `accelerate` и `brake` (от 0 до 1), плюс необязательный `boost` (буст, от 0 до 1). `RacingFleet(..., model=...)` собирает наблюдение в порядке `model.inputs`, а `reference.train(..., model=...)` строит сеть по этой спецификации. Награда может быть составной — `FitnessSpec({"progress": 1.0, "centering": 0.5})` — взвешенная сумма слагаемых `progress`, `lap_bonus`, `speed`, `survival`, `centering` и `smoothness` (отрицательный вес работает как штраф). Готовые профили в `PRESETS`: `racer` (прогресс, бонус круга, скорость), `careful` (прогресс, центрирование, плавность, выживание) и `balanced`. Без явных параметров всё работает как раньше; это основа будущего интерфейса для настройки сети и наград.
+
+```python
+from rl_fun.racing import reference
+from rl_fun.racing.fitness import PRESETS
+from rl_fun.racing.fleet import RacingFleet
+from rl_fun.racing.model_spec import ModelSpec
+
+model = ModelSpec(
+    inputs=("ray:-45", "ray:0", "ray:45", "speed", "acceleration"),
+    hidden=(8,),
+    outputs=("steer", "accelerate", "brake", "boost"),
+    activation="relu",
+)
+fleet = RacingFleet(40, model=model)  # fleet.action_size == 4 выхода сети
+run = reference.train("oval", generations=20, model=model, fitness=PRESETS["careful"])
+```
+
 ## Структура проекта
 
 - `src/rl_fun/` — среды, алгоритмы, policy, rollout, runtime и метрики;
