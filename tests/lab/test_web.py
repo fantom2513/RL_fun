@@ -19,6 +19,7 @@ EXPECTED = (
     "track_view.js",
     "params_form.js",
     "charts.js",
+    "network_view.js",
 )
 
 _ATTRIBUTE = re.compile(r"""\b(?:src|href)\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
@@ -88,13 +89,19 @@ def test_js_module_imports_resolve_to_existing_files(path: Path) -> None:
     assert [t for t in targets if not t.is_file()] == []
 
 
-def test_app_module_imports_form_and_charts_modules() -> None:
+def test_app_module_imports_form_charts_and_network_modules() -> None:
     path = WEB_DIR / "app.js"
     source = _strip_comments(path, path.read_text("utf-8"))
 
     imported = {_resolve(_url_of(path), s).name for s in _JS_IMPORT.findall(source)}
 
-    assert {"api.js", "track_view.js", "params_form.js", "charts.js"} <= imported
+    assert {"api.js", "track_view.js", "params_form.js", "charts.js", "network_view.js"} <= imported
+
+
+def test_network_view_module_is_preloaded_by_index_html() -> None:
+    html = (WEB_DIR / "index.html").read_text("utf-8")
+
+    assert "/static/network_view.js" in html
 
 
 @pytest.mark.parametrize("path", [p for p in WEB_FILES if p.suffix == ".css"], ids=lambda p: p.name)
