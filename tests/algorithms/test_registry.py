@@ -119,3 +119,63 @@ def test_epsilon_adapter_requires_epsilon_parameter():
             MemoryMetricSink(),
             {},
         )
+
+
+def test_random_algorithm_includes_partial_episode_reward_in_training_total():
+    # Arrange
+    env = gym.make("CartPole-v1")
+    try:
+        # Act
+        result = get_algorithm("random").run(
+            env,
+            1,
+            7,
+            np.random.default_rng(7),
+            MemoryMetricSink(),
+            {},
+        )
+        # Assert: CartPole returns one reward per step, even without an episode end.
+        assert result.metrics["train/cumulative_reward"] == 1.0
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize("algorithm_id", ["bandit_greedy", "bandit_epsilon"])
+@pytest.mark.parametrize("entry_point", ["validate", "run"])
+@pytest.mark.parametrize("wrapper", ["transform", "identity", "space"])
+def test_bandit_rejects_incompatible_actions_before_environment_mutation(
+    algorithm_id: str,
+    entry_point: str,
+    wrapper: str,
+) -> None:
+    # Arrange
+    base = StationaryBanditEnv(arms=3, horizon=4, reward_std=0.0)
+    if wrapper == "space":
+        env = gym.Wrapper(base)
+        env.action_space = gym.spaces.Discrete(2)
+    else:
+        env = gym.wrappers.TransformAction(
+            base,
+            (lambda action: action + 1) if wrapper == "transform" else lambda action: action,
+            gym.spaces.Discrete(2 if wrapper == "transform" else 3),
+        )
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=2)
+    definition = get_algorithm(algorithm_id)
+    sink = MemoryMetricSink()
+    try:
+        # Act / Assert
+        with pytest.raises(ValueError, match=f"{algorithm_id}.*environment"):
+            if entry_point == "validate":
+                definition.validate(env, "wrapped-bandit")
+            else:
+                definition.run(
+                    env,
+                    4,
+                    7,
+                    np.random.default_rng(7),
+                    sink,
+                    {"epsilon": 0.1} if algorithm_id == "bandit_epsilon" else {},
+                )
+        assert np.array_equal(base.arm_means, np.zeros(3)) and sink.events == []
+    finally:
+        env.close()

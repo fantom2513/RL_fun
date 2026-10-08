@@ -1,5 +1,7 @@
 import gymnasium as gym
+import pytest
 
+from rl_fun.environments.bandit import StationaryBanditEnv
 from rl_fun.policies import RandomPolicy
 from rl_fun.rollouts import rollout_episode
 
@@ -48,5 +50,33 @@ def test_rollout_obeys_safety_limit():
 
         # Assert
         assert result.length == 1
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize(
+    ("ending", "expected"),
+    [
+        ("terminated", (True, False, False)),
+        ("truncated", (False, True, False)),
+        ("safety", (False, False, True)),
+    ],
+)
+def test_rollout_reports_distinct_end_flags(ending: str, expected: tuple[bool, bool, bool]):
+    # Arrange
+    env = StationaryBanditEnv(arms=2, horizon=1 if ending == "truncated" else 4)
+    if ending == "terminated":
+
+        class TerminatingBandit(StationaryBanditEnv):
+            def step(self, action):
+                observation, reward, _, _, info = super().step(action)
+                return observation, reward, True, False, info
+
+        env = TerminatingBandit(arms=2, horizon=4)
+    try:
+        # Act
+        result = rollout_episode(env, RandomPolicy(), seed=5, max_episode_steps=1)
+        # Assert: an environment end on the budget boundary takes precedence.
+        assert (result.terminated, result.truncated, result.reached_safety_limit) == expected
     finally:
         env.close()
