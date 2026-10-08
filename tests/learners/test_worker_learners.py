@@ -60,21 +60,16 @@ def test_config_artifact_records_the_learner_and_ppo_params(tmp_path):
     assert saved["ppo"]["learning_rate"] == 3e-4
 
 
-def test_unimplemented_learner_ends_with_error_status_not_a_crash(tmp_path):
+def test_ppo_learner_runs_to_the_finished_status(tmp_path):
     # Arrange
     conn = Connection()
+    config = _config(learner="ppo", population=6, ppo={"rollout_steps": 16, "minibatch_size": 32})
 
     # Act
-    run_worker(_config(learner="ppo"), conn, tmp_path, speed="max")
+    run_worker(config, conn, tmp_path, speed="max")
 
     # Assert
-    last = conn.sent[-1]
-    assert last["t"] == "status"
-    if last["status"] == "error":
-        assert "обучатель ppo ещё не реализован" in last["message"]
-        assert list(tmp_path.iterdir()) == []
-    else:
-        assert last["status"] == "finished"  # task D implemented PPO
+    assert conn.sent[-1] == {"t": "status", "status": "finished"}
 
 
 def test_unknown_learner_ends_with_error_status(tmp_path):

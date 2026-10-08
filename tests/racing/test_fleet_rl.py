@@ -69,6 +69,25 @@ def test_respawn_resets_a_crashed_or_finished_car():
     assert not fleet.just_finished.any()
 
 
+def test_lap_steps_of_a_respawned_car_count_from_its_respawn():
+    # Arrange
+    fleet = RacingFleet(2)
+    fleet.reset()
+    for _ in range(20):
+        fleet.step(repeat(FORWARD, 2))
+    fleet.respawn(np.array([True, False]))
+    for _ in range(5):
+        fleet.step(repeat(FORWARD, 2))
+    fleet._travelled[0] = fleet.track.length - 0.001
+
+    # Act
+    fleet.step(repeat(FORWARD, 2))
+
+    # Assert
+    assert fleet.finished[0]
+    assert fleet.lap_steps[0] == 6.0
+
+
 def test_respawned_car_behaves_like_a_fresh_one():
     # Arrange
     fleet = RacingFleet(2)

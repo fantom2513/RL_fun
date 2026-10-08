@@ -184,14 +184,15 @@ def test_registry_creates_the_evolution_learner():
     assert available_learners() == ("evolution", "ppo")
 
 
-def test_registry_reports_ppo_as_not_implemented_in_russian_until_it_lands():
-    # Arrange / Act / Assert
-    try:
-        learner = get_learner("ppo")
-    except ValueError as error:
-        assert "обучатель ppo ещё не реализован" in str(error)
-    else:
-        assert learner is not None  # task D replaced the placeholder
+def test_registry_creates_the_ppo_learner():
+    # Arrange
+    from rl_fun.learners.ppo import PPOLearner
+
+    # Act
+    learner = get_learner("ppo")
+
+    # Assert
+    assert isinstance(learner, PPOLearner)
 
 
 def test_registry_rejects_unknown_names():
