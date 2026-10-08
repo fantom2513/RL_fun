@@ -95,7 +95,7 @@ def test_no_curbs_on_straight_edges():
     assert spans
     for span in spans:
         for x, y in segment_midpoints(track, span):
-            # Inner (left) boundary of the straights: y = +-35 for |x| <= 40, x = +-55 for |y| <= 20.
+            # Inner (left) boundary of the straights: y = +-35 for |x| <= 40, x = +-55 for |y| <= 20
             assert not (abs(abs(y) - 35.0) < 1.0 and abs(x) <= 35.0)
             assert not (abs(abs(x) - 55.0) < 1.0 and abs(y) <= 15.0)
 

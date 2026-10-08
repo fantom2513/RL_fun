@@ -9,19 +9,25 @@ import numpy as np
 import pygame
 
 from rl_fun.racing.fleet import RacingFleet
-from rl_fun.racing.render import GAME_HEIGHT, PANEL_BACKGROUND, TEXT, Renderer
+from rl_fun.racing.render import GAME_HEIGHT, Renderer
+from rl_fun.racing.style import (
+    EDGE_NEGATIVE,
+    EDGE_POSITIVE,
+    NODE_NEGATIVE,
+    NODE_NEUTRAL,
+    NODE_OUTLINE,
+    NODE_POSITIVE,
+    PANEL_BACKGROUND,
+    PANEL_MUTED,
+    PANEL_TEXT,
+)
 
-NODE_NEUTRAL = (70, 72, 84)
-NODE_POSITIVE = (255, 200, 60)
-NODE_NEGATIVE = (80, 160, 255)
-EDGE_POSITIVE = (60, 200, 90)
-EDGE_NEGATIVE = (220, 70, 70)
-LABEL_MUTED = (170, 170, 180)
 EDGE_MIN_STRENGTH = 0.05
+NODE_RADIUS = 10
 PANEL_TOP = 60
-PANEL_BOTTOM = GAME_HEIGHT - 20
-LABEL_GUTTER = 96
-VALUE_GUTTER = 110
+PANEL_BOTTOM = GAME_HEIGHT - 24
+LABEL_GUTTER = 84
+VALUE_GUTTER = 84
 
 
 class ViewClosed(Exception):
@@ -52,9 +58,10 @@ def _node_ys(count: int) -> list[float]:
 class NetworkPanel:
     """Side panel drawing a fully connected network: nodes per layer, weighted edges, values.
 
-    Edges are green for positive weights and red for negative ones; strength (thickness and
-    brightness) grows with |w|, and weak edges are skipped. Node colors follow the sign of the
-    activation. Without a state set by `update` only the title is drawn.
+    Edges are green for positive weights and red for negative ones; thickness and saturation grow
+    with |w|, and weak edges are skipped. Nodes are filled green or red by the sign of the
+    activation. Every input and output label has its current value printed underneath. Without a
+    state set by `update` only the title is drawn.
     """
 
     def __init__(
@@ -67,6 +74,7 @@ class NetworkPanel:
         self._matrices: list[np.ndarray] | None = None
         self._activations: list[np.ndarray] | None = None
         self._font = pygame.font.Font(None, 22)
+        self._value_font = pygame.font.Font(None, 19)
         self._title_font = pygame.font.Font(None, 28)
 
     def update(self, matrices: Sequence[np.ndarray], activations: Sequence[np.ndarray]) -> None:
@@ -77,7 +85,7 @@ class NetworkPanel:
     def draw(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
         """Draw the network into `rect` of `surface`."""
         surface.fill(PANEL_BACKGROUND, rect)
-        title = self._title_font.render("Нейросеть лидера", True, TEXT)
+        title = self._title_font.render("Нейросеть лидера", True, PANEL_TEXT)
         surface.blit(title, (rect.left + 12, rect.top + 14))
         if self._activations is None or self._matrices is None:
             return
@@ -105,42 +113,73 @@ class NetworkPanel:
         src: list[tuple[float, float]],
         dst: list[tuple[float, float]],
     ) -> None:
+        edges = []
         for out_index, (ox, oy) in enumerate(dst):
             for in_index, (ix, iy) in enumerate(src):
                 weight = float(matrix[out_index, in_index])
                 strength = min(abs(weight), 1.0)
-                if strength < EDGE_MIN_STRENGTH:
-                    continue
-                base = EDGE_POSITIVE if weight > 0 else EDGE_NEGATIVE
-                color = _mix(PANEL_BACKGROUND, base, 0.25 + 0.75 * strength)
-                pygame.draw.line(surface, color, (ix, iy), (ox, oy), 1 + int(2 * strength))
+                if strength >= EDGE_MIN_STRENGTH:
+                    edges.append((strength, weight > 0, (ix, iy), (ox, oy)))
+        for strength, positive, start, end in sorted(edges, key=lambda edge: edge[0]):
+            base = EDGE_POSITIVE if positive else EDGE_NEGATIVE
+            color = _mix(PANEL_BACKGROUND, base, 0.3 + 0.7 * strength)
+            pygame.draw.line(surface, color, start, end, 1 + int(4 * strength))
 
     def _draw_node(
         self, surface: pygame.Surface, center: tuple[float, float], value: float
     ) -> None:
-        if value >= 0:
-            color = _mix(NODE_NEUTRAL, NODE_POSITIVE, value)
-        else:
-            color = _mix(NODE_NEUTRAL, NODE_NEGATIVE, -value)
-        pygame.draw.circle(surface, color, center, 8)
-        pygame.draw.circle(surface, TEXT, center, 8, 1)
+        target = NODE_POSITIVE if value >= 0 else NODE_NEGATIVE
+        color = _mix(NODE_NEUTRAL, target, abs(value) ** 0.7)
+        pygame.draw.circle(surface, color, center, NODE_RADIUS)
+        pygame.draw.circle(surface, NODE_OUTLINE, center, NODE_RADIUS, 3)
 
     def _draw_labels(
         self, surface: pygame.Surface, positions: list[list[tuple[float, float]]]
     ) -> None:
-        for name, (x, y) in zip(self.input_labels, positions[0], strict=False):
-            text = self._font.render(name, True, LABEL_MUTED)
-            surface.blit(text, (x - 14 - text.get_width(), y - text.get_height() / 2))
+        inputs = self._activations[0] if self._activations else np.zeros(0)
+        for name, (x, y), value in zip(self.input_labels, positions[0], inputs, strict=False):
+            x_text = x - NODE_RADIUS - 8
+            self._blit_label(surface, name, f"{value:.2f}", (x_text, y), right_aligned=True)
         output_nodes = positions[-1] if len(positions) > 1 else []
-        activations = self._activations[-1] if self._activations else np.zeros(0)
-        for name, (x, y), value in zip(self.output_labels, output_nodes, activations, strict=False):
-            text = self._font.render(f"{name}: {value:+.2f}", True, TEXT)
-            surface.blit(text, (x + 14, y - text.get_height() / 2))
+        outputs = self._activations[-1] if self._activations else np.zeros(0)
+        for name, (x, y), value in zip(self.output_labels, output_nodes, outputs, strict=False):
+            x_text = x + NODE_RADIUS + 8
+            self._blit_label(surface, name, f"{value:.2f}", (x_text, y), right_aligned=False)
+
+    def _blit_label(
+        self,
+        surface: pygame.Surface,
+        name: str,
+        value: str,
+        anchor: tuple[float, float],
+        right_aligned: bool,
+    ) -> None:
+        """Name with its value underneath, vertically centred on the node."""
+        arrow = name.startswith("↑")  # the default font has no arrow glyph, so it is drawn
+        title = self._font.render(
+            name.removeprefix("↑").strip() if arrow else name, True, PANEL_TEXT
+        )
+        number = self._value_font.render(value, True, PANEL_MUTED)
+        x, y = anchor
+        top = y - (title.get_height() + number.get_height() - 2) / 2
+        for line, offset in ((title, 0), (number, title.get_height() - 2)):
+            left = x - line.get_width() if right_aligned else x
+            surface.blit(line, (left, top + offset))
+        if arrow:
+            self._draw_arrow(surface, (x - title.get_width() - 9, top + title.get_height() / 2))
+
+    @staticmethod
+    def _draw_arrow(surface: pygame.Surface, center: tuple[float, float]) -> None:
+        cx, cy = center
+        pygame.draw.line(surface, PANEL_TEXT, (cx, cy + 5), (cx, cy - 5), 2)
+        pygame.draw.lines(
+            surface, PANEL_TEXT, False, [(cx - 4, cy - 1), (cx, cy - 5), (cx + 4, cy - 1)], 2
+        )
 
 
 def default_input_labels(ray_angles: np.ndarray) -> list[str]:
     """Labels for the observation: one per ray angle in degrees, then speed, slip and yaw."""
-    rays = [f"{round(float(np.degrees(angle)))}°" for angle in ray_angles]
+    rays = [f"↑ {round(float(np.degrees(angle)))}°" for angle in ray_angles]
     return [*rays, "Скор.", "Бок.", "Угл."]
 
 
