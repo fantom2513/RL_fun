@@ -451,3 +451,32 @@ def test_crash_is_delivered_to_subscribers(tmp_path: Path) -> None:
         assert events[-1][1]["message"] == "процесс запуска завершился неожиданно"
     finally:
         manager.shutdown()
+
+
+def test_subscribe_idle_timeout_yields_idle_sentinel_while_nothing_happens(
+    idle_manager: RunManager,
+) -> None:
+    run_id = idle_manager.create(_config())
+    wait_status(idle_manager, run_id, "running")
+    events = idle_manager.subscribe(run_id, idle_timeout=0.05)
+    try:
+        received = [next(events) for _ in range(4)]
+    finally:
+        events.close()
+
+    assert received[0] == ("status", {"t": "status", "status": "running"})
+    assert received[1:] == [("idle", None)] * 3
+
+
+def test_subscribe_without_idle_timeout_never_yields_idle(idle_manager: RunManager) -> None:
+    run_id = idle_manager.create(_config())
+    wait_status(idle_manager, run_id, "running")
+    events, thread = consume(idle_manager, run_id)
+    wait_for(lambda: events)
+
+    time.sleep(1.5)  # longer than the internal wake-up interval
+    idle_manager.command(run_id, {"cmd": "stop"})
+    thread.join(TIMEOUT)
+
+    assert not thread.is_alive()
+    assert all(kind != "idle" for kind, _ in events)

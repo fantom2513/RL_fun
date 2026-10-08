@@ -18,6 +18,8 @@ from rl_fun.lab.server import LabServer, make_server
 
 from rl_fun.lab.manager import RunManager
 
+from . import manager_targets as targets
+
 TIMEOUT = 90.0
 MAX_BODY = 1024 * 1024
 CYRILLIC = re.compile(r"[а-яё]", re.IGNORECASE)
@@ -471,6 +473,35 @@ def test_stream_client_disconnect_frees_threads(server: LabServer) -> None:
             "running",
             "paused",
         )
+
+
+def sse_pump_threads() -> int:
+    return sum(1 for t in threading.enumerate() if t.name.startswith("lab-sse-"))
+
+
+def test_stream_disconnect_from_idle_run_stops_the_pump_thread(tmp_path: Path) -> None:
+    manager = RunManager(tmp_path, worker_target=targets.idle_target)
+    lab = make_server(port=0, runs_dir=tmp_path, manager=manager)
+    lab.serve_in_thread()
+    try:
+        run_id = call_json(lab, "POST", "/api/runs", _config(generations=None))[1]["id"]
+        for _ in range(3):  # repeated reconnects must not accumulate parked threads
+            sock = socket.create_connection(("127.0.0.1", lab.port), timeout=TIMEOUT)
+            try:
+                sock.sendall(
+                    f"GET /api/runs/{run_id}/stream HTTP/1.1\r\nHost: 127.0.0.1:{lab.port}\r\n\r\n"
+                    .encode()
+                )
+                assert b"event:" in _recv_until(sock, b"event:")
+                assert sse_pump_threads() >= 1
+            finally:
+                sock.close()
+
+        wait_for(lambda: sse_pump_threads() == 0, timeout=5.0)
+        assert call_json(lab, "GET", f"/api/runs/{run_id}")[1]["status"] == "running"
+        assert manager.process(run_id).is_alive()
+    finally:
+        lab.close()
 
 
 def _recv_until(sock: socket.socket, marker: bytes) -> bytes:
