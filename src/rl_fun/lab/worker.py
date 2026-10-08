@@ -11,7 +11,6 @@ import os
 import re
 import time
 from collections.abc import Callable
-from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
@@ -19,13 +18,11 @@ from typing import Any, Protocol
 import numpy as np
 
 from rl_fun.lab.config import RunConfig
-from rl_fun.lab.protocol import build_gen_message, notice_message, status_message
+from rl_fun.lab.protocol import build_iteration_message, notice_message, status_message
 from rl_fun.lab.stream_view import StopRun, StreamView
-from rl_fun.racing import reference
+from rl_fun.learners.registry import get_learner
 from rl_fun.racing.fleet import RacingFleet
-from rl_fun.racing.generation import run_generation
 
-UPDATABLE = ("mutation_rate", "mutation_scale", "elite", "fitness")
 _UNSAFE_NAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
@@ -69,11 +66,10 @@ def _run(
     sleep: Callable[[float], None],
 ) -> None:
     cfg = RunConfig.from_dict(config)
+    learner = get_learner(cfg.learner)
     run_dir = _create_run_dir(runs_dir, cfg.name)
     _write_json(run_dir / "config.json", cfg.to_dict())
 
-    sizes = cfg.model.layer_sizes
-    activation = cfg.model.activation
     fleet = RacingFleet(
         cfg.population,
         track=cfg.track,
@@ -82,7 +78,6 @@ def _run(
         ray_range=cfg.ray_range,
     )
     rng = np.random.default_rng(cfg.seed)
-    population = reference.init_population(rng, cfg.population, sizes, cfg.init_scale)
     view = StreamView(
         conn.send,
         lambda: _drain(conn),
@@ -90,87 +85,37 @@ def _run(
         sleep=sleep,
         speed=speed,
     )
+    learner.setup(cfg, fleet, rng, view)
     conn.send(status_message("running"))
 
-    best_weights = population[0].copy()
-    best_fitness = -np.inf
-    generation = 0
-    while cfg.generations is None or generation < cfg.generations:
-        view.current_generation = generation
-        result = run_generation(
-            fleet,
-            population,
-            lambda weights, observation: reference.forward(weights, observation, sizes, activation),
-            view=view,
-            inspect=lambda weights, observation: reference.inspect(
-                weights, observation, sizes, activation
-            ),
-            label=f"Лаборатория, поколение {generation + 1}",
+    iteration = 0
+    while cfg.generations is None or iteration < cfg.generations:
+        view.current_generation = iteration
+        result = learner.run_iteration(iteration)
+        message = build_iteration_message(
+            iteration,
+            best=result.best,
+            mean=result.mean,
+            finished=result.finished,
+            best_fitness=result.best_fitness,
+            best_lap_steps=result.best_lap_steps,
+            params=result.params,
+            extra=result.extra,
         )
-        scores = cfg.fitness.score(result)
-        message = build_gen_message(
-            generation,
-            result,
-            scores,
-            {
-                "mutation_rate": cfg.mutation_rate,
-                "mutation_scale": cfg.mutation_scale,
-                "elite": cfg.elite,
-            },
-        )
-
-        top = int(np.argmax(scores))
-        if scores[top] > best_fitness:
-            best_fitness = float(scores[top])
-            best_weights = population[top].copy()
-        _write_json(
-            run_dir / "best_weights.json",
-            {
-                "sizes": sizes,
-                "activation": activation,
-                "generation": generation,
-                "fitness": best_fitness,
-                "weights": best_weights.tolist(),
-            },
-        )
+        snapshot = learner.best_snapshot()
+        if snapshot is not None:
+            _write_json(run_dir / "best_weights.json", snapshot)
         _append_history(run_dir / "history.jsonl", message)
         conn.send(message)
 
         updates = list(view.pending_updates)
         view.pending_updates.clear()
-        cfg = _apply_updates(cfg, updates, conn)
-        population = reference.next_generation(
-            population,
-            scores,
-            rng,
-            reference.EvolutionParams(
-                population=cfg.population,
-                elite=cfg.elite,
-                mutation_rate=cfg.mutation_rate,
-                mutation_scale=cfg.mutation_scale,
-                init_scale=cfg.init_scale,
-            ),
-        )
-        generation += 1
+        for params in updates:
+            for notice in learner.apply_update(params):
+                conn.send(notice_message(notice))
+        iteration += 1
 
     conn.send(status_message("finished"))
-
-
-def _apply_updates(
-    cfg: RunConfig, updates: list[dict[str, Any]], conn: WorkerConnection
-) -> RunConfig:
-    """Apply allowed parameter changes; each rejected value produces a notice and is skipped."""
-    for params in updates:
-        for key, value in params.items():
-            if key not in UPDATABLE:
-                conn.send(notice_message(f"параметр {key} нельзя менять во время запуска"))
-                continue
-            try:
-                cfg = replace(cfg, **{key: value})
-            except ValueError as error:
-                conn.send(notice_message(f"параметр {key} не применён: {error}"))
-    return cfg
-
 
 def _drain(conn: WorkerConnection) -> list[dict[str, Any]]:
     commands: list[dict[str, Any]] = []

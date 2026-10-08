@@ -54,7 +54,9 @@ def _legacy(config: RunConfig, generations: int) -> tuple[list[tuple], np.ndarra
         )
         scores = config.fitness.score(result)
         message = build_gen_message(0, result, scores, {})
-        rows.append((message["best"], message["mean"], message["finished"], message["best_fitness"]))
+        rows.append(
+            (message["best"], message["mean"], message["finished"], message["best_fitness"])
+        )
         top = int(np.argmax(scores))
         if scores[top] > best_fitness:
             best_fitness = float(scores[top])

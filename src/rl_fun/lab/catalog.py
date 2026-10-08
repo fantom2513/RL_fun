@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from rl_fun.lab.config import RunConfig
+from rl_fun.learners.schemas import build_learner_schemas
 from rl_fun.racing.fitness import PRESETS, available_terms
 from rl_fun.racing.model_spec import (
     _ACTIVATIONS,
@@ -100,6 +101,7 @@ def build_catalog(tracks: Sequence[str] | None = None) -> dict[str, Any]:
             "presets": {name: spec.to_dict() for name, spec in PRESETS.items()},
         },
         "defaults": RunConfig().to_dict(),
+        "learners": build_learner_schemas(),
         "tracks": names,
         "style": _build_style(),
     }

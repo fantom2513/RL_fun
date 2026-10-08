@@ -92,8 +92,12 @@ def build_gen_message(
     result: GenerationResult,
     scores: np.ndarray,
     params: Mapping[str, Any],
+    extra: Mapping[str, float] | None = None,
 ) -> dict[str, Any]:
-    """Summary of a finished generation, with the tunable parameters it was run with."""
+    """Summary of a finished generation, with the tunable parameters it was run with.
+
+    `extra` (learner-specific metrics) is added as the `extra` field only when it is not empty.
+    """
     progress = np.asarray(result.progress, dtype=np.float64)
     finished = np.asarray(result.finished, dtype=bool)
     lap_steps = np.asarray(result.lap_steps, dtype=np.float64)
@@ -105,16 +109,46 @@ def build_gen_message(
         echoed["mutation_scale"] = float(params["mutation_scale"])
     if "elite" in params:
         echoed["elite"] = int(params["elite"])
-    return {
+    return build_iteration_message(
+        generation,
+        best=float(np.max(progress)),
+        mean=float(np.mean(progress)),
+        finished=int(np.count_nonzero(finished)),
+        best_fitness=float(np.max(np.asarray(scores, dtype=np.float64))),
+        best_lap_steps=int(finished_laps.min()) if finished_laps.size > 0 else None,
+        params=echoed,
+        extra=extra,
+    )
+
+
+def build_iteration_message(
+    iteration: int,
+    *,
+    best: float,
+    mean: float,
+    finished: int,
+    best_fitness: float,
+    best_lap_steps: int | None,
+    params: Mapping[str, Any],
+    extra: Mapping[str, float] | None = None,
+) -> dict[str, Any]:
+    """The `gen` message from already-summarized numbers (any learner).
+
+    `params` is echoed as given; `extra` is added as a plain-float dict only when not empty.
+    """
+    message: dict[str, Any] = {
         "t": "gen",
-        "gen": int(generation),
-        "best": float(np.max(progress)),
-        "mean": float(np.mean(progress)),
-        "finished": int(np.count_nonzero(finished)),
-        "best_fitness": float(np.max(np.asarray(scores, dtype=np.float64))),
-        "best_lap_steps": int(finished_laps.min()) if finished_laps.size > 0 else None,
-        "params": echoed,
+        "gen": int(iteration),
+        "best": float(best),
+        "mean": float(mean),
+        "finished": int(finished),
+        "best_fitness": float(best_fitness),
+        "best_lap_steps": None if best_lap_steps is None else int(best_lap_steps),
+        "params": {key: value for key, value in params.items()},
     }
+    if extra:
+        message["extra"] = {str(key): float(value) for key, value in extra.items()}
+    return message
 
 
 def status_message(status: str, message: str | None = None) -> dict[str, Any]:
