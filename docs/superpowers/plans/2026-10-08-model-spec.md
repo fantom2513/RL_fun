@@ -211,7 +211,9 @@ def test_boost_accelerates_faster():
 
 
 def test_boost_raises_top_speed():
-    boosted, top = step(1.0, speed=top_speed := KinematicBicycle().max_speed)
+    top = KinematicBicycle().max_speed
+
+    boosted, _ = step(1.0, speed=top)
 
     assert boosted > top
 
@@ -599,4 +601,4 @@ def test_fleet_view_takes_labels_from_the_fleet_model():
 
 - **Покрытие спеки:** §4.1 — Task 1; §4.2 и §4.3 — Task 2; §4.4 — Task 3; §4.5 и поля результата — Task 4; §4.6 (`reference`, `FleetView`) — Task 5; README — Task 6.
 - **Согласованность имён:** `ModelSpec` (`inputs`, `hidden`, `outputs`, `activation`, `layer_sizes`, `weight_count`, `ray_angles_deg`, `input_labels`, `output_labels`), `map_controls`, `fleet.model` / `action_size` / `mean_speed` / `centering` / `smoothness`, `GenerationResult(..., mean_speed, centering, smoothness, max_steps)`, `FitnessSpec(weights)`, `PRESETS` везде одинаковы.
-- **Риски:** (1) совместимость умолчаний с прежним флотом и бенчмарком — проверяется прежними тестами; (2) в `test_boost_raises_top_speed` используется walrus в аргументе — реализующий может заменить на отдельную переменную без изменения смысла.
+- **Риски:** совместимость умолчаний с прежним флотом и бенчмарком — проверяется прежними тестами.
