@@ -250,6 +250,19 @@ def test_catalog_endpoint(server: LabServer) -> None:
     assert "oval" in data["tracks"]
 
 
+def test_catalog_endpoint_lists_the_learners_with_their_parameter_groups(
+    server: LabServer,
+) -> None:
+    status, data = call_json(server, "GET", "/api/catalog")
+
+    assert status == 200
+    assert [learner["id"] for learner in data["learners"]] == ["evolution", "ppo"]
+    ppo_keys = [
+        param["key"] for group in data["learners"][1]["groups"] for param in group["params"]
+    ]
+    assert "ppo.learning_rate" in ppo_keys
+
+
 def test_track_endpoint(server: LabServer) -> None:
     status, data = call_json(server, "GET", "/api/tracks/oval")
 

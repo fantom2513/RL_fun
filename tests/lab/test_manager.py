@@ -114,6 +114,28 @@ def test_create_runs_to_finish_and_records_history(manager: RunManager, tmp_path
     assert (artifacts[0] / "config.json").is_file()
 
 
+def test_ppo_run_in_a_real_process_finishes_with_extra_metrics(
+    manager: RunManager, tmp_path: Path
+) -> None:
+    config = _config(
+        name="ppo",
+        learner="ppo",
+        population=6,
+        max_steps=50,
+        ppo={"rollout_steps": 16, "minibatch_size": 32, "epochs": 2},
+    )
+    run_id = manager.create(config)
+
+    info = wait_status(manager, run_id, *TERMINAL)
+
+    assert info["status"] == "finished", info.get("error")
+    assert [entry["gen"] for entry in info["history"]] == [0, 1]
+    assert all("entropy" in entry["extra"] for entry in info["history"])
+    artifacts = [path for path in (tmp_path / "runs").iterdir() if path.name.startswith("ppo-")]
+    assert len(artifacts) == 1
+    assert (artifacts[0] / "best_weights.json").is_file()
+
+
 def test_two_runs_complete_independently(manager: RunManager) -> None:
     first = manager.create(_config(name="a", seed=1, generations=2))
     second = manager.create(_config(name="b", seed=2, generations=3))
