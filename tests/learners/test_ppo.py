@@ -129,6 +129,24 @@ def test_policy_output_has_the_model_shape_bounds_and_initial_std():
     assert policy.std().detach().numpy() == pytest.approx([0.6, 0.6])
 
 
+def test_value_net_starts_close_to_zero_so_rewards_dominate_early_advantages():
+    # Arrange
+    import torch
+
+    from rl_fun.learners.ppo_core import ValueNet
+
+    model = ModelSpec()
+    value = ValueNet(model.layer_sizes, model.activation, np.random.default_rng(3))
+    observations = torch.from_numpy(np.random.default_rng(4).uniform(-1, 1, (256, 8))).float()
+
+    # Act
+    with torch.no_grad():
+        estimates = value(observations)
+
+    # Assert
+    assert float(estimates.abs().max()) < 0.05
+
+
 @pytest.mark.parametrize("activation", ["tanh", "relu", "sigmoid"])
 def test_exported_weights_reproduce_the_policy_mean_with_reference_forward(activation):
     # Arrange
