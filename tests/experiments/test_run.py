@@ -57,7 +57,7 @@ def test_run_once_is_reproducible(tmp_path: Path) -> None:
 
 def test_run_once_runs_cartpole_random(tmp_path: Path) -> None:
     config = replace(
-        bandit_config(tmp_path), env=EnvironmentConfig("CartPole-v1"),
+        bandit_config(tmp_path), environment=EnvironmentConfig("CartPole-v1"),
         algorithm=AlgorithmConfig("random"),
     )
     summary = run_once(config, 17, "cartpole")
@@ -65,7 +65,7 @@ def test_run_once_runs_cartpole_random(tmp_path: Path) -> None:
 
 
 def test_run_once_records_environment_failure(tmp_path: Path) -> None:
-    config = replace(bandit_config(tmp_path), env=EnvironmentConfig("Missing-v0"))
+    config = replace(bandit_config(tmp_path), environment=EnvironmentConfig("Missing-v0"))
     summary = run_once(config, 17, "failed")
     error = (summary.run_dir / "error.txt").read_text("utf-8")
     written = json.loads((summary.run_dir / "summary.json").read_text("utf-8"))
@@ -76,7 +76,7 @@ def test_run_once_records_environment_failure(tmp_path: Path) -> None:
 
 
 def test_run_once_rejects_incompatible_pair_before_training(tmp_path: Path) -> None:
-    config = replace(bandit_config(tmp_path), env=EnvironmentConfig("CartPole-v1"))
+    config = replace(bandit_config(tmp_path), environment=EnvironmentConfig("CartPole-v1"))
     summary = run_once(config, 17, "incompatible")
     metric_path = summary.run_dir / "metrics.jsonl"
     assert (
@@ -148,7 +148,7 @@ def test_run_once_closes_environment_and_leaves_reset_to_algorithm(
     env = LifecycleProbe()
     monkeypatch.setattr(run_module, "make_environment", lambda config: env)
     config = replace(
-        bandit_config(tmp_path), env=EnvironmentConfig("CartPole-v1"),
+        bandit_config(tmp_path), environment=EnvironmentConfig("CartPole-v1"),
         algorithm=AlgorithmConfig("random"),
     )
     if outcome != "success":
