@@ -41,8 +41,18 @@ class VehicleDynamics(Protocol):
         steer: np.ndarray,
         throttle: np.ndarray,
         dt: float,
+        boost: np.ndarray | float = 0.0,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Vectorized `step`: returns (x, y, heading, v_long, yaw_rate) arrays."""
+        """Vectorized `step`: returns (x, y, heading, v_long, yaw_rate) arrays.
+
+        `boost` in [0, 1] raises acceleration and top speed while throttling forward.
+        """
+
+
+BOOST_ACCELERATION_GAIN = 0.8
+"""Extra forward acceleration at full boost, as a fraction of the base acceleration."""
+BOOST_TOP_SPEED_GAIN = 0.3
+"""Extra top speed at full boost, as a fraction of `max_speed`."""
 
 
 def _clip(value: float, low: float, high: float) -> float:
@@ -92,12 +102,21 @@ class KinematicBicycle:
         steer: np.ndarray,
         throttle: np.ndarray,
         dt: float,
+        boost: np.ndarray | float = 0.0,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Vectorized `step` over arrays of cars: returns (x, y, heading, v_long, yaw_rate)."""
+        """Vectorized `step` over arrays of cars: returns (x, y, heading, v_long, yaw_rate).
+
+        Boost in [0, 1]: full boost gives 1.8x acceleration and 1.3x top speed.
+        """
         steer = np.clip(steer, -1.0, 1.0)
         throttle = np.clip(throttle, -1.0, 1.0)
-        rate = np.where(throttle >= 0, throttle * self.acceleration, throttle * self.braking)
-        speed = np.clip(v_long + rate * dt, 0.0, self.max_speed)
+        boost = np.clip(boost, 0.0, 1.0)
+        forward_gain = 1.0 + BOOST_ACCELERATION_GAIN * boost
+        top_speed = self.max_speed * (1.0 + BOOST_TOP_SPEED_GAIN * boost)
+        rate = np.where(
+            throttle >= 0, throttle * self.acceleration * forward_gain, throttle * self.braking
+        )
+        speed = np.clip(v_long + rate * dt, 0.0, top_speed)
         yaw_rate = speed / self.wheelbase * np.tan(steer * self.max_steer)
         new_heading = heading + yaw_rate * dt
         new_x = x + speed * np.cos(new_heading) * dt
