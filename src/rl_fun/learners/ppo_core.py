@@ -25,7 +25,11 @@ HIDDEN_GAIN = math.sqrt(2.0)
 """Orthogonal-init gain of the hidden layers."""
 POLICY_OUTPUT_GAIN = 0.01
 """Small output gain: the initial mean action is close to zero for every observation."""
-VALUE_OUTPUT_GAIN = 1.0
+VALUE_OUTPUT_GAIN = 0.01
+"""Small output gain: the initial value estimate is close to zero everywhere. Per-step rewards are
+tiny (about 1e-3), so with gain 1 the random slope of an untrained value net (for example along
+the speed input) dominated the advantages and, for some seeds, taught the cars to brake and stand
+still before any real signal arrived (see the lab iteration journal, iteration 2, D-E)."""
 
 
 def _orthogonal(rng: np.random.Generator, rows: int, cols: int, gain: float) -> np.ndarray:
