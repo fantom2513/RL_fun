@@ -259,7 +259,8 @@ def test_run_once_records_cleanup_failure_and_preserves_training_error(
     run_dir = tmp_path / "bandit-smoke" / outcome
     error = (run_dir / "error.txt").read_text("utf-8")
     written = json.loads((run_dir / "summary.json").read_text("utf-8"))
-    assert written["status"] == "failure" and written["error"] == error
+    assert written["status"] == ("cancelled" if outcome == "interrupt" else "failure")
+    assert written["error"] == error
     assert "cleanup failed" in error
     if outcome != "success":
         assert ("training interrupted" if outcome == "interrupt" else "training failed") in error
