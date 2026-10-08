@@ -3,10 +3,86 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>Лаборатория</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="modulepreload" href="/static/api.js">
+  <link rel="modulepreload" href="/static/track_view.js">
 </head>
 <body>
-  <div id="app">Лаборатория</div>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 22c0-8 4-14 10-14s10 4 10 8-5 4-8 4-4 3-12 2z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+          <circle cx="24" cy="12" r="2.2" fill="var(--curb)"/>
+        </svg>
+        <span class="brand-name">Лаборатория</span>
+      </div>
+
+      <div class="tabs-wrap">
+        <div id="tabs" class="tabs" role="tablist" aria-label="Запуски"></div>
+        <button id="new-run" class="btn btn-primary" type="button">+ новый запуск</button>
+      </div>
+
+      <div class="controls" role="group" aria-label="Управление запуском">
+        <button id="pause" class="btn" type="button" disabled>Пауза</button>
+        <label class="select-label">
+          <span>Скорость</span>
+          <select id="speed" aria-label="Скорость симуляции" disabled>
+            <option value="1">×1</option>
+            <option value="2">×2</option>
+            <option value="4">×4</option>
+            <option value="8">×8</option>
+            <option value="max">макс</option>
+          </select>
+        </label>
+        <button id="stop" class="btn" type="button" disabled>Остановить</button>
+        <button id="delete" class="btn btn-danger" type="button" disabled>Удалить</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel params" aria-labelledby="params-title">
+        <h2 id="params-title" class="panel-title">Параметры</h2>
+        <p class="placeholder">Форма параметров запуска появится здесь.</p>
+      </aside>
+
+      <section class="stage" aria-label="Трасса">
+        <canvas id="track" tabindex="0" aria-label="Трасса с машинками"></canvas>
+        <div class="camera-tools" role="group" aria-label="Камера">
+          <button id="camera-mode" class="chip" type="button" aria-label="Режим камеры (клавиша C)">Вписать</button>
+          <button id="zoom-out" class="chip chip-square" type="button" aria-label="Уменьшить">−</button>
+          <button id="zoom-in" class="chip chip-square" type="button" aria-label="Увеличить">+</button>
+        </div>
+        <p id="stage-hint" class="stage-hint">Колесо или + / −: масштаб · C: камера</p>
+        <div id="stage-empty" class="stage-message" hidden>
+          <h2>Создайте запуск</h2>
+          <p>Машинки обучаются поколениями: лучшие передают свои веса дальше.</p>
+          <button id="empty-new" class="btn btn-primary" type="button">+ новый запуск</button>
+        </div>
+        <div id="stage-loading" class="stage-message stage-message-quiet" hidden>
+          <p>Загрузка трассы…</p>
+        </div>
+        <div id="stage-banner" class="banner" role="status" hidden>
+          <span id="banner-text"></span>
+          <button id="banner-retry" class="btn btn-small" type="button" hidden>Повторить</button>
+        </div>
+      </section>
+
+      <aside class="panel network" aria-labelledby="network-title">
+        <h2 id="network-title" class="panel-title">Сеть лидера</h2>
+        <p class="placeholder">Граф нейросети лидера появится здесь.</p>
+      </aside>
+
+      <section class="panel curves" aria-labelledby="curves-title">
+        <h2 id="curves-title" class="panel-title">Кривые обучения</h2>
+        <p class="placeholder">Графики по поколениям появятся здесь.</p>
+      </section>
+    </main>
+
+    <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+  </div>
   <script type="module" src="/static/app.js"></script>
 </body>
 </html>
