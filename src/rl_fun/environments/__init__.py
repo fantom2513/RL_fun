@@ -4,6 +4,7 @@ import gymnasium as gym
 
 LOCAL_ENVIRONMENTS = {
     "RLFun/StationaryBandit-v0": "rl_fun.environments.bandit:StationaryBanditEnv",
+    "RLFun/Racing-v0": "rl_fun.racing.env:RacingEnv",
 }
 
 
