@@ -29,6 +29,10 @@ class GenerationResult:
     finished: np.ndarray
     steps_alive: np.ndarray
     lap_steps: np.ndarray
+    mean_speed: np.ndarray | None = None
+    centering: np.ndarray | None = None
+    smoothness: np.ndarray | None = None
+    max_steps: int | None = None
 
     @property
     def best_index(self) -> int:
@@ -60,7 +64,7 @@ def run_generation(
 
     observation = fleet.reset()
     while not fleet.done:
-        actions = np.zeros((fleet.n_cars, 2))
+        actions = np.zeros((fleet.n_cars, fleet.action_size))
         for index in np.flatnonzero(fleet.alive):
             actions[index] = forward(population[index], observation[index])
         observation, _ = fleet.step(actions)
@@ -79,4 +83,8 @@ def run_generation(
         finished=fleet.finished.copy(),
         steps_alive=fleet.steps_alive.copy(),
         lap_steps=fleet.lap_steps.copy(),
+        mean_speed=fleet.mean_speed.copy(),
+        centering=fleet.centering.copy(),
+        smoothness=fleet.smoothness.copy(),
+        max_steps=fleet.max_steps,
     )
