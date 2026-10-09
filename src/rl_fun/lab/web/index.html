@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/css/base.css">
   <link rel="stylesheet" href="/static/css/components.css">
   <link rel="stylesheet" href="/static/css/layout.css">
+  <link rel="stylesheet" href="/static/css/screens.css">
   <link rel="preload" href="/static/fonts/onest-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="modulepreload" href="/static/core/router.js">
@@ -42,6 +43,7 @@
           <div class="tabs-wrap">
             <div id="tabs" class="tabs" role="tablist" aria-label="Запуски"></div>
             <button id="new-run" class="btn btn-primary" type="button" aria-controls="params-body">+ новый запуск</button>
+          <a id="view-toggle" class="btn" href="#/lab/compare" data-tip="Таблица со всеми запусками: прогресс, лучший круг, число финишировавших." data-tip-key="G">Сравнение</a>
           </div>
 
           <div class="controls" role="group" aria-label="Управление запуском">
@@ -61,6 +63,7 @@
           </div>
         </header>
 
+        <section id="compare-view" class="compare-view" aria-label="Сравнение запусков" hidden></section>
         <div class="layout">
           <aside class="panel params" aria-labelledby="params-title">
             <h2 id="params-title" class="panel-title">Параметры</h2>
@@ -125,13 +128,10 @@
       <section class="screen-pane" data-screen="challenges" hidden>
         <header class="screen-head">
           <h1 class="screen-title" tabindex="-1">Челленджи</h1>
-          <span class="screen-sub">Задания со звёздами</span>
+          <span class="screen-sub" id="stars-total">Задания со звёздами</span>
         </header>
         <div class="screen-body">
-          <div class="empty">
-            <b>Скоро</b>
-            <p>Здесь появятся задания с целями в одну, две и три звезды. Пока можно тренировать сети в лаборатории.</p>
-          </div>
+          <div id="challenges-list" class="levels"></div>
         </div>
       </section>
       <section class="screen-pane" data-screen="garage" hidden>

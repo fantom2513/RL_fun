@@ -9,6 +9,9 @@ import { getTheme, initTheme, setTheme, toggleTheme } from './core/theme.js';
 import { modelLabels, NetworkView } from './network_view.js';
 import { ParamsForm } from './params_form.js';
 import { TrackView } from './track_view.js';
+import { LEVELS, bestStars, loadStars, saveStars, startConfig } from './core/levels.js';
+import { renderChallenges, starSummary } from './screens/challenges.js';
+import { compareRows, renderCompare, sortRows } from './screens/compare.js';
 import { initTooltips } from './ui/tooltip.js';
 import './ui/seg.js';
 
@@ -57,6 +60,8 @@ const el = {
 };
 
 const state = {
+  stars: loadStars(),
+  compareSort: { key: 'bestProgress', direction: 'desc' },
   catalog: null,
   runs: new Map(),
   activeId: null,
@@ -140,6 +145,7 @@ function addRun(row) {
       renderTabs();
       chart.update();
       form.onGen(run);
+      scheduleGame();
     },
     status: (message) => {
       setRunStatus(run, message.status);
@@ -147,6 +153,7 @@ function addRun(row) {
       renderTabs();
       renderControls();
       renderBanner();
+      scheduleGame();
       if (run.id === state.activeId) renderNetworkState();
       if (run.id === state.activeId) form.refreshLock();
     },
@@ -363,6 +370,77 @@ async function removeRun() {
   await select(remaining.length ? remaining[remaining.length - 1] : null);
 }
 
+// ---- game layer: levels, stars and the comparison table --------------------------------------
+
+let gameTimer = null;
+
+// Gen messages arrive many times a second; the screens that depend on them redraw at most twice.
+function scheduleGame() {
+  if (gameTimer) return;
+  gameTimer = setTimeout(() => {
+    gameTimer = null;
+    refreshGame();
+  }, 500);
+}
+
+function refreshGame() {
+  const runs = [...state.runs.values()];
+  const next = bestStars(runs, state.stars);
+  let changed = false;
+  for (const level of LEVELS) {
+    const count = next[level.id] ?? 0;
+    if (count > (state.stars[level.id] ?? 0)) {
+      changed = true;
+      toast(`«${level.title}»: ${'★'.repeat(count)} из ★★★`);
+    }
+  }
+  state.stars = next;
+  if (changed) saveStars(next);
+  renderChallenges($('challenges-list'), { stars: next, runs, onStart: startLevel });
+  $('stars-total').textContent = starSummary(next);
+  renderCompareView();
+}
+
+function renderCompareView() {
+  const rows = compareRows([...state.runs.values()]);
+  const { key, direction } = state.compareSort;
+  renderCompare($('compare-view'), sortRows(rows, key, direction), {
+    sortKey: key,
+    sortDirection: direction,
+    onSort: (column) => {
+      const same = state.compareSort.key === column;
+      state.compareSort = { key: column, direction: same && state.compareSort.direction === 'desc' ? 'asc' : 'desc' };
+      renderCompareView();
+    },
+    onSelect: (id) => {
+      location.hash = '#/lab';
+      select(id);
+    },
+  });
+}
+
+// "Start attempt" of a level: the new-run form gets the level's track and limits.
+function startLevel(level) {
+  if (!state.catalog) return;
+  location.hash = '#/lab';
+  form.showNew({ config: startConfig(level, state.catalog.defaults) });
+  el.paramsPanel.scrollIntoView({ block: 'nearest' });
+  form.focusName();
+}
+
+// The lab shows either the stage or the comparison table; the route `#/lab/compare` picks the table.
+function showLabView(compare) {
+  const labScreen = document.querySelector('.lab-screen');
+  labScreen.dataset.view = compare ? 'compare' : 'run';
+  $('compare-view').hidden = !compare;
+  document.querySelector('.layout').style.display = compare ? 'none' : '';
+  const toggle = $('view-toggle');
+  toggle.textContent = compare ? 'Заезд' : 'Сравнение';
+  toggle.setAttribute('href', compare ? '#/lab' : '#/lab/compare');
+  if (compare) renderCompareView();
+  else window.dispatchEvent(new Event('resize'));
+}
+
 // ---- rendering of the chrome --------------------------------------------------------------
 
 function renderTabs() {
@@ -561,6 +639,9 @@ function wire() {
       case 'KeyC':
         view.toggleMode();
         break;
+      case 'KeyG':
+        location.hash = document.querySelector('.lab-screen').dataset.view === 'compare' ? '#/lab' : '#/lab/compare';
+        break;
       case 'Equal':
       case 'NumpadAdd':
         zoom(ZOOM_STEP);
@@ -640,6 +721,8 @@ async function start() {
   } catch {
     initial = null;
   }
+  await Promise.all(rows.map((row) => ensureConfig(state.runs.get(row.id)).catch(() => null)));
+  refreshGame();
   const ids = rows.map((row) => row.id);
   await select(ids.includes(initial) ? initial : (ids[ids.length - 1] ?? null));
 }
@@ -648,7 +731,7 @@ async function start() {
 function initShell() {
   initTheme();
   initTooltips();
-  startRouter();
+  startRouter((route) => showLabView(route.name === 'lab' && route.rest[0] === 'compare'));
   startKeys({ navigate: (name) => { location.hash = hashFor(name); }, toggleTheme });
   const themePref = $('theme-pref');
   themePref.value = getTheme();

@@ -694,6 +694,7 @@ def test_index_loads_the_component_and_layout_layers() -> None:
         "/static/css/base.css",
         "/static/css/components.css",
         "/static/css/layout.css",
+        "/static/css/screens.css",
     ]
 
 
@@ -726,7 +727,7 @@ def test_every_section_has_a_screen_with_a_focusable_title(name: str) -> None:
 
 def test_placeholder_sections_say_they_are_coming_soon() -> None:
     html = _index_html()
-    for name in ("tracks", "challenges", "garage", "settings"):
+    for name in ("tracks", "garage", "settings"):
         screen = re.search(
             rf"""<section\b[^>]*data-screen=["']{name}["'][^>]*>(.*?)(?=<section\b[^>]*data-screen=|</main>)""",
             html,
@@ -845,3 +846,98 @@ def test_a_run_can_be_edited_and_restarted_in_place() -> None:
     for needle in ("Изменить и перезапустить", "showEdit", "onRestart", "Перезапустить с изменениями"):
         assert needle in form
     assert "restartRun" in app and "run.color = old.color" in app
+
+
+# ---- game layer: levels, stars, comparison -----------------------------------------------------
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_levels_are_judged_from_the_run_history_and_its_config() -> None:
+    result = _node_json(
+        "core/levels.js",
+        """(() => {
+  const gens = [{finished: 0, best_lap_steps: null}, {finished: 2, best_lap_steps: 600}, {finished: 5, best_lap_steps: 450}];
+  const config = {track: 'oval', learner: 'evolution', model: {inputs: ['ray:-90', 'ray:0', 'ray:90', 'speed'], hidden: [6, 5]}};
+  const level = (id) => m.byId(id);
+  return [
+    m.metrics(gens),
+    m.evaluate(level('oval-first'), {config, gens}),
+    m.evaluate(level('oval-fast'), {config, gens}),
+    m.evaluate(level('wavy-first'), {config, gens}),
+    m.evaluate(level('tiny-brain'), {config, gens}),
+    m.evaluate(level('rl-pilot'), {config: {...config, track: 'circuit'}, gens}),
+    m.evaluate(level('sharp-eye'), {config: {...config, track: 'circuit'}, gens: []}),
+    m.isUnlocked(level('oval-fast'), {}), m.isUnlocked(level('oval-fast'), {'oval-first': 1}),
+    m.bestStars([{config, gens}], {"oval-first": 3}),
+    m.bestStars([{config: {...config, track: 'circuit'}, gens}], {}),
+  ];
+})()""",
+    )
+
+    assert result[0] == {"finish_iter": 2, "lap_seconds": 15.0}
+    assert result[1] == {"counts": True, "value": 2, "stars": 3}
+    assert result[2] == {"counts": True, "value": 15.0, "stars": 3}
+    assert result[3]["counts"] is False
+    assert result[4]["counts"] is False  # ten hidden neurons break the four-neuron limit
+    assert result[5]["counts"] is False  # evolution run, the level wants PPO
+    assert result[6] == {"counts": True, "value": None, "stars": 0}
+    assert result[7:9] == [False, True]
+    assert result[9]["oval-first"] == 3 and result[9]["oval-fast"] == 3
+    assert result[10] == {}  # nothing counts while the level before it has no stars
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_every_level_is_playable_and_start_configs_fit_their_own_limits() -> None:
+    result = _node_json(
+        "core/levels.js",
+        """(() => {
+  const defaults = {track: 'circuit', name: 'run', learner: 'evolution',
+    model: {inputs: ['ray:-90', 'ray:-30', 'ray:0', 'ray:30', 'ray:90', 'speed'], hidden: [6, 5], outputs: ['steer', 'throttle']}};
+  return m.LEVELS.map((level) => [level.id, m.fits(level, m.startConfig(level, defaults)), level.stars.length,
+    [...level.stars].sort((a, b) => b - a).join() === level.stars.join()]);
+})()""",
+    )
+
+    assert all(fits and count == 3 and descending for _, fits, count, descending in result), result
+    assert len({row[0] for row in result}) == len(result) >= 8
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_comparison_rows_flag_the_best_values_per_track_and_sort_nulls_last() -> None:
+    result = _node_json(
+        "screens/compare.js",
+        """(() => {
+  const run = (id, track, gens) => ({id, name: id, color: '#fff', learner: 'evolution', status: 'finished', gens, config: track && {track, population: 10}});
+  const a = run('a', 'oval', [{best: 0.5, mean: 0.1, finished: 0, best_lap_steps: null}, {best: 1, mean: 0.6, finished: 3, best_lap_steps: 600}]);
+  const b = run('b', 'oval', [{best: 1, mean: 0.9, finished: 5, best_lap_steps: 450}]);
+  const c = run('c', 'circuit', [{best: 0.2, mean: 0.1, finished: 0, best_lap_steps: null}]);
+  const d = run('d', null, []);
+  const rows = m.compareRows([a, b, c, d]);
+  return [rows.map((r) => [r.id, r.iterations, r.bestLap, r.firstLap, r.best]),
+    m.sortRows(rows, 'bestLap', 'asc').map((r) => r.id), m.sortRows(rows, 'bestLap', 'desc').map((r) => r.id)];
+})()""",
+    )
+
+    rows, ascending, descending = result
+    by_id = {row[0]: row for row in rows}
+    assert by_id["a"][1:4] == [2, 20.0, 2]
+    assert by_id["b"][2] == 15.0 and by_id["b"][3] == 1
+    assert by_id["b"][4] == {"progress": True, "lap": True, "firstLap": True}
+    assert by_id["a"][4]["progress"] is True and by_id["a"][4]["lap"] is False
+    assert by_id["c"][4]["progress"] is True and by_id["d"][4] == {
+        "progress": False,
+        "lap": False,
+        "firstLap": False,
+    }
+    assert ascending[:2] == ["b", "a"] and descending[:2] == ["a", "b"]
+    assert set(ascending[2:]) == set(descending[2:]) == {"c", "d"}
+
+
+def test_challenges_and_comparison_are_wired_into_the_lab() -> None:
+    app = (WEB_DIR / "app.js").read_text("utf-8")
+    html = _index_html()
+
+    for needle in ("renderChallenges", "renderCompare", "startConfig", "bestStars", "#/lab/compare", "KeyG"):
+        assert needle in app
+    for needle in ('id="challenges-list"', 'id="compare-view"', 'id="view-toggle"', 'id="stars-total"'):
+        assert needle in html
