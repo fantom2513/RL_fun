@@ -13,6 +13,7 @@ latest one is kept, so a slow subscriber skips frames but never other messages.
 from __future__ import annotations
 
 import multiprocessing
+import os
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -23,6 +24,7 @@ from rl_fun.lab.config import RunConfig
 from rl_fun.lab.protocol import status_message
 from rl_fun.lab.stream_view import SPEEDS
 from rl_fun.lab.worker import run_worker
+from rl_fun.racing.track import TRACKS_ENV
 
 TERMINAL_STATUSES = ("finished", "stopped", "error")
 UNEXPECTED_EXIT = "процесс запуска завершился неожиданно"
@@ -98,10 +100,17 @@ class RunManager:
         self._counter = 0
         self._closed = False
 
+    @property
+    def tracks_dir(self) -> Path:
+        """Folder of the tracks drawn in the lab."""
+        return self._runs_dir / "tracks"
+
     # ---- public API --------------------------------------------------------------------------
 
     def create(self, config: dict[str, Any]) -> str:
         """Validate `config`, start a worker process for it and return the run id."""
+        # saved tracks are found through the environment, which the worker process inherits
+        os.environ[TRACKS_ENV] = str(self.tracks_dir)
         cfg = RunConfig.from_dict(config)
         with self._cond:
             if self._closed:

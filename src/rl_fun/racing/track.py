@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -11,6 +12,8 @@ import numpy as np
 from rl_fun.racing.geometry import cross
 
 TRACKS_DIR = Path(__file__).parent / "tracks"
+TRACKS_ENV = "RL_FUN_TRACKS_DIR"
+"""Environment variable naming the folder of user-made tracks; worker processes inherit it."""
 
 
 def _segments_intersect(p: np.ndarray, q: np.ndarray, r: np.ndarray, s: np.ndarray) -> bool:
@@ -147,16 +150,41 @@ class Track:
         return self.centerline + offset, self.centerline - offset
 
 
-def available_tracks() -> list[str]:
-    """Return the names of the built-in tracks."""
+def builtin_tracks() -> list[str]:
+    """Return the names of the tracks shipped with the package."""
     return sorted(path.stem for path in TRACKS_DIR.glob("*.json"))
 
 
-def load_track(name_or_path: str | Path) -> Track:
-    """Load a built-in track by name or a track JSON file by path."""
+def _user_dir(user_dir: Path | None) -> Path | None:
+    if user_dir is not None:
+        return Path(user_dir)
+    value = os.environ.get(TRACKS_ENV)
+    return Path(value) if value else None
+
+
+def available_tracks(user_dir: Path | None = None) -> list[str]:
+    """Return the built-in track names, then the user-made ones (folder or `RL_FUN_TRACKS_DIR`)."""
+    names = builtin_tracks()
+    folder = _user_dir(user_dir)
+    if folder is not None and folder.is_dir():
+        names += sorted(path.stem for path in folder.glob("*.json") if path.stem not in names)
+    return names
+
+
+def load_track(name_or_path: str | Path, user_dir: Path | None = None) -> Track:
+    """Load a built-in or user-made track by name, or a track JSON file by path."""
     text = str(name_or_path)
-    builtin = TRACKS_DIR / f"{text}.json"
-    path = builtin if builtin.is_file() else Path(text)
+    path = TRACKS_DIR / f"{text}.json"
+    folder = _user_dir(user_dir)
+    if (
+        not path.is_file()
+        and folder is not None
+        and Path(text).name == text
+        and (folder / f"{text}.json").is_file()
+    ):
+        path = folder / f"{text}.json"
+    if not path.is_file():
+        path = Path(text)
     if not path.is_file():
         raise ValueError(
             f"unknown track {text!r}; built-in tracks: {', '.join(available_tracks())}"

@@ -19,7 +19,10 @@ from rl_fun.racing.track import available_tracks, load_track
 
 def ellipse(count: int = 24, rx: float = 60.0, ry: float = 35.0) -> list[list[float]]:
     return [
-        [round(rx * math.cos(2 * math.pi * i / count), 3), round(ry * math.sin(2 * math.pi * i / count), 3)]
+        [
+            round(rx * math.cos(2 * math.pi * i / count), 3),
+            round(ry * math.sin(2 * math.pi * i / count), 3),
+        ]
         for i in range(count)
     ]
 

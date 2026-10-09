@@ -248,7 +248,7 @@ def test_design_system_assets_are_served(server: LabServer, path: str, content_t
     assert body
 
 
-@pytest.mark.parametrize("name", ["_probe_test.md","_probe_test.txt", "_probe_test.py"])
+@pytest.mark.parametrize("name", ["_probe_test.md", "_probe_test.txt", "_probe_test.py"])
 def test_static_files_of_unlisted_types_are_404(server: LabServer, name: str) -> None:
     assert _probe(server, name, b"secret")[0] == 404
 
@@ -522,8 +522,7 @@ def test_stream_client_disconnect_frees_threads(server: LabServer) -> None:
         sock = socket.create_connection(("127.0.0.1", server.port), timeout=TIMEOUT)
         try:
             sock.sendall(
-                f"GET /api/runs/{run_id}/stream HTTP/1.1\r\nHost: 127.0.0.1:{server.port}\r\n\r\n"
-                .encode()
+                f"GET /api/runs/{run_id}/stream HTTP/1.1\r\nHost: 127.0.0.1:{server.port}\r\n\r\n".encode()
             )
             assert b"event:" in _recv_until(sock, b"event:")
         finally:
@@ -550,8 +549,7 @@ def test_stream_disconnect_from_idle_run_stops_the_pump_thread(tmp_path: Path) -
             sock = socket.create_connection(("127.0.0.1", lab.port), timeout=TIMEOUT)
             try:
                 sock.sendall(
-                    f"GET /api/runs/{run_id}/stream HTTP/1.1\r\nHost: 127.0.0.1:{lab.port}\r\n\r\n"
-                    .encode()
+                    f"GET /api/runs/{run_id}/stream HTTP/1.1\r\nHost: 127.0.0.1:{lab.port}\r\n\r\n".encode()
                 )
                 assert b"event:" in _recv_until(sock, b"event:")
                 assert sse_pump_threads() >= 1
@@ -660,7 +658,7 @@ def test_make_server_creates_default_manager(tmp_path: Path) -> None:
 
 
 def _loop(name: str) -> dict[str, Any]:
-    from tests.lab.test_tracks import ellipse
+    from .test_tracks import ellipse
 
     return {"name": name, "width": 10.0, "centerline": ellipse()}
 
@@ -682,11 +680,16 @@ def test_a_saved_track_reaches_the_catalog_and_serves_its_geometry(server: LabSe
     call_json(server, "POST", "/api/tracks", _loop("Каталог"))
 
     _, catalog = call_json(server, "GET", "/api/catalog")
-    status, geometry = call_json(server, "GET", "/api/tracks/%D0%9A%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3")
+    status, geometry = call_json(
+        server, "GET", "/api/tracks/%D0%9A%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3"
+    )
 
     assert "Каталог" in catalog["tracks"]
     assert status == 200 and geometry["name"] == "Каталог" and geometry["left"]
-    assert call_json(server, "DELETE", "/api/tracks/%D0%9A%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3")[0] == 200
+    assert (
+        call_json(server, "DELETE", "/api/tracks/%D0%9A%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3")[0]
+        == 200
+    )
     assert "Каталог" not in call_json(server, "GET", "/api/catalog")[1]["tracks"]
 
 

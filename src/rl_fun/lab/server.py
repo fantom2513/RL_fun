@@ -22,6 +22,7 @@ from urllib.parse import unquote, urlsplit
 
 from rl_fun.lab.catalog import build_catalog, build_track
 from rl_fun.lab.manager import RunManager
+from rl_fun.lab.tracks import TrackExistsError, delete_track, list_tracks, save_track
 from rl_fun.racing.track import available_tracks
 
 LOGGER = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ _STATUS_TEXT = {
     404: "не найдено",
     405: "метод не поддерживается",
     408: "время ожидания запроса истекло",
+    409: "конфликт: такое имя уже занято",
     411: "нужен заголовок Content-Length",
     413: "тело запроса слишком большое (не более 1 МБ)",
     414: "слишком длинный адрес",
@@ -78,9 +80,10 @@ class LabServer(ThreadingHTTPServer):
     allow_reuse_address = False  # on Windows SO_REUSEADDR would let another process share the port
     request_queue_size = 32
 
-    def __init__(self, port: int, manager: RunManager) -> None:
+    def __init__(self, port: int, manager: RunManager, tracks_dir: Path | None = None) -> None:
         self.manager = manager
-        self.track_names = available_tracks()
+        self.tracks_dir = tracks_dir if tracks_dir is not None else manager.tracks_dir
+        self.track_names = available_tracks(self.tracks_dir)
         self._catalog = build_catalog(self.track_names)
         self._serving = False
         self._closed = False
@@ -99,6 +102,11 @@ class LabServer(ThreadingHTTPServer):
     @property
     def catalog(self) -> dict[str, Any]:
         return self._catalog
+
+    def refresh_tracks(self) -> None:
+        """Rebuild the catalog after a track was saved or deleted."""
+        self.track_names = available_tracks(self.tracks_dir)
+        self._catalog = build_catalog(self.track_names)
 
     def serve_forever(self, poll_interval: float = 0.1) -> None:
         self._serving = True
@@ -138,7 +146,8 @@ def make_server(
     Without a `manager` a new `RunManager(runs_dir)` is created. Either way `close()` shuts the
     manager down.
     """
-    return LabServer(port, manager if manager is not None else RunManager(runs_dir))
+    manager = manager if manager is not None else RunManager(runs_dir)
+    return LabServer(port, manager, getattr(manager, "tracks_dir", Path(runs_dir) / "tracks"))
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -228,10 +237,20 @@ class _Handler(BaseHTTPRequestHandler):
         if parts == ["catalog"]:
             self._expect(method, "GET")
             self._send_json(200, self.server.catalog)
+        elif parts == ["tracks"]:
+            if method == "GET":
+                self._send_json(200, list_tracks(self.server.tracks_dir))
+            elif method == "POST":
+                self._save_track()
+            else:
+                raise _HttpError(405)
         elif len(parts) == 2 and parts[0] == "tracks":
+            if method == "DELETE":
+                self._delete_track(parts[1])
+                return
             self._expect(method, "GET")
             try:
-                data = build_track(parts[1])
+                data = build_track(parts[1], self.server.tracks_dir)
             except ValueError:
                 raise _HttpError(404, "трасса не найдена") from None
             self._send_json(200, data)
@@ -270,6 +289,30 @@ class _Handler(BaseHTTPRequestHandler):
             return action()
         except KeyError:
             raise _HttpError(404, "запуск не найден") from None
+
+    def _save_track(self) -> None:
+        data = self._read_json_object()
+        overwrite = data.pop("overwrite", False) is True
+        try:
+            row = save_track(self.server.tracks_dir, data, overwrite=overwrite)
+        except TrackExistsError as error:
+            raise _HttpError(409, str(error)) from None
+        except ValueError as error:
+            raise _HttpError(400, str(error)) from None
+        except OSError:
+            raise _HttpError(500, "не удалось сохранить трассу на диск") from None
+        self.server.refresh_tracks()
+        self._send_json(201, {"name": row["name"]})
+
+    def _delete_track(self, name: str) -> None:
+        try:
+            delete_track(self.server.tracks_dir, name)
+        except ValueError as error:
+            raise _HttpError(400, str(error)) from None
+        except KeyError:
+            raise _HttpError(404, "трасса не найдена") from None
+        self.server.refresh_tracks()
+        self._send_json(200, {"ok": True})
 
     def _create_run(self) -> None:
         config = self._read_json_object()

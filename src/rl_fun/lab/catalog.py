@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 from rl_fun.lab.config import RunConfig
@@ -133,11 +134,11 @@ def _build_style() -> dict[str, Any]:
     }
 
 
-def build_track(name: str) -> dict[str, Any]:
-    """Geometry of a built-in track; unknown names (including file paths) raise ValueError."""
-    if name not in available_tracks():
+def build_track(name: str, tracks_dir: Path | None = None) -> dict[str, Any]:
+    """Geometry of a built-in or saved track; unknown names (including paths) raise ValueError."""
+    if name not in available_tracks(tracks_dir):
         raise ValueError(f"неизвестная трасса: {name!r}")
-    track = load_track(name)
+    track = load_track(name, tracks_dir)
     position, heading = track.start_pose()
     return {
         "name": track.name,
