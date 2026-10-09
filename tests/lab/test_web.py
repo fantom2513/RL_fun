@@ -652,3 +652,160 @@ def test_log_scale_maps_slider_positions_to_values_and_back() -> None:
     lo, hi, top, mid, back = json.loads(_node(script))
 
     assert (lo, hi, top, mid) == (1e-5, 1e-2, 1, 0.492) and abs(back - 3e-4) < 1e-12
+
+
+# ---- shell: rail, routes, keys, theme, tooltips (DESIGN.md sections 2, 4.1, 11.6 task 4) ----
+
+SHELL_FILES = (
+    "css/layout.css",
+    "core/router.js",
+    "core/keys.js",
+    "core/theme.js",
+    "ui/tooltip.js",
+)
+SECTIONS = {
+    "lab": "flask-conical",
+    "tracks": "route",
+    "challenges": "trophy",
+    "garage": "warehouse",
+    "settings": "settings",
+}
+INDEX = WEB_DIR / "index.html"
+
+
+def _index_html() -> str:
+    return _HTML_COMMENT.sub("", INDEX.read_text("utf-8"))
+
+
+def test_shell_files_exist() -> None:
+    assert [n for n in SHELL_FILES if not (WEB_DIR / n).is_file()] == []
+
+
+def test_index_loads_the_component_and_layout_layers() -> None:
+    sheets = re.findall(r"""<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']""", _index_html())
+
+    assert [s for s in sheets if s != "/static/style.css"] == [
+        "/static/css/tokens.css",
+        "/static/css/base.css",
+        "/static/css/components.css",
+        "/static/css/layout.css",
+    ]
+
+
+@pytest.mark.parametrize(("name", "icon"), SECTIONS.items())
+def test_rail_has_a_link_with_an_icon_and_an_explanation_per_section(name: str, icon: str) -> None:
+    link = re.search(rf"""<a\b[^>]*href=["']#/{name}["'][^>]*>.*?</a>""", _index_html(), re.DOTALL)
+
+    assert link is not None
+    assert 'class="rail-item' in link.group(0)
+    assert f"#i-{icon}" in link.group(0)
+    tip = re.search(r"""data-tip=["']([^"']{20,})["']""", link.group(0))
+    assert tip is not None, "every rail item explains what is behind it"
+
+
+@pytest.mark.parametrize("name", SECTIONS)
+def test_every_section_has_a_screen_with_a_focusable_title(name: str) -> None:
+    screen = re.search(
+        rf"""<section\b[^>]*data-screen=["']{name}["'][^>]*>(.*?)(?=<section\b[^>]*data-screen=|</main>)""",
+        _index_html(),
+        re.DOTALL,
+    )
+
+    assert screen is not None
+    assert re.search(r"""<h1\b[^>]*tabindex=["']-1["']""", screen.group(1))
+
+
+def test_placeholder_sections_say_they_are_coming_soon() -> None:
+    html = _index_html()
+    for name in ("tracks", "challenges", "garage", "settings"):
+        screen = re.search(
+            rf"""<section\b[^>]*data-screen=["']{name}["'][^>]*>(.*?)(?=<section\b[^>]*data-screen=|</main>)""",
+            html,
+            re.DOTALL,
+        )
+        assert screen is not None and "скоро" in screen.group(1).lower()
+
+
+def test_lab_screen_keeps_every_element_the_app_script_looks_up() -> None:
+    html = _index_html()
+    wanted = set(re.findall(r"""\$\('([\w-]+)'\)""", (WEB_DIR / "app.js").read_text("utf-8")))
+
+    assert sorted(i for i in wanted if f'id="{i}"' not in html) == []
+
+
+def test_app_shortcuts_only_act_on_the_lab_screen() -> None:
+    assert "dataset.screen" in (WEB_DIR / "app.js").read_text("utf-8")
+
+
+def test_app_starts_the_router_the_global_keys_and_the_tooltips() -> None:
+    source = (WEB_DIR / "app.js").read_text("utf-8")
+
+    for module in ("./core/router.js", "./core/keys.js", "./core/theme.js", "./ui/tooltip.js"):
+        assert module in source
+
+
+def test_tooltip_waits_half_a_second_and_closes_on_escape() -> None:
+    source = (WEB_DIR / "ui" / "tooltip.js").read_text("utf-8")
+
+    assert "data-tip" in source and "500" in source and "Escape" in source
+    assert "focusin" in source and "role" in source and "tooltip" in source
+
+
+def test_layout_stylesheet_styles_the_rail() -> None:
+    selectors = " ".join(s for _, s, _ in _rules(_css(CSS_DIR / "layout.css")))
+
+    for name in ("shell", "rail", "rail-brand", "rail-item", "screen", "screen-head"):
+        assert re.search(rf"\.{name}(?![\w-])", selectors), name
+    assert 'aria-current="page"' in selectors
+
+
+def _node_json(module: str, expression: str) -> object:
+    url = (WEB_DIR / module).as_uri()
+    script = f"import * as m from {json.dumps(url)};console.log(JSON.stringify({expression}));"
+    return json.loads(_node(script))
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_router_parses_hash_routes() -> None:
+    result = _node_json(
+        "core/router.js",
+        "[m.SECTIONS, m.parseRoute(''), m.parseRoute('#/tracks/new'), m.parseRoute('#/lab/new/network'),"
+        " m.parseRoute('#/nowhere'), m.parseRoute('#/garage/42/test'), m.hashFor('settings')]",
+    )
+
+    assert result == [
+        ["lab", "tracks", "challenges", "garage", "settings"],
+        {"name": "lab", "rest": [], "valid": False},
+        {"name": "tracks", "rest": ["new"], "valid": True},
+        {"name": "lab", "rest": ["new", "network"], "valid": True},
+        {"name": "lab", "rest": [], "valid": False},
+        {"name": "garage", "rest": ["42", "test"], "valid": True},
+        "#/settings",
+    ]
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_global_keys_map_digits_to_sections_in_rail_order() -> None:
+    result = _node_json(
+        "core/keys.js",
+        "[m.sectionForKey({code:'Digit1'}), m.sectionForKey({code:'Digit5'}),"
+        " m.sectionForKey({code:'Numpad3'}), m.sectionForKey({code:'Digit6'}),"
+        " m.sectionForKey({code:'Digit1', ctrlKey:true}), m.sectionForKey({code:'Digit1', shiftKey:true}),"
+        " m.sectionForKey({code:'Digit2', isComposing:true}), m.isThemeKey({code:'KeyT'}),"
+        " m.isThemeKey({code:'KeyT', metaKey:true})]",
+    )
+
+    assert result == ["lab", "settings", "challenges", None, None, None, None, True, False]
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_theme_preference_helpers() -> None:
+    result = _node_json(
+        "core/theme.js",
+        "[m.normalizeTheme('light'), m.normalizeTheme('x'), m.normalizeTheme(null),"
+        " m.effectiveTheme('system', true), m.effectiveTheme('system', false),"
+        " m.effectiveTheme('light', true), m.toggledTheme('system', true), m.toggledTheme('light', true),"
+        " m.toggledTheme('dark', false)]",
+    )
+
+    assert result == ["light", "system", "system", "dark", "light", "light", "light", "dark", "light"]
