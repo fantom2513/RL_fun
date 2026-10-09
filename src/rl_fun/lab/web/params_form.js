@@ -335,6 +335,20 @@ export class ParamsForm {
     return this.field(key, label, h('div', { class: 'slide' }, range, input), hint);
   }
 
+  // The track list changed (a track was saved or deleted): keep the chosen one when it still exists.
+  setTracks(names) {
+    const select = this.fields.track;
+    const current = select.value;
+    select.replaceChildren(...names.map((name) => h('option', { value: name, text: name })));
+    select.value = names.includes(current) ? current : names[0];
+  }
+
+  setTrack(name) {
+    if (![...this.fields.track.options].some((option) => option.value === name)) this.setTracks([...this.catalog.tracks]);
+    this.fields.track.value = name;
+    this.changed('track');
+  }
+
   learnerField() {
     const select = this.makeSelect('learner', this.learners.map((item) => [item.id, item.label]));
     select.addEventListener('change', () => this.changed('learner'));

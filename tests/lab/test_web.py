@@ -727,7 +727,7 @@ def test_every_section_has_a_screen_with_a_focusable_title(name: str) -> None:
 
 def test_placeholder_sections_say_they_are_coming_soon() -> None:
     html = _index_html()
-    for name in ("tracks", "garage", "settings"):
+    for name in ("garage", "settings"):
         screen = re.search(
             rf"""<section\b[^>]*data-screen=["']{name}["'][^>]*>(.*?)(?=<section\b[^>]*data-screen=|</main>)""",
             html,
@@ -941,3 +941,47 @@ def test_challenges_and_comparison_are_wired_into_the_lab() -> None:
         assert needle in app
     for needle in ('id="challenges-list"', 'id="compare-view"', 'id="view-toggle"', 'id="stars-total"'):
         assert needle in html
+
+
+# ---- tracks screen and editor ------------------------------------------------------------------
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_track_geometry_helpers() -> None:
+    result = _node_json(
+        "core/geometry.js",
+        """(() => {
+  const square = [[0, 0], [10, 0], [10, 10], [0, 10]];
+  const bowtie = [[0, 0], [50, 50], [50, 0], [0, 50]];
+  return [
+    m.selfIntersections(bowtie), m.selfIntersections(square), m.polylineLength(square),
+    m.snapPoint([1.4, -0.2]), m.chaikin(square, 1).length, m.chaikin(square, 9, 40).length,
+    m.insertPoint(square, [5, -1]), m.closestOnPolyline(square, [5, -3]).index,
+    Object.entries(m.TEMPLATES).map(([name, make]) => [name, m.selfIntersections(make()).length, m.signedArea(make()) > 0]),
+  ];
+})()""",
+    )
+
+    assert result[0] == [[0, 2]] and result[1] == []
+    assert result[2] == 40 and result[3] == [1, 0]
+    assert result[4] == 8 and result[5] == 32
+    assert result[6] == [[0, 0], [5, -1], [10, 0], [10, 10], [0, 10]] and result[7] == 0
+    assert all(count == 0 and counter_clockwise for _, count, counter_clockwise in result[8])
+
+
+def test_the_tracks_screen_offers_choosing_drawing_editing_and_deleting() -> None:
+    screen = (WEB_DIR / "screens" / "tracks.js").read_text("utf-8")
+    app = (WEB_DIR / "app.js").read_text("utf-8")
+
+    for needle in ("Выбрать для запуска", "Изменить", "Удалить", "Сохранить трассу", "overwrite", "TEMPLATES"):
+        assert needle in screen
+    for needle in ("initTracks", "useTrack", "reloadTracks", "setTrack"):
+        assert needle in app
+    assert 'id="tracks-root"' in _index_html()
+
+
+def test_the_editor_canvas_edits_points_with_mouse_and_keyboard() -> None:
+    source = (WEB_DIR / "views" / "track_editor_canvas.js").read_text("utf-8")
+
+    for needle in ("pointerdown", "contextmenu", "Delete", "ArrowLeft", "KeyZ", "insertPoint", "selfIntersections"):
+        assert needle in source

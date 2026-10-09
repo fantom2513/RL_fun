@@ -26,7 +26,7 @@
         <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="currentColor" opacity="0.14"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="var(--danger)" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
       </a>
       <a class="rail-item" href="#/lab" data-tip="Запуски обучения: кривые, сеть лидера и параметры. Здесь машинки учатся ездить." data-tip-key="1" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-flask-conical"/></svg><span>Лаборатория</span></a>
-      <a class="rail-item" href="#/tracks" data-tip="Встроенные трассы и редактор своих. Скоро: рисуй трассу мышкой." data-tip-key="2" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-route"/></svg><span>Трассы</span></a>
+      <a class="rail-item" href="#/tracks" data-tip="Выберите трассу для запуска или нарисуйте свою: точки мышью, ширина, сохранение." data-tip-key="2" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-route"/></svg><span>Трассы</span></a>
       <a class="rail-item" href="#/challenges" data-tip="Задания со звёздами: уложись в лимиты и побей цель. Скоро." data-tip-key="3" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-trophy"/></svg><span>Челленджи</span></a>
       <a class="rail-item" href="#/garage" data-tip="Сохранённые сети: проверка на любой трассе, импорт и экспорт. Скоро." data-tip-key="4" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-warehouse"/></svg><span>Гараж</span></a>
       <div class="rail-spacer"></div>
@@ -116,13 +116,11 @@
       <section class="screen-pane" data-screen="tracks" hidden>
         <header class="screen-head">
           <h1 class="screen-title" tabindex="-1">Трассы</h1>
-          <span class="screen-sub">Встроенные и свои</span>
+          <span class="screen-sub" id="tracks-sub">Встроенные и свои</span>
+          <a id="track-new" class="btn btn-primary screen-action" href="#/tracks/new">Новая трасса</a>
         </header>
         <div class="screen-body">
-          <div class="empty">
-            <b>Скоро</b>
-            <p>Здесь появятся список трасс и редактор: нарисуй свою и проверь на ней сеть. Пока трассу выбирают в форме нового запуска.</p>
-          </div>
+          <div id="tracks-root" class="tracks"></div>
         </div>
       </section>
       <section class="screen-pane" data-screen="challenges" hidden>

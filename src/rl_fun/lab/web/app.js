@@ -11,6 +11,7 @@ import { ParamsForm } from './params_form.js';
 import { TrackView } from './track_view.js';
 import { LEVELS, bestStars, loadStars, saveStars, startConfig } from './core/levels.js';
 import { renderChallenges, starSummary } from './screens/challenges.js';
+import { initTracks } from './screens/tracks.js';
 import { compareRows, renderCompare, sortRows } from './screens/compare.js';
 import { initTooltips } from './ui/tooltip.js';
 import './ui/seg.js';
@@ -368,6 +369,27 @@ async function removeRun() {
   state.runs.delete(run.id);
   const remaining = [...state.runs.keys()];
   await select(remaining.length ? remaining[remaining.length - 1] : null);
+}
+
+// ---- tracks: the list, the editor and the use of a track in a new run -------------------------
+
+let tracksScreen = null;
+
+// A track was saved or deleted: the catalog (the form's list of tracks) follows the server.
+async function reloadTracks() {
+  try {
+    state.catalog = await api.getCatalog();
+  } catch {
+    return;
+  }
+  form?.setTracks(state.catalog.tracks);
+}
+
+function useTrack(name) {
+  if (!state.catalog) return;
+  location.hash = '#/lab';
+  openNewForm();
+  form.setTrack(name);
 }
 
 // ---- game layer: levels, stars and the comparison table --------------------------------------
@@ -731,7 +753,14 @@ async function start() {
 function initShell() {
   initTheme();
   initTooltips();
-  startRouter((route) => showLabView(route.name === 'lab' && route.rest[0] === 'compare'));
+  tracksScreen = initTracks({
+    root: $('tracks-root'), api, onUse: useTrack, onChanged: reloadTracks, toast,
+  });
+  startRouter((route) => {
+    showLabView(route.name === 'lab' && route.rest[0] === 'compare');
+    if (route.name === 'tracks') tracksScreen.show(route);
+    $('track-new').hidden = route.name === 'tracks' && route.rest.length > 0;
+  });
   startKeys({ navigate: (name) => { location.hash = hashFor(name); }, toggleTheme });
   const themePref = $('theme-pref');
   themePref.value = getTheme();
