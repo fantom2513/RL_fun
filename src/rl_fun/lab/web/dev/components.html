@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Компоненты · Лаборатория</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/dev/components.css">
+</head>
+<body>
+  <header class="showcase-head">
+    <h1>Компоненты</h1>
+    <lab-seg id="scheme" label="Цветовая схема" value="dark"
+      options='[{"value":"dark","label":"Тёмная","icon":"moon"},{"value":"light","label":"Светлая","icon":"sun"}]'></lab-seg>
+  </header>
+  <main id="showcase"></main>
+  <lab-toast-host></lab-toast-host>
+  <script type="module" src="/static/dev/components.js"></script>
+</body>
+</html>
