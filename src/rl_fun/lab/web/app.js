@@ -3,9 +3,14 @@
 
 import * as api from './api.js';
 import { Chart, METRICS } from './charts.js';
+import { startKeys } from './core/keys.js';
+import { hashFor, startRouter } from './core/router.js';
+import { getTheme, initTheme, setTheme, toggleTheme } from './core/theme.js';
 import { modelLabels, NetworkView } from './network_view.js';
 import { ParamsForm } from './params_form.js';
 import { TrackView } from './track_view.js';
+import { initTooltips } from './ui/tooltip.js';
+import './ui/seg.js';
 
 const RUN_COLORS = ['#3b82c4', '#e08a3c', '#2fa59a', '#9a6fd0', '#d05d8f', '#8fa83a', '#5ab4e0', '#a8795a'];
 const STATUS_LABELS = {
@@ -497,6 +502,7 @@ function wire() {
 
   window.addEventListener('keydown', (event) => {
     if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+    if (document.body.dataset.screen !== 'lab') return;
     // Never act while the user types or operates a control: shortcuts are for the stage only.
     const target = event.target.closest ? event.target : document.body;
     if (target.closest('input, select, textarea, [contenteditable]')) return;
@@ -591,4 +597,17 @@ async function start() {
   await select(ids.includes(initial) ? initial : (ids[ids.length - 1] ?? null));
 }
 
+// The shell: hash routes, section keys, the theme preference and the rail tooltips.
+function initShell() {
+  initTheme();
+  initTooltips();
+  startRouter();
+  startKeys({ navigate: (name) => { location.hash = hashFor(name); }, toggleTheme });
+  const themePref = $('theme-pref');
+  themePref.value = getTheme();
+  themePref.addEventListener('seg-change', (event) => setTheme(event.detail.value));
+  window.addEventListener('themechange', (event) => { themePref.value = event.detail.preference; });
+}
+
+initShell();
 init();

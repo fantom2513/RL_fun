@@ -1,0 +1,100 @@
+/* Лаборатория — layout layer: shell, rail, screen frame (DESIGN.md §2.1, §4.1, §11.2). */
+
+@layer layout {
+  .shell {
+    display: grid;
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    height: 100vh;
+    min-height: 560px;
+  }
+  .rail {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-1);
+    padding: var(--sp-3) var(--sp-2);
+    background: var(--surface-sunken);
+    border-right: 1px solid var(--border);
+  }
+  .rail-brand {
+    display: grid;
+    place-items: center;
+    height: 48px;
+    margin-bottom: var(--sp-3);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .rail-brand svg { width: 34px; height: 34px; }
+  .rail-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 2px 8px;
+    border-radius: var(--r-m);
+    color: var(--text-2);
+    font-size: var(--fs-label);
+    line-height: var(--lh-label);
+    font-weight: 500;
+    text-decoration: none;
+    letter-spacing: -0.02em;
+    transition: background var(--t-fast) var(--ease-standard), color var(--t-fast) var(--ease-standard);
+  }
+  .rail-item .icon { width: 22px; height: 22px; }
+  .rail-item:hover { background: var(--surface-2); color: var(--text); }
+  .rail-item[aria-current="page"] { background: var(--surface-3); color: var(--text); }
+  /* signature: the active section is marked with a curb */
+  .rail-item[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    left: -8px; top: 10px; bottom: 10px;
+    width: 4px;
+    border-radius: 0 2px 2px 0;
+    background: repeating-linear-gradient(180deg, var(--scene-curb) 0 6px, var(--scene-curb-white) 6px 12px);
+  }
+  .rail-badge {
+    position: absolute;
+    top: 6px; right: 14px;
+    min-width: 18px; height: 18px;
+    padding: 0 5px;
+    border-radius: var(--r-pill);
+    background: var(--accent);
+    color: var(--on-accent);
+    font: 600 11px/18px var(--font-mono);
+    text-align: center;
+  }
+  .rail-spacer { flex: 1; }
+
+  .screen { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .screen-head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    min-height: var(--runbar-h);
+    padding: var(--sp-2) var(--sp-5);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-1);
+  }
+  .screen-title { font: 600 var(--fs-title-l)/var(--lh-title-l) var(--font-display); letter-spacing: -0.015em; white-space: nowrap; }
+  .screen-sub { color: var(--text-2); font-size: var(--fs-body-s); }
+  .crumbs { display: flex; align-items: center; gap: var(--sp-2); color: var(--text-2); font-size: var(--fs-body-s); }
+  .crumbs a { text-decoration: none; }
+  .crumbs a:hover { color: var(--text); text-decoration: underline; }
+  .head-spacer { flex: 1; }
+  .head-actions { display: flex; align-items: center; gap: var(--sp-2); }
+  .screen-body { flex: 1; min-height: 0; overflow: auto; }
+
+  .screen-pane { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+  .screen-pane[hidden] { display: none; }
+  .lab-screen { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  .screen-pane > .screen-body { padding: var(--sp-5); }
+  .settings-theme { max-width: 420px; margin-top: var(--sp-5); }
+
+  @media (max-width: 1000px) {
+    .rail-item span { display: none; }
+    .rail-item { padding: 12px 0; }
+    .rail-item[aria-current="page"]::before { left: -8px; }
+    .rail-badge { right: 6px; }
+  }
+}

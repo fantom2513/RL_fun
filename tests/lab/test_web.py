@@ -51,6 +51,11 @@ def _strip_comments(path: Path, text: str) -> str:
     return _LINE_COMMENT.sub("", text) if path.suffix == ".js" else text
 
 
+def _page_references(html: str) -> list[str]:
+    """src/href values that point at files; same-page fragments such as `#/lab` are routes."""
+    return [r for r in _ATTRIBUTE.findall(html) if not r.startswith("#")]
+
+
 def _resolve(page_url: str, reference: str) -> Path:
     """Map a reference found in a file served at `page_url` to a path below web/."""
     assert not re.match(r"^[a-z][a-z0-9+.-]*:", reference, re.IGNORECASE), reference
@@ -81,7 +86,7 @@ def test_expected_web_files_exist() -> None:
 def test_index_html_references_only_existing_local_files() -> None:
     html = _strip_comments(WEB_DIR / "index.html", (WEB_DIR / "index.html").read_text("utf-8"))
 
-    references = _ATTRIBUTE.findall(html)
+    references = _page_references(html)
     targets = [_resolve("/", reference) for reference in references]
 
     assert references, "index.html should load its stylesheet and script"
@@ -93,7 +98,7 @@ def test_index_html_references_only_existing_local_files() -> None:
 def test_html_pages_reference_only_existing_files_below_static(path: Path) -> None:
     html = _strip_comments(path, path.read_text("utf-8"))
 
-    targets = [_resolve(_url_of(path), reference) for reference in _ATTRIBUTE.findall(html)]
+    targets = [_resolve(_url_of(path), reference) for reference in _page_references(html)]
 
     assert [t for t in targets if not t.is_file()] == []
 
@@ -694,7 +699,11 @@ def test_index_loads_the_component_and_layout_layers() -> None:
 
 @pytest.mark.parametrize(("name", "icon"), SECTIONS.items())
 def test_rail_has_a_link_with_an_icon_and_an_explanation_per_section(name: str, icon: str) -> None:
-    link = re.search(rf"""<a\b[^>]*href=["']#/{name}["'][^>]*>.*?</a>""", _index_html(), re.DOTALL)
+    link = re.search(
+        rf"""<a\b[^>]*class=["']rail-item["'][^>]*href=["']#/{name}["'][^>]*>.*?</a>""",
+        _index_html(),
+        re.DOTALL,
+    )
 
     assert link is not None
     assert 'class="rail-item' in link.group(0)

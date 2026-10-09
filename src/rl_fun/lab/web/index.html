@@ -7,8 +7,11 @@
   <title>Лаборатория</title>
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/layout.css">
   <link rel="preload" href="/static/fonts/onest-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="modulepreload" href="/static/core/router.js">
   <link rel="modulepreload" href="/static/api.js">
   <link rel="modulepreload" href="/static/track_view.js">
   <link rel="modulepreload" href="/static/params_form.js">
@@ -16,90 +19,155 @@
   <link rel="modulepreload" href="/static/network_view.js">
 </head>
 <body>
-  <div class="app">
-    <header class="topbar">
-      <div class="brand">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-          <path d="M6 22c0-8 4-14 10-14s10 4 10 8-5 4-8 4-4 3-12 2z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
-          <circle cx="24" cy="12" r="2.2" fill="var(--curb)"/>
-        </svg>
-        <span class="brand-name">Лаборатория</span>
-      </div>
+  <div class="shell">
+    <nav class="rail" aria-label="Разделы">
+      <a class="rail-brand" href="#/lab" aria-label="Лаборатория: на главную">
+        <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="currentColor" opacity="0.14"/><path d="M8.5 21.5c0-6.5 3.4-10.5 8.5-10.5s8.5 2.6 8.5 6.2-3.6 3.6-6.2 3.6-3.2 3.2-10.8.7z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M20.4 11.3l3.6 2.1" stroke="var(--danger)" stroke-width="2.8" stroke-dasharray="1.6 1.2"/></svg>
+      </a>
+      <a class="rail-item" href="#/lab" data-tip="Запуски обучения: кривые, сеть лидера и параметры. Здесь машинки учатся ездить." data-tip-key="1" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-flask-conical"/></svg><span>Лаборатория</span></a>
+      <a class="rail-item" href="#/tracks" data-tip="Встроенные трассы и редактор своих. Скоро: рисуй трассу мышкой." data-tip-key="2" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-route"/></svg><span>Трассы</span></a>
+      <a class="rail-item" href="#/challenges" data-tip="Задания со звёздами: уложись в лимиты и побей цель. Скоро." data-tip-key="3" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-trophy"/></svg><span>Челленджи</span></a>
+      <a class="rail-item" href="#/garage" data-tip="Сохранённые сети: проверка на любой трассе, импорт и экспорт. Скоро." data-tip-key="4" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-warehouse"/></svg><span>Гараж</span></a>
+      <div class="rail-spacer"></div>
+      <a class="rail-item" href="#/settings" data-tip="Тема оформления, звуки и клавиши. Остальные настройки скоро." data-tip-key="5" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-settings"/></svg><span>Настройки</span></a>
+    </nav>
 
-      <div class="tabs-wrap">
-        <div id="tabs" class="tabs" role="tablist" aria-label="Запуски"></div>
-        <button id="new-run" class="btn btn-primary" type="button" aria-controls="params-body">+ новый запуск</button>
-      </div>
+    <main class="screen" id="screen">
+      <section class="screen-pane lab-screen" data-screen="lab">
+        <header class="topbar">
+          <div class="brand">
+            <h1 class="brand-name" tabindex="-1">Лаборатория</h1>
+          </div>
 
-      <div class="controls" role="group" aria-label="Управление запуском">
-        <button id="pause" class="btn" type="button" disabled>Пауза</button>
-        <label class="select-label">
-          <span>Скорость</span>
-          <select id="speed" aria-label="Скорость симуляции" disabled>
-            <option value="1">×1</option>
-            <option value="2">×2</option>
-            <option value="4">×4</option>
-            <option value="8">×8</option>
-            <option value="max">макс</option>
-          </select>
-        </label>
-        <button id="stop" class="btn" type="button" disabled>Остановить</button>
-        <button id="delete" class="btn btn-danger" type="button" disabled>Удалить</button>
-      </div>
-    </header>
+          <div class="tabs-wrap">
+            <div id="tabs" class="tabs" role="tablist" aria-label="Запуски"></div>
+            <button id="new-run" class="btn btn-primary" type="button" aria-controls="params-body">+ новый запуск</button>
+          </div>
 
-    <main class="layout">
-      <aside class="panel params" aria-labelledby="params-title">
-        <h2 id="params-title" class="panel-title">Параметры</h2>
-        <div id="params-body" class="params-body">
-          <p id="params-status" class="panel-note" role="status">Загрузка параметров…</p>
-          <button id="params-retry" class="btn btn-small" type="button" hidden>Повторить</button>
-        </div>
-      </aside>
+          <div class="controls" role="group" aria-label="Управление запуском">
+            <button id="pause" class="btn" type="button" disabled>Пауза</button>
+            <label class="select-label">
+              <span>Скорость</span>
+              <select id="speed" aria-label="Скорость симуляции" disabled>
+                <option value="1">×1</option>
+                <option value="2">×2</option>
+                <option value="4">×4</option>
+                <option value="8">×8</option>
+                <option value="max">макс</option>
+              </select>
+            </label>
+            <button id="stop" class="btn" type="button" disabled>Остановить</button>
+            <button id="delete" class="btn btn-danger" type="button" disabled>Удалить</button>
+          </div>
+        </header>
 
-      <section class="stage" aria-label="Трасса">
-        <canvas id="track" tabindex="0" aria-label="Трасса с машинками"></canvas>
-        <div class="camera-tools" role="group" aria-label="Камера">
-          <button id="camera-mode" class="chip" type="button" aria-label="Режим камеры: вписать или следовать (клавиша C)" title="Режим камеры (C)">Вписать</button>
-          <button id="zoom-out" class="chip chip-square" type="button" aria-label="Уменьшить масштаб (клавиша −)" title="Уменьшить (−)">−</button>
-          <button id="zoom-in" class="chip chip-square" type="button" aria-label="Увеличить масштаб (клавиша +)" title="Увеличить (+)">+</button>
-        </div>
-        <p id="stage-hint" class="stage-hint">Колесо или + / −: масштаб · C: камера</p>
-        <div id="stage-empty" class="stage-message" hidden>
-          <h2>Создайте запуск</h2>
-          <p>Машинки обучаются поколениями: лучшие передают свои веса дальше.</p>
-          <button id="empty-new" class="btn btn-primary" type="button">+ новый запуск</button>
-        </div>
-        <div id="stage-loading" class="stage-message stage-message-quiet" hidden>
-          <p>Загрузка трассы…</p>
-        </div>
-        <div id="stage-banner" class="banner" role="status" hidden>
-          <span id="banner-text"></span>
-          <button id="banner-retry" class="btn btn-small" type="button" hidden>Повторить</button>
+        <div class="layout">
+          <aside class="panel params" aria-labelledby="params-title">
+            <h2 id="params-title" class="panel-title">Параметры</h2>
+            <div id="params-body" class="params-body">
+              <p id="params-status" class="panel-note" role="status">Загрузка параметров…</p>
+              <button id="params-retry" class="btn btn-small" type="button" hidden>Повторить</button>
+            </div>
+          </aside>
+
+          <section class="stage" aria-label="Трасса">
+            <canvas id="track" tabindex="0" aria-label="Трасса с машинками"></canvas>
+            <div class="camera-tools" role="group" aria-label="Камера">
+              <button id="camera-mode" class="chip" type="button" aria-label="Режим камеры: вписать или следовать (клавиша C)" title="Режим камеры (C)">Вписать</button>
+              <button id="zoom-out" class="chip chip-square" type="button" aria-label="Уменьшить масштаб (клавиша −)" title="Уменьшить (−)">−</button>
+              <button id="zoom-in" class="chip chip-square" type="button" aria-label="Увеличить масштаб (клавиша +)" title="Увеличить (+)">+</button>
+            </div>
+            <p id="stage-hint" class="stage-hint">Колесо или + / −: масштаб · C: камера</p>
+            <div id="stage-empty" class="stage-message" hidden>
+              <h2>Создайте запуск</h2>
+              <p>Машинки обучаются поколениями: лучшие передают свои веса дальше.</p>
+              <button id="empty-new" class="btn btn-primary" type="button">+ новый запуск</button>
+            </div>
+            <div id="stage-loading" class="stage-message stage-message-quiet" hidden>
+              <p>Загрузка трассы…</p>
+            </div>
+            <div id="stage-banner" class="banner" role="status" hidden>
+              <span id="banner-text"></span>
+              <button id="banner-retry" class="btn btn-small" type="button" hidden>Повторить</button>
+            </div>
+          </section>
+
+          <aside class="panel network" aria-labelledby="network-title">
+            <h2 id="network-title" class="panel-title">Сеть лидера</h2>
+            <div id="network-body" class="network-body"></div>
+            <ul id="network-legend" class="net-legend" aria-label="Как читать граф"></ul>
+          </aside>
+
+          <section class="panel curves" aria-labelledby="curves-title">
+            <div class="curves-head">
+              <h2 id="curves-title" class="panel-title">Кривые обучения</h2>
+              <div id="metrics" class="segmented" role="radiogroup" aria-label="Показатель кривых"></div>
+              <ul id="legend" class="legend" aria-label="Запуски на графике"></ul>
+            </div>
+            <div class="curves-body">
+              <canvas id="chart" aria-label="Кривые обучения по поколениям для всех запусков"></canvas>
+            </div>
+          </section>
         </div>
       </section>
-
-      <aside class="panel network" aria-labelledby="network-title">
-        <h2 id="network-title" class="panel-title">Сеть лидера</h2>
-        <div id="network-body" class="network-body"></div>
-        <ul id="network-legend" class="net-legend" aria-label="Как читать граф"></ul>
-      </aside>
-
-      <section class="panel curves" aria-labelledby="curves-title">
-        <div class="curves-head">
-          <h2 id="curves-title" class="panel-title">Кривые обучения</h2>
-          <div id="metrics" class="segmented" role="radiogroup" aria-label="Показатель кривых"></div>
-          <ul id="legend" class="legend" aria-label="Запуски на графике"></ul>
+      <section class="screen-pane" data-screen="tracks" hidden>
+        <header class="screen-head">
+          <h1 class="screen-title" tabindex="-1">Трассы</h1>
+          <span class="screen-sub">Встроенные и свои</span>
+        </header>
+        <div class="screen-body">
+          <div class="empty">
+            <b>Скоро</b>
+            <p>Здесь появятся список трасс и редактор: нарисуй свою и проверь на ней сеть. Пока трассу выбирают в форме нового запуска.</p>
+          </div>
         </div>
-        <div class="curves-body">
-          <canvas id="chart" aria-label="Кривые обучения по поколениям для всех запусков"></canvas>
+      </section>
+      <section class="screen-pane" data-screen="challenges" hidden>
+        <header class="screen-head">
+          <h1 class="screen-title" tabindex="-1">Челленджи</h1>
+          <span class="screen-sub">Задания со звёздами</span>
+        </header>
+        <div class="screen-body">
+          <div class="empty">
+            <b>Скоро</b>
+            <p>Здесь появятся задания с целями в одну, две и три звезды. Пока можно тренировать сети в лаборатории.</p>
+          </div>
+        </div>
+      </section>
+      <section class="screen-pane" data-screen="garage" hidden>
+        <header class="screen-head">
+          <h1 class="screen-title" tabindex="-1">Гараж</h1>
+          <span class="screen-sub">Сохранённые сети</span>
+        </header>
+        <div class="screen-body">
+          <div class="empty">
+            <b>Скоро</b>
+            <p>Здесь появятся сохранённые сети, проверка на любой трассе и импорт с экспортом. Пока лучшая сеть каждого запуска лежит в папке runs.</p>
+          </div>
+        </div>
+      </section>
+      <section class="screen-pane" data-screen="settings" hidden>
+        <header class="screen-head">
+          <h1 class="screen-title" tabindex="-1">Настройки</h1>
+          <span class="screen-sub">Оформление и клавиши</span>
+        </header>
+        <div class="screen-body">
+          <div class="field settings-theme">
+            <span class="field-label" id="theme-label">Тема оформления</span>
+            <lab-seg id="theme-pref" label="Тема оформления" value="system"
+              options='[{"value":"system","label":"Как в системе","icon":"monitor"},{"value":"light","label":"Светлая","icon":"sun"},{"value":"dark","label":"Тёмная","icon":"moon"}]'></lab-seg>
+            <span class="field-hint">Быстро переключить можно клавишей T.</span>
+          </div>
+          <div class="empty">
+            <b>Скоро</b>
+            <p>Остальные настройки — звук, плотность, клавиши — скоро.</p>
+          </div>
         </div>
       </section>
     </main>
-
-    <div id="toasts" class="toasts" aria-live="polite"></div>
-    <p id="announcer" class="sr-only" role="status" aria-live="polite"></p>
   </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <p id="announcer" class="sr-only" role="status" aria-live="polite"></p>
   <script type="module" src="/static/app.js"></script>
 </body>
 </html>
