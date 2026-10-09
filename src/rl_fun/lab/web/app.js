@@ -114,6 +114,7 @@ function addRun(row) {
     status: row.status,
     gens: [],
     best: row.best ?? null,
+    learner: row.learner ?? 'evolution',
     color: RUN_COLORS[state.colorIndex++ % RUN_COLORS.length],
     config: null,
     frame: null,
@@ -184,6 +185,7 @@ async function ensureConfig(run) {
   if (run.config) return run.config;
   const data = await api.getRun(run.id);
   run.config = data.config;
+  run.learner = data.config.learner ?? 'evolution';
   return run.config;
 }
 
@@ -204,6 +206,7 @@ async function select(id) {
   renderBanner();
   chart.setHighlight(id);
   const run = activeRun();
+  if (run) view.setLearner(run.learner);
   el.empty.hidden = Boolean(run);
   network.clear();
   network.setLabels(null);
@@ -277,7 +280,7 @@ async function createFromForm(config) {
   renderControls();
   try {
     const { id } = await api.createRun(config);
-    const run = addRun({ id, name: config.name, status: 'running', best: null });
+    const run = addRun({ id, name: config.name, status: 'running', best: null, learner: config.learner });
     await select(run.id);
     return true;
   } catch (error) {
@@ -353,7 +356,7 @@ function renderTabs() {
     meta.className = 'tab-meta';
     const dot = document.createElement('span');
     dot.className = 'tab-dot';
-    meta.append(dot, `${label} · пок. ${run.gens.length}${best}`);
+    meta.append(dot, `${label} · ${run.learner === 'evolution' ? 'пок.' : 'итер.'} ${run.gens.length}${best}`);
     body.append(name, meta);
     tab.append(body);
     fragment.append(tab);

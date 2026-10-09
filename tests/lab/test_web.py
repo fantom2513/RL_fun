@@ -818,3 +818,21 @@ def test_theme_preference_helpers() -> None:
     )
 
     assert result == ["light", "system", "system", "dark", "light", "light", "light", "dark", "light"]
+
+
+# ---- learner choice in the run form ---------------------------------------------------------
+
+
+def test_params_form_builds_the_learner_block_from_the_catalog_schema() -> None:
+    source = (WEB_DIR / "params_form.js").read_text("utf-8")
+
+    for needle in ("catalog.learners", "data-learner-group", "schemaField", "validateSchema", "logScale"):
+        assert needle in source
+
+
+def test_runs_of_other_learners_count_iterations_not_generations() -> None:
+    sources = {name: (WEB_DIR / name).read_text("utf-8") for name in ("app.js", "charts.js", "track_view.js")}
+
+    assert "итер." in sources["app.js"]
+    assert "итерация" in sources["charts.js"]
+    assert "Итер." in sources["track_view.js"]

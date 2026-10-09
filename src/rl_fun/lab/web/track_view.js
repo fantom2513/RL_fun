@@ -113,6 +113,7 @@ export class TrackView {
     this.track = null;
     this.style = null;
     this.frame = null;
+    this.iterationWord = 'Пок.';
     this.parts = [];
     this.paths = null;
     this.background = null;
@@ -146,6 +147,11 @@ export class TrackView {
   }
 
   // ---- data -------------------------------------------------------------------------------
+
+  // Evolution counts generations, every other learner counts iterations.
+  setLearner(learner) {
+    this.iterationWord = learner === 'evolution' ? 'Пок.' : 'Итер.';
+  }
 
   setStyle(style) {
     this.style = style;
@@ -562,7 +568,7 @@ export class TrackView {
     const ctx = this.ctx;
     const frame = this.frame;
     const text = frame
-      ? `Пок. ${frame.gen + 1} · ${frame.alive}/${frame.n} · ${Math.round(frame.hud.progress * 100)}%`
+      ? `${this.iterationWord} ${frame.gen + 1} · ${frame.alive}/${frame.n} · ${Math.round(frame.hud.progress * 100)}%`
       : 'Ждём кадр…';
     ctx.font = HUD_FONT;
     const x = 10;
@@ -590,7 +596,7 @@ export class TrackView {
     const ctx = this.ctx;
     const frame = this.frame;
     const rows = [
-      ['Поколение', frame ? String(frame.gen + 1) : '—'],
+      [this.iterationWord === 'Пок.' ? 'Поколение' : 'Итерация', frame ? String(frame.gen + 1) : '—'],
       ['Шаг', frame ? String(frame.step) : '—'],
       ['Живых', frame ? `${frame.alive} / ${frame.n}` : '—'],
       ['Скорость', frame ? `${frame.hud.speed.toFixed(1)} м/с` : '—'],

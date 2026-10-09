@@ -138,7 +138,7 @@ class RunManager:
         return run_id
 
     def list(self) -> list[dict[str, Any]]:
-        """One summary row per run: id, name, status, completed generations and best progress."""
+        """One summary row per run: id, name, status, generations, learner and best progress."""
         with self._cond:
             return [
                 {
@@ -146,6 +146,7 @@ class RunManager:
                     "name": run.name,
                     "status": run.status,
                     "gen": len(run.history),
+                    "learner": run.config.get("learner", "evolution"),
                     "best": max((entry["best"] for entry in run.history), default=None),
                 }
                 for run in self._runs.values()

@@ -37,6 +37,13 @@ const valueOf = (gen, metric) => {
 };
 
 export class Chart {
+  // The x axis counts generations of evolution runs and iterations of the other learners.
+  axisLabel() {
+    const kinds = new Set(this.getRuns().map((run) => (run.learner === 'evolution' ? 'поколение' : 'итерация')));
+    if (kinds.size === 1) return [...kinds][0];
+    return kinds.size ? 'итерация / поколение' : 'итерация';
+  }
+
   constructor(canvas, getRuns) {
     this.canvas = canvas;
     this.getRuns = getRuns;
@@ -183,7 +190,7 @@ export class Chart {
     }
     ctx.textAlign = 'right';
     ctx.fillStyle = colors.muted;
-    ctx.fillText('поколение', width - 2, plot.y + plot.h + 7 + 0.1);
+    ctx.fillText(this.axisLabel(), width - 2, plot.y + plot.h + 7 + 0.1);
 
     ctx.save();
     ctx.beginPath();

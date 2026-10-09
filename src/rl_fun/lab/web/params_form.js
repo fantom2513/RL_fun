@@ -4,6 +4,8 @@
 // authority and its errors are shown too. For a running run only the live-editable fields stay
 // enabled and their changes are sent as `update` commands (debounced).
 
+import { logScale, number } from './core/format.js';
+
 const RAY_PREFIX = 'ray:';
 const RAY_PRESETS = [
   { label: '3 луча', angles: [-60, 0, 60] },
@@ -26,6 +28,10 @@ const OUTPUT_TEXT = {
 const OUTPUT_RULES =
   'Руль нужен всегда. Газ задаётся одним выходом «Газ и тормоз» либо отдельным «Газ»; ' +
   'тормоз добавляется только к отдельному газу.';
+
+// Parameters the form already shows in the "Запуск" group; the learner schema lists them too.
+const SHARED_KEYS = new Set(['population', 'max_steps']);
+const roundValue = (value) => Number(value.toPrecision(3));
 
 let uid = 0;
 
@@ -83,6 +89,9 @@ export class ParamsForm {
     this.scalars = new Set();
     this.outputs = new Set(['steer', 'throttle']);
     this.passthrough = { init_scale: catalog.defaults.init_scale };
+    this.learners = catalog.learners ?? [];
+    this.schemaParams = new Map();
+    this.scales = new Map();
     this.liveTimer = null;
     this.liveDirty = new Set();
     this.pending = null;
@@ -104,6 +113,7 @@ export class ParamsForm {
     const run = h('details', { class: 'group', open: true },
       h('summary', { text: 'Запуск' }),
       this.textField('name', 'Название', { maxLength: MAX_NAME }),
+      this.learnerField(),
       this.selectField('track', 'Трасса', c.tracks.map((id) => [id, id])),
       this.sliderField('population', 'Популяция', { min: 2, max: 200, step: 1, int: true, hint: 'машинок в поколении' }),
       h('div', { class: 'field-grid' },
@@ -114,7 +124,7 @@ export class ParamsForm {
       ),
     );
 
-    const evolution = h('details', { class: 'group', open: true },
+    const evolution = h('details', { class: 'group', open: true, 'data-learner-group': 'evolution' },
       h('summary', { text: 'Эволюция' }),
       this.liveNote,
       this.sliderField('elite', 'Элита', { min: 1, max: 199, step: 1, int: true, live: true, hint: 'лучших переходят без изменений' }),
@@ -242,7 +252,7 @@ export class ParamsForm {
     this.actions = h('div', { class: 'form-actions' }, this.formError, this.submitBtn, this.resetBtn, this.copyBtn);
 
     this.form = h('form', { class: 'params-form', noValidate: true, autocomplete: 'off' },
-      this.modeLine, this.summary, this.lockNote, run, evolution, reward, model, this.actions);
+      this.modeLine, this.summary, this.lockNote, run, evolution, ...this.learnerGroups('ppo'), reward, model, this.actions);
     this.form.addEventListener('submit', (event) => {
       event.preventDefault();
       this.submit();
@@ -315,6 +325,80 @@ export class ParamsForm {
     this.fields[key] = input;
     this.fields[`range:${key}`] = range;
     return this.field(key, label, h('div', { class: 'slide' }, range, input), hint);
+  }
+
+  learnerField() {
+    const select = this.makeSelect('learner', this.learners.map((item) => [item.id, item.label]));
+    select.addEventListener('change', () => this.changed('learner'));
+    this.fields.learner = select;
+    this.learnerNote = h('p', { class: 'hint' });
+    const error = this.errorLine('learner');
+    return h('div', { class: 'field', 'data-field': 'learner' },
+      h('label', { for: select.id, text: 'Обучатель' }), select, this.learnerNote, error);
+  }
+
+  // Parameter groups of a learner built from its schema in the catalog: the form knows no names.
+  learnerGroups(id) {
+    const learner = this.learners.find((item) => item.id === id);
+    if (!learner) return [];
+    const groups = [];
+    for (const group of learner.groups) {
+      const fields = group.params.filter((param) => !SHARED_KEYS.has(param.key)).map((param) => this.schemaField(param));
+      if (!fields.length) continue;
+      groups.push(h('details', { class: 'group', open: groups.length < 2, 'data-learner-group': id },
+        h('summary', { text: group.label }), ...fields));
+    }
+    return groups;
+  }
+
+  schemaField(param) {
+    const { key, min, max, step, log, live } = param;
+    const isIntParam = param.type === 'int';
+    const scale = log ? logScale(min, max) : null;
+    if (scale) this.scales.set(key, { ...scale, min, max });
+    this.schemaParams.set(key, param);
+    const range = h('input', {
+      type: 'range', 'aria-label': param.label, 'data-live': live ? '' : null,
+      ...(scale ? { min: 0, max: 1, step: 'any' } : { min, max, step }),
+    });
+    const input = h('input', {
+      type: 'number', id: `f${++uid}`, class: 'num', min, max, step: isIntParam ? 1 : 'any', inputMode: 'decimal',
+      'data-live': live ? '' : null,
+    });
+    range.addEventListener('input', () => {
+      const raw = scale ? scale.toValue(Number(range.value)) : Number(range.value);
+      input.value = String(isIntParam ? Math.round(raw) : roundValue(raw));
+      this.changed(key);
+    });
+    input.addEventListener('input', () => {
+      const value = Number(input.value);
+      if (input.value === '' || !Number.isFinite(value)) {
+        this.changed(key);
+        return;
+      }
+      range.value = scale ? scale.toPosition(Math.min(max, Math.max(min, value))) : value;
+      this.changed(key);
+    });
+    this.fields[key] = input;
+    this.fields[`range:${key}`] = range;
+    const bounds = `от ${number(min, 'auto')} до ${number(max, 'auto')}`;
+    return this.field(key, param.label, h('div', { class: 'slide' }, range, input), `${param.hint} (${bounds})`);
+  }
+
+  learnerId() {
+    return this.fields.learner.value || 'evolution';
+  }
+
+  // Shows the groups of the chosen learner and adapts the shared fields to it.
+  syncLearner() {
+    const id = this.learnerId();
+    for (const group of this.form.querySelectorAll('[data-learner-group]')) {
+      group.hidden = group.dataset.learnerGroup !== id;
+    }
+    const learner = this.learners.find((item) => item.id === id);
+    this.learnerNote.textContent = learner?.description ?? '';
+    const label = this.fields.population.closest('.field')?.querySelector('label');
+    if (label) label.textContent = id === 'evolution' ? 'Популяция' : 'Число машинок';
   }
 
   termField(term) {
@@ -473,8 +557,10 @@ export class ParamsForm {
         activation: this.fields.activation.value,
       },
       fitness: { weights: this.weights() },
+      learner: this.learnerId(),
+      ppo: this.readSchema('ppo.'),
       population: this.num('population'),
-      elite: this.num('elite'),
+      elite: this.eliteValue(),
       mutation_rate: this.num('mutation_rate'),
       mutation_scale: this.num('mutation_scale'),
       init_scale: this.passthrough.init_scale,
@@ -485,16 +571,39 @@ export class ParamsForm {
     };
   }
 
+  // PPO ignores the elite; keep the hidden value valid for the server whatever the population is.
+  eliteValue() {
+    const elite = this.num('elite');
+    const population = this.num('population');
+    if (this.learnerId() === 'evolution' || elite == null || population == null) return elite;
+    return Math.max(1, Math.min(elite, population - 1));
+  }
+
+  readSchema(prefix) {
+    const values = {};
+    for (const key of this.schemaParams.keys()) {
+      if (key.startsWith(prefix)) values[key.slice(prefix.length)] = this.num(key);
+    }
+    return values;
+  }
+
   setValue(key, value) {
     this.fields[key].value = value ?? '';
     const range = this.fields[`range:${key}`];
-    if (range && value != null) range.value = value;
+    if (!range || value == null) return;
+    const scale = this.scales.get(key);
+    range.value = scale ? scale.toPosition(Math.min(scale.max, Math.max(scale.min, value))) : value;
   }
 
   write(config) {
     const c = { ...this.catalog.defaults, ...config };
     this.passthrough.init_scale = c.init_scale;
     this.setValue('name', c.name);
+    this.fields.learner.value = this.learners.some((item) => item.id === c.learner) ? c.learner : 'evolution';
+    for (const [key, param] of this.schemaParams) {
+      const name = key.slice(key.indexOf('.') + 1);
+      this.setValue(key, c[key] ?? c.ppo?.[name] ?? param.default);
+    }
     if (!this.catalog.tracks.includes(c.track)) {
       this.fields.track.append(h('option', { value: c.track, text: c.track }));
     }
@@ -516,6 +625,7 @@ export class ParamsForm {
     this.renderRays();
     this.renderHidden();
     this.syncOutputs();
+    this.syncLearner();
     this.refresh();
   }
 
@@ -563,16 +673,20 @@ export class ParamsForm {
     if (!config.name) errors.name = 'Введите название запуска.';
     else if (config.name.length > MAX_NAME) errors.name = `Не длиннее ${MAX_NAME} символов (сейчас ${config.name.length}).`;
     intIn('population', 2, 200, 'Целое число от 2 до 200.');
-    const eliteMax = Number.isFinite(config.population) ? config.population - 1 : 199;
-    intIn('elite', 1, eliteMax, config.elite >= config.population && Number.isFinite(config.elite)
-      ? `Элита должна быть меньше популяции: от 1 до ${eliteMax}.`
-      : `Целое число от 1 до ${eliteMax}.`);
-    const rate = config.mutation_rate;
-    if (rate == null || !Number.isFinite(rate) || rate <= 0 || rate > 1) errors.mutation_rate = 'Число больше 0 и не больше 1.';
-    for (const key of ['mutation_scale', 'ray_range']) {
-      const v = config[key];
-      if (v == null || !Number.isFinite(v) || v <= 0) errors[key] = 'Число больше 0.';
+    if (config.learner === 'evolution') {
+      const eliteMax = Number.isFinite(config.population) ? config.population - 1 : 199;
+      intIn('elite', 1, eliteMax, config.elite >= config.population && Number.isFinite(config.elite)
+        ? `Элита должна быть меньше популяции: от 1 до ${eliteMax}.`
+        : `Целое число от 1 до ${eliteMax}.`);
+      const rate = config.mutation_rate;
+      if (rate == null || !Number.isFinite(rate) || rate <= 0 || rate > 1) errors.mutation_rate = 'Число больше 0 и не больше 1.';
+      const scale = config.mutation_scale;
+      if (scale == null || !Number.isFinite(scale) || scale <= 0) errors.mutation_scale = 'Число больше 0.';
+    } else {
+      this.validateSchema(errors);
     }
+    const range = config.ray_range;
+    if (range == null || !Number.isFinite(range) || range <= 0) errors.ray_range = 'Число больше 0.';
     intIn('max_steps', 50, 5000, 'Целое число от 50 до 5000.');
     intIn('seed', 0, null, 'Целое число, не меньше 0.');
     if (config.generations != null) intIn('generations', 1, null, 'Целое число от 1 или пустое поле.');
@@ -607,6 +721,20 @@ export class ParamsForm {
     const bad = this.catalog.fitness.terms.find((t) => !Number.isFinite(this.num(`term:${t.id}`) ?? 0));
     if (bad) errors.fitness = 'Веса награды должны быть числами.';
     return errors;
+  }
+
+  // Range and integer checks of the chosen learner's parameters, from the schema in the catalog.
+  validateSchema(errors) {
+    for (const [key, param] of this.schemaParams) {
+      if (SHARED_KEYS.has(key)) continue;
+      const value = this.num(key);
+      const bounds = `${number(param.min, 'auto')}–${number(param.max, 'auto')}`;
+      if (value == null || !Number.isFinite(value) || value < param.min || value > param.max) {
+        errors[key] = `Число от ${bounds}.`;
+      } else if (param.type === 'int' && !isInt(value)) {
+        errors[key] = `Целое число от ${bounds}.`;
+      }
+    }
   }
 
   showErrors(errors) {
@@ -645,6 +773,7 @@ export class ParamsForm {
       this.fields.elite.max = max;
       this.fields['range:elite'].max = max;
     }
+    if (key === 'learner') this.syncLearner();
     this.clearServerError();
     this.dirty = true;
     this.refresh();
@@ -778,6 +907,9 @@ export class ParamsForm {
         if (!errors.fitness) params.fitness = config.fitness;
       } else if (['elite', 'mutation_rate', 'mutation_scale'].includes(key) && !errors[key]) {
         params[key] = config[key];
+      } else if (this.schemaParams.get(key)?.live && !errors[key]) {
+        const [group, name] = key.split('.');
+        params[group] = { ...params[group], [name]: config[group][name] };
       }
     }
     if (!Object.keys(params).length) return;
@@ -805,12 +937,17 @@ export class ParamsForm {
       return;
     }
     const echo = run.gens[run.gens.length - 1]?.params;
-    const applied = echo
-      ? `Сервер применил в поколении ${run.gens.length}: мутация ${fmt(echo.mutation_rate)}, ` +
-        `сила ${fmt(echo.mutation_scale)}, элита ${echo.elite}.`
-      : 'Параметры можно менять на ходу — изменения вступят в силу со следующего поколения.';
+    const step = this.learnerId() === 'evolution' ? 'поколении' : 'итерации';
+    const when = this.learnerId() === 'evolution' ? 'со следующего поколения' : 'со следующей итерации';
+    let applied = `Параметры можно менять на ходу — изменения вступят в силу ${when}.`;
+    if (echo && this.learnerId() === 'evolution') {
+      applied = `Сервер применил в поколении ${run.gens.length}: мутация ${fmt(echo.mutation_rate)}, ` +
+        `сила ${fmt(echo.mutation_scale)}, элита ${echo.elite}.`;
+    } else if (echo) {
+      applied = `Сервер применил параметры в ${step} ${run.gens.length}.`;
+    }
     this.liveNote.textContent = this.pending
-      ? `Отправлено, применится со следующего поколения. ${echo ? applied : ''}`.trim()
+      ? `Отправлено, применится ${when}. ${echo ? applied : ''}`.trim()
       : applied;
   }
 

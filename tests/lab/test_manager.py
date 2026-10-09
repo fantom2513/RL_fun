@@ -108,6 +108,7 @@ def test_create_runs_to_finish_and_records_history(manager: RunManager, tmp_path
     assert [row["id"] for row in manager.list()] == ["r1"]
     row = manager.list()[0]
     assert (row["name"], row["status"], row["gen"]) == ("alpha", "finished", 2)
+    assert row["learner"] == "evolution"
     assert row["best"] == max(entry["best"] for entry in info["history"])
     artifacts = [path for path in (tmp_path / "runs").iterdir() if path.name.startswith("alpha-")]
     assert len(artifacts) == 1
