@@ -654,3 +654,74 @@ def test_make_server_creates_default_manager(tmp_path: Path) -> None:
 
     assert status == 200
     assert rows == []
+
+
+# ---- custom tracks over HTTP -------------------------------------------------------------------
+
+
+def _loop(name: str) -> dict[str, Any]:
+    from tests.lab.test_tracks import ellipse
+
+    return {"name": name, "width": 10.0, "centerline": ellipse()}
+
+
+def test_tracks_endpoint_lists_built_in_and_saved_tracks(server: LabServer) -> None:
+    status, data = call_json(server, "POST", "/api/tracks", _loop("Список"))
+    assert status == 201 and data["name"] == "Список"
+
+    status, rows = call_json(server, "GET", "/api/tracks")
+
+    assert status == 200
+    assert [row["name"] for row in rows[:3]] == ["circuit", "oval", "wavy"]
+    mine = next(row for row in rows if row["name"] == "Список")
+    assert mine["builtin"] is False and len(mine["centerline"]) == 24
+    call_json(server, "DELETE", "/api/tracks/%D0%A1%D0%BF%D0%B8%D1%81%D0%BE%D0%BA")
+
+
+def test_a_saved_track_reaches_the_catalog_and_serves_its_geometry(server: LabServer) -> None:
+    call_json(server, "POST", "/api/tracks", _loop("Каталог"))
+
+    _, catalog = call_json(server, "GET", "/api/catalog")
+    status, geometry = call_json(server, "GET", "/api/tracks/%D0%9A%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3")
+
+    assert "Каталог" in catalog["tracks"]
+    assert status == 200 and geometry["name"] == "Каталог" and geometry["left"]
+    assert call_json(server, "DELETE", "/api/tracks/%D0%9A%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3")[0] == 200
+    assert "Каталог" not in call_json(server, "GET", "/api/catalog")[1]["tracks"]
+
+
+def test_invalid_and_duplicate_tracks_get_clear_errors(server: LabServer) -> None:
+    bad = _loop("Плохая")
+    bad["centerline"] = [[0, 0], [50, 50], [50, 0], [0, 50]]
+    status, body = call_json(server, "POST", "/api/tracks", bad)
+    assert status == 400 and CYRILLIC.search(body["error"])
+
+    call_json(server, "POST", "/api/tracks", _loop("Дубль"))
+    status, body = call_json(server, "POST", "/api/tracks", _loop("Дубль"))
+    assert status == 409 and "уже есть" in body["error"]
+    again = {**_loop("Дубль"), "overwrite": True}
+    assert call_json(server, "POST", "/api/tracks", again)[0] == 201
+    call_json(server, "DELETE", "/api/tracks/%D0%94%D1%83%D0%B1%D0%BB%D1%8C")
+
+
+def test_built_in_tracks_cannot_be_deleted_and_unknown_ones_are_not_found(
+    server: LabServer,
+) -> None:
+    assert call_json(server, "DELETE", "/api/tracks/oval")[0] == 400
+    assert call_json(server, "DELETE", "/api/tracks/nothing")[0] == 404
+    assert call_json(server, "PUT", "/api/tracks")[0] == 405
+
+
+def test_a_run_can_use_a_saved_track(server: LabServer) -> None:
+    call_json(server, "POST", "/api/tracks", _loop("Гонка"))
+
+    status, data = call_json(server, "POST", "/api/runs", _config(track="Гонка", name="own"))
+    assert status == 201
+
+    info = wait_for(
+        lambda: (lambda row: row if row["status"] in ("finished", "error") else None)(
+            call_json(server, "GET", f"/api/runs/{data['id']}")[1]
+        )
+    )
+    assert info["status"] == "finished"
+    call_json(server, "DELETE", "/api/tracks/%D0%93%D0%BE%D0%BD%D0%BA%D0%B0")
