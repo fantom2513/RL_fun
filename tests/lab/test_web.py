@@ -836,3 +836,12 @@ def test_runs_of_other_learners_count_iterations_not_generations() -> None:
     assert "итер." in sources["app.js"]
     assert "итерация" in sources["charts.js"]
     assert "Итер." in sources["track_view.js"]
+
+
+def test_a_run_can_be_edited_and_restarted_in_place() -> None:
+    form = (WEB_DIR / "params_form.js").read_text("utf-8")
+    app = (WEB_DIR / "app.js").read_text("utf-8")
+
+    for needle in ("Изменить и перезапустить", "showEdit", "onRestart", "Перезапустить с изменениями"):
+        assert needle in form
+    assert "restartRun" in app and "run.color = old.color" in app

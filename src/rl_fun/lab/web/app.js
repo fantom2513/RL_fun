@@ -101,7 +101,7 @@ function setRunStatus(run, status) {
 
 // What the run tabs and the new-run form say about the selection: the open run's tab looks
 // selected only while its own parameters are shown, not while the form is writing a new run.
-const formMode = () => form?.mode ?? 'new';
+const formMode = () => (form?.mode === 'edit' ? 'run' : (form?.mode ?? 'new'));
 
 // ---- runs ---------------------------------------------------------------------------------
 
@@ -282,6 +282,47 @@ async function createFromForm(config) {
     const { id } = await api.createRun(config);
     const run = addRun({ id, name: config.name, status: 'running', best: null, learner: config.learner });
     await select(run.id);
+    return true;
+  } catch (error) {
+    form.showServerError(error.message);
+    return false;
+  } finally {
+    state.creating = false;
+    renderControls();
+  }
+}
+
+// Edit mode: the run's settings open for any change; submitting restarts it in the same tab.
+async function editRun(run) {
+  if (!run) return;
+  const config = await ensureConfig(run);
+  form.showEdit(run, config);
+  el.paramsPanel.scrollIntoView({ block: 'nearest' });
+}
+
+// Starts a replacement with the edited config and puts it where the old run was: same name,
+// colour and tab position, so the user sees one run that was changed, not a second one.
+async function restartRun(old, config) {
+  if (state.creating) return false;
+  state.creating = true;
+  renderControls();
+  try {
+    const { id } = await api.createRun(config);
+    try {
+      await api.deleteRun(old.id);
+    } catch (error) {
+      if (error.status !== 404) throw error;
+    }
+    old.subscription.close();
+    const run = addRun({ id, name: config.name, status: 'running', best: null, learner: config.learner });
+    state.colorIndex -= 1;
+    run.color = old.color;
+    state.runs = new Map([...state.runs].flatMap(([key, item]) => {
+      if (key === old.id) return [[run.id, run]];
+      return key === run.id ? [] : [[key, item]];
+    }));
+    await select(run.id);
+    toast(`«${run.name}» перезапущен с новыми настройками`);
     return true;
   } catch (error) {
     form.showServerError(error.message);
@@ -575,6 +616,9 @@ async function start() {
   form = new ParamsForm(el.paramsBody, state.catalog, {
     onCreate: createFromForm,
     onCopy: copySettings,
+    onEdit: editRun,
+    onCancelEdit: (run) => select(run.id),
+    onRestart: restartRun,
     onLiveUpdate: liveUpdate,
     onModeChange: renderTabs,
   });

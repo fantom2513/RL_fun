@@ -108,7 +108,7 @@ export class ParamsForm {
     this.summary = h('div', { class: 'model-summary' });
     this.modeLine = h('p', { class: 'form-mode' });
     this.liveNote = h('p', { class: 'live-note', role: 'status' });
-    this.lockNote = h('p', { class: 'lock-note', text: 'Структура модели, размер популяции и трасса задаются при создании запуска.' });
+    this.lockNote = h('p', { class: 'lock-note', text: 'Структура, обучатель и трасса меняются только перезапуском: «Изменить и перезапустить» начнёт этот запуск заново в той же вкладке.' });
 
     const run = h('details', { class: 'group', open: true },
       h('summary', { text: 'Запуск' }),
@@ -249,7 +249,15 @@ export class ParamsForm {
       type: 'button', class: 'btn btn-wide', text: 'Копировать настройки текущего запуска',
       onclick: () => this.hooks.onCopy?.(this.run),
     });
-    this.actions = h('div', { class: 'form-actions' }, this.formError, this.submitBtn, this.resetBtn, this.copyBtn);
+    this.editBtn = h('button', {
+      type: 'button', class: 'btn btn-wide', text: 'Изменить и перезапустить',
+      onclick: () => this.hooks.onEdit?.(this.run),
+    });
+    this.cancelBtn = h('button', {
+      type: 'button', class: 'btn btn-quiet', text: 'Отмена', onclick: () => this.hooks.onCancelEdit?.(this.run),
+    });
+    this.actions = h('div', { class: 'form-actions' },
+      this.formError, this.submitBtn, this.cancelBtn, this.resetBtn, this.editBtn, this.copyBtn);
 
     this.form = h('form', { class: 'params-form', noValidate: true, autocomplete: 'off' },
       this.modeLine, this.summary, this.lockNote, run, evolution, ...this.learnerGroups('ppo'), reward, model, this.actions);
@@ -816,7 +824,7 @@ export class ParamsForm {
   }
 
   liveEditable() {
-    return this.mode === 'new' || (this.run && !TERMINAL.has(this.run.status));
+    return this.mode !== 'run' || (this.run && !TERMINAL.has(this.run.status));
   }
 
   applyLock() {
@@ -833,8 +841,12 @@ export class ParamsForm {
     this.addLayerBtn.disabled = this.addLayerBtn.disabled || this.hidden.length >= MAX_LAYERS;
     this.addRayBtn.disabled = this.addRayBtn.disabled || false;
     this.lockNote.hidden = !run;
+    const edit = this.mode === 'edit';
     this.submitBtn.hidden = run;
-    this.resetBtn.hidden = run;
+    this.submitBtn.textContent = edit ? 'Перезапустить с изменениями' : 'Создать запуск';
+    this.resetBtn.hidden = run || edit;
+    this.cancelBtn.hidden = !edit;
+    this.editBtn.hidden = !run;
     this.copyBtn.hidden = !run;
     this.liveNote.hidden = !run;
   }
@@ -868,6 +880,22 @@ export class ParamsForm {
     const last = run.gens[run.gens.length - 1]?.params;
     this.write({ ...config, ...(last ?? {}) });
     this.setLiveNote();
+    this.hooks.onModeChange?.(this.mode);
+  }
+
+  // Edit mode: every field is open; submitting restarts this run with the new settings in its tab.
+  showEdit(run, config) {
+    this.stashDraft();
+    this.mode = 'edit';
+    this.run = run;
+    this.clearServerError();
+    clearTimeout(this.liveTimer);
+    this.liveDirty.clear();
+    this.modeLine.replaceChildren(
+      h('span', { class: 'run-swatch', style: `background:${run.color}` }), `Изменение запуска «${run.name}»`);
+    this.write({ ...config, name: run.name });
+    this.dirty = false;
+    this.root.scrollTop = 0;
     this.hooks.onModeChange?.(this.mode);
   }
 
@@ -954,7 +982,7 @@ export class ParamsForm {
   // ---- submit -----------------------------------------------------------------------------
 
   async submit() {
-    if (this.mode !== 'new') return;
+    if (this.mode === 'run') return;
     const errors = this.refresh();
     if (this.hasErrors(errors)) {
       this.setFormError('Исправьте отмеченные поля.');
@@ -964,8 +992,11 @@ export class ParamsForm {
     this.setFormError(null);
     this.submitBtn.disabled = true;
     try {
-      const result = await this.hooks.onCreate?.(this.read());
-      if (result === true) this.draft = null;
+      const config = this.read();
+      const result = this.mode === 'edit'
+        ? await this.hooks.onRestart?.(this.run, config)
+        : await this.hooks.onCreate?.(config);
+      if (result === true && this.mode !== 'edit') this.draft = null;
     } finally {
       this.submitBtn.disabled = false;
     }
