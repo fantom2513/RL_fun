@@ -33,6 +33,56 @@ const OUTPUT_RULES =
 const SHARED_KEYS = new Set(['population', 'max_steps']);
 const roundValue = (value) => Number(value.toPrecision(3));
 
+// What the activation functions are, in plain words, shown under the choice in the model block.
+const ACTIVATION_TEXT = {
+  tanh: [
+    'Гладкая S-образная кривая: любое число превращает в значение от −1 до 1.',
+    'Нейрон может сказать и «да» (плюс), и «нет» (минус), ноль — «нейтрально». Хороший выбор по умолчанию, особенно для маленьких сетей, которые рулят.',
+    'Минус: при очень больших входах кривая плоская, и обучение там замедляется.',
+  ],
+  relu: [
+    'Ломаная: всё отрицательное превращается в 0, положительное проходит без изменений.',
+    'Простая и быстрая: нейрон либо молчит, либо передаёт сигнал как есть. Любит глубокие сети.',
+    'Минус: нейрон может «умереть» — всегда выдавать 0 и перестать учиться. В маленькой сети руля часто проигрывает tanh.',
+  ],
+  sigmoid: [
+    'Гладкая кривая от 0 до 1: как степень «включённости» нейрона.',
+    'Выход никогда не отрицательный, поэтому «влево» и «вправо» сети приходится выражать разностью нейронов. В середине кривая пологая, обучение идёт медленнее. Хороша для сравнения.',
+    'Минус: самая медленная из трёх на этой задаче.',
+  ],
+};
+const ACTIVATION_FUNCTIONS = {
+  tanh: Math.tanh,
+  relu: (x) => Math.max(0, x),
+  sigmoid: (x) => 1 / (1 + Math.exp(-x)),
+};
+
+// The curve of an activation function on [-3, 3] as a small SVG picture.
+function activationCurve(id) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 120 70');
+  svg.setAttribute('class', 'activation-curve');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', `График функции ${id}`);
+  const line = (x1, y1, x2, y2, cls) => {
+    const node = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    for (const [name, value] of Object.entries({ x1, y1, x2, y2, class: cls })) node.setAttribute(name, value);
+    return node;
+  };
+  svg.append(line(0, 35, 120, 35, 'axis'), line(60, 0, 60, 70, 'axis'));
+  const points = [];
+  for (let step = 0; step <= 60; step += 1) {
+    const x = -3 + step / 10;
+    const y = Math.max(-1.2, Math.min(1.6, ACTIVATION_FUNCTIONS[id](x)));
+    points.push(`${(60 + x * 20).toFixed(1)},${(35 - y * 24).toFixed(1)}`);
+  }
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  path.setAttribute('points', points.join(' '));
+  path.setAttribute('class', 'curve');
+  svg.append(path);
+  return svg;
+}
+
 let uid = 0;
 
 function h(tag, attrs = {}, ...children) {
@@ -210,7 +260,11 @@ export class ParamsForm {
       );
     }
     this.fields.activation = this.makeSelect('activation', c.activations.map((a) => [a.id, a.label]));
-    this.fields.activation.addEventListener('change', () => this.changed('model'));
+    this.fields.activation.addEventListener('change', () => {
+      this.syncActivation();
+      this.changed('model');
+    });
+    this.activationNote = h('div', { class: 'activation-note' });
 
     const model = h('details', { class: 'group', open: true },
       h('summary', { text: 'Модель' }),
@@ -238,8 +292,10 @@ export class ParamsForm {
         this.errorLine('outputs'),
       ),
       h('div', { class: 'field' },
-        h('label', { for: this.fields.activation.id, text: 'Активация' }),
+        h('label', { for: this.fields.activation.id, text: 'Активация скрытых слоёв' }),
         this.fields.activation,
+        this.activationNote,
+        h('p', { class: 'hint', text: 'Выходной слой (руль и газ) всегда tanh: от −1 до 1. Активация — это то, как нейрон превращает сумму входов в свой сигнал; без неё сеть из нескольких слоёв была бы одной линейной формулой.' }),
       ),
     );
 
@@ -348,6 +404,18 @@ export class ParamsForm {
     if (![...this.fields.track.options].some((option) => option.value === name)) this.setTracks([...this.catalog.tracks]);
     this.fields.track.value = name;
     this.changed('track');
+  }
+
+  // The picture and the words for the chosen activation function.
+  syncActivation() {
+    const id = this.fields.activation.value;
+    const lines = ACTIVATION_TEXT[id] ?? [];
+    if (!(id in ACTIVATION_FUNCTIONS)) {
+      this.activationNote.replaceChildren();
+      return;
+    }
+    this.activationNote.replaceChildren(
+      activationCurve(id), h('div', { class: 'activation-text' }, ...lines.map((line) => h('p', { text: line }))));
   }
 
   learnerField() {
@@ -645,12 +713,14 @@ export class ParamsForm {
     this.hidden = c.model.hidden.map(String);
     this.outputs = new Set(c.model.outputs);
     this.fields.activation.value = c.model.activation;
+    this.syncActivation();
     this.writeWeights(c.fitness.weights ?? c.fitness);
     this.renderRays();
     this.renderHidden();
     this.syncOutputs();
     this.syncLearner();
     this.refresh();
+    this.hooks.onTrack?.(this.fields.track.value);
   }
 
   writeWeights(weights) {
@@ -799,6 +869,7 @@ export class ParamsForm {
       this.fields['range:elite'].max = max;
     }
     if (key === 'learner') this.syncLearner();
+    if (key === 'track') this.hooks.onTrack?.(this.fields.track.value);
     this.clearServerError();
     this.dirty = true;
     this.refresh();
@@ -812,6 +883,7 @@ export class ParamsForm {
     const errors = this.validate();
     this.showErrors(errors);
     this.renderSummary();
+    this.hooks.onChange?.();
     return errors;
   }
 

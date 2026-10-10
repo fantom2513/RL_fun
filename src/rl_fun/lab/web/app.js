@@ -9,8 +9,8 @@ import { getTheme, initTheme, setTheme, toggleTheme } from './core/theme.js';
 import { modelLabels, NetworkView } from './network_view.js';
 import { ParamsForm } from './params_form.js';
 import { TrackView } from './track_view.js';
-import { LEVELS, bestStars, bestValue, isUnlocked, loadStars, saveStars, startConfig } from './core/levels.js';
-import { renderChallenges, showLevelComplete, starSummary } from './screens/challenges.js';
+import { LEVELS, bestStars, bestValue, isUnlocked, loadStars, saveStars } from './core/levels.js';
+import { renderChallenges, renderTaskPanel, showLevelComplete, starSummary } from './screens/challenges.js';
 import { initTracks } from './screens/tracks.js';
 import { compareRows, renderCompare, sortRows } from './screens/compare.js';
 import { initTooltips } from './ui/tooltip.js';
@@ -61,6 +61,7 @@ const el = {
 };
 
 const state = {
+  challenge: null,
   stars: loadStars(),
   compareSort: { key: 'bestProgress', direction: 'desc' },
   catalog: null,
@@ -290,6 +291,7 @@ async function createFromForm(config) {
   try {
     const { id } = await api.createRun(config);
     const run = addRun({ id, name: config.name, status: 'running', best: null, learner: config.learner });
+    state.challenge = null;
     await select(run.id);
     return true;
   } catch (error) {
@@ -448,13 +450,56 @@ function renderCompareView() {
   });
 }
 
-// "Start attempt" of a level: the new-run form gets the level's track and limits.
-function startLevel(level) {
+// "Start attempt" of a level: the stage shows its track and the form opens with the stock settings
+// except the track; the task panel lists what the level asks and, on request, how to set it.
+async function startLevel(level) {
   if (!state.catalog) return;
   location.hash = '#/lab';
-  form.showNew({ config: startConfig(level, state.catalog.defaults) });
+  state.challenge = { level, opened: false };
+  await select(null);
+  const config = structuredClone(state.catalog.defaults);
+  form.showNew({ config: { ...config, track: level.track, name: level.title } });
+  renderTask();
   el.paramsPanel.scrollIntoView({ block: 'nearest' });
   form.focusName();
+}
+
+// The task panel follows the form while a challenge is being set up.
+function renderTask() {
+  const panel = $('task-panel');
+  const challenge = state.challenge;
+  if (!challenge || !form || form.mode !== 'new') {
+    panel.hidden = true;
+    return;
+  }
+  renderTaskPanel(panel, {
+    level: challenge.level,
+    config: form.read(),
+    opened: challenge.opened,
+    onToggle: () => {
+      challenge.opened = !challenge.opened;
+      renderTask();
+    },
+    onCancel: () => {
+      state.challenge = null;
+      renderTask();
+    },
+  });
+}
+
+// With no run open the stage previews the track chosen in the form instead of staying empty.
+async function previewTrack(name) {
+  if (!form || !state.catalog || form.mode !== 'new' || activeRun() || view.trackName === name) return;
+  try {
+    const track = await loadTrack(name);
+    if (activeRun() || form.fields.track.value !== name) return;
+    view.setTrack(track, state.catalog.style);
+    el.empty.hidden = true;
+    el.loading.hidden = true;
+    el.hint.textContent = `Предпросмотр трассы «${name}»: настройте запуск слева и нажмите «Создать запуск».`;
+  } catch {
+    // the preview is a convenience; the form still works without it
+  }
 }
 
 // The lab shows either the stage or the comparison table; the route `#/lab/compare` picks the table.
@@ -730,7 +775,12 @@ async function start() {
     onCancelEdit: (run) => select(run.id),
     onRestart: restartRun,
     onLiveUpdate: liveUpdate,
-    onModeChange: renderTabs,
+    onModeChange: () => {
+      renderTabs();
+      renderTask();
+    },
+    onChange: renderTask,
+    onTrack: previewTrack,
   });
   window.__lab.form = form;
   form.showNew({ name: nextRunName() });

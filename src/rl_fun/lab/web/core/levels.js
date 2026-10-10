@@ -76,18 +76,50 @@ export const byId = (id) => LEVELS.find((level) => level.id === id) ?? null;
 
 const isRay = (name) => name.startsWith(RAY_PREFIX);
 
+// What a level asks of a run's config, one entry per condition: whether the config meets it now and
+// how to set it in the form. The challenge panel shows these as a checklist with hints.
+export function conditions(level, config) {
+  const settings = config ?? {};
+  const inputs = settings.model?.inputs ?? [];
+  const items = [
+    {
+      key: 'track', ok: settings.track === level.track, text: `Трасса: ${level.track}`,
+      how: `В поле «Трасса» выберите «${level.track}».`,
+    },
+    {
+      key: 'laps', ok: (settings.laps ?? 1) === level.laps, text: `Кругов: ${level.laps}`,
+      how: `В блоке «Запуск» в поле «Кругов» поставьте ${level.laps}.`,
+    },
+    {
+      key: 'steps', ok: settings.max_steps <= level.maxSteps, text: `Лимит шагов не больше ${level.maxSteps}`,
+      how: `В поле «Лимит шагов» поставьте ${level.maxSteps} или меньше (30 шагов — одна секунда): так медленный заезд не засчитается.`,
+    },
+  ];
+  if (level.learner) {
+    items.push({
+      key: 'learner', ok: (settings.learner ?? 'evolution') === level.learner,
+      text: `Обучатель: ${level.learner.toUpperCase()}`, how: `В списке «Обучатель» выберите ${level.learner.toUpperCase()}.`,
+    });
+  }
+  if (level.maxRays != null) {
+    items.push({
+      key: 'rays', ok: inputs.filter(isRay).length <= level.maxRays, text: `Лучей не больше ${level.maxRays}`,
+      how: `В блоке «Модель», «Лучи дальномера», оставьте не больше ${level.maxRays} лучей: удалите лишние крестиком или нажмите «3 луча».`,
+    });
+  }
+  if (level.maxHidden != null) {
+    const hidden = (settings.model?.hidden ?? []).reduce((sum, size) => sum + size, 0);
+    items.push({
+      key: 'hidden', ok: hidden <= level.maxHidden, text: `Скрытых нейронов не больше ${level.maxHidden}`,
+      how: `В блоке «Скрытые слои» оставьте в сумме не больше ${level.maxHidden} нейронов, например один слой из ${level.maxHidden}.`,
+    });
+  }
+  return items;
+}
+
 // Does a run's config satisfy the level's track and limits?
 export function fits(level, config) {
-  if (!config || config.track !== level.track) return false;
-  if ((config.laps ?? 1) !== level.laps || config.max_steps > level.maxSteps) return false;
-  if (level.learner && (config.learner ?? 'evolution') !== level.learner) return false;
-  const inputs = config.model?.inputs ?? [];
-  if (level.maxRays != null && inputs.filter(isRay).length > level.maxRays) return false;
-  if (level.maxHidden != null) {
-    const hidden = (config.model?.hidden ?? []).reduce((sum, size) => sum + size, 0);
-    if (hidden > level.maxHidden) return false;
-  }
-  return true;
+  return Boolean(config) && conditions(level, config).every((item) => item.ok);
 }
 
 // Numbers a run has reached so far: iterations to the first finished race and the fastest race in seconds.

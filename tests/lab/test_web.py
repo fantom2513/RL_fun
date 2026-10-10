@@ -945,7 +945,7 @@ def test_challenges_and_comparison_are_wired_into_the_lab() -> None:
     app = (WEB_DIR / "app.js").read_text("utf-8")
     html = _index_html()
 
-    for needle in ("renderChallenges", "renderCompare", "startConfig", "bestStars", "#/lab/compare", "KeyG"):
+    for needle in ("renderChallenges", "renderCompare", "renderTaskPanel", "bestStars", "#/lab/compare", "KeyG"):
         assert needle in app
     for needle in ('id="challenges-list"', 'id="compare-view"', 'id="view-toggle"', 'id="stars-total"'):
         assert needle in html
@@ -1011,3 +1011,41 @@ def test_a_training_budget_counts_only_the_first_iterations() -> None:
     assert result[0] == {"counts": True, "value": None, "stars": 0}  # the finish came after iteration 40
     assert result[1]["value"] == 46.0 and result[1]["stars"] == 2
     assert result[2] == 40
+
+
+def test_a_challenge_opens_a_track_preview_with_stock_settings_and_a_hint_panel() -> None:
+    app = (WEB_DIR / "app.js").read_text("utf-8")
+    form = (WEB_DIR / "params_form.js").read_text("utf-8")
+
+    assert "previewTrack" in app and "state.challenge" in app and 'id="task-panel"' in _index_html()
+    # the level is not applied to the form: only the track and the name are set
+    assert "startConfig(" not in app.split("async function startLevel")[1].split("function renderTask")[0]
+    assert "onTrack" in form and "onChange" in form
+
+
+def test_the_form_explains_what_each_activation_function_is() -> None:
+    form = (WEB_DIR / "params_form.js").read_text("utf-8")
+
+    for needle in ("ACTIVATION_TEXT", "tanh:", "relu:", "sigmoid:", "activationCurve", "syncActivation"):
+        assert needle in form
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_level_conditions_tell_how_to_fix_each_missing_setting() -> None:
+    result = _node_json(
+        "core/levels.js",
+        """(() => {
+  const stock = {track: 'circuit', laps: 1, max_steps: 1500, learner: 'evolution', model: {inputs: ['ray:0', 'ray:30', 'ray:60', 'ray:-30'], hidden: [6, 5]}};
+  const levels = ['oval-two', 'rl-pilot', 'sharp-eye', 'tiny-brain'].map((id) => m.byId(id));
+  return levels.map((level) => m.conditions(level, stock).filter((item) => !item.ok).map((item) => [item.key, item.how]));
+})()""",
+    )
+
+    keys = [[key for key, _ in row] for row in result]
+    assert keys == [
+        ["track", "laps", "steps"],
+        ["laps", "learner"],
+        ["laps", "rays"],
+        ["track", "laps", "steps", "hidden"],
+    ]
+    assert all("«" in how for row in result for _, how in row)

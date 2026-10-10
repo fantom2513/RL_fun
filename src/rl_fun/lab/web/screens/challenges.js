@@ -2,7 +2,7 @@
 
 import { h, icon } from '../core/dom.js';
 import { number } from '../core/format.js';
-import { LEVELS, bestValue, byId, isUnlocked, totalStars } from '../core/levels.js';
+import { LEVELS, bestValue, byId, conditions, isUnlocked, totalStars } from '../core/levels.js';
 
 const UNITS = { finish_iter: 'итер.', race_seconds: 'с' };
 const GOAL_TITLE = { finish_iter: 'Итераций до финиша', race_seconds: 'Время заезда, с' };
@@ -110,4 +110,40 @@ function showNext() {
 export function showLevelComplete(details) {
   queue.push(details);
   if (!open) showNext();
+}
+
+// ---- the task panel above the run form --------------------------------------------------------
+
+const GENERAL_TIPS = [
+  'Если машинки почти не едут, увеличьте популяцию (60 → 100) и подождите 10–20 поколений.',
+  'Если они вылетают на поворотах, поднимите в награде вес «центрирования» или уменьшите «скорость».',
+  'Когда круг уже пройден, а время не падает, не останавливайте обучение: сеть доучивается срезать повороты.',
+  'Сеть слишком маленькая не учится, слишком большая учится медленно: начните с 6 и 5 нейронов.',
+];
+
+// Draws the checklist of the level for the config now in the form; `opened` shows the hint steps.
+export function renderTaskPanel(container, { level, config, opened, onToggle, onCancel }) {
+  const items = conditions(level, config);
+  const done = items.every((item) => item.ok);
+  const limits = level.stars.map((limit, index) => `${'★'.repeat(index + 1)} ≤ ${formatValue(level, limit)} ${UNITS[level.metric]}`).join(' · ');
+  const steps = items.filter((item) => !item.ok).map((item) => h('li', null, item.how));
+  const hintBox = h('div', { class: 'task-hints' },
+    steps.length ? h('p', { class: 'task-hints-title' }, 'Что поменять в настройках:') : h('p', { class: 'task-hints-title' }, 'Все условия выполнены, можно запускать.'),
+    steps.length ? h('ol', null, ...steps) : null,
+    h('p', { class: 'task-hints-title' }, 'Как добиться результата:'),
+    h('ul', null, h('li', null, level.hint), ...GENERAL_TIPS.map((tip) => h('li', null, tip))));
+  hintBox.hidden = !opened;
+  container.replaceChildren(
+    h('div', { class: 'task-head' },
+      h('b', null, `Задание: «${level.title}»`),
+      h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: onCancel }, 'Отменить')),
+    h('p', null, level.goal),
+    h('p', { class: 'muted task-limits' }, `${GOAL_TITLE[level.metric]}: ${limits}`),
+    h('ul', { class: 'task-checks', 'aria-label': 'Условия задания' },
+      ...items.map((item) => h('li', { class: item.ok ? 'is-ok' : 'is-todo' }, icon(item.ok ? 'check' : 'x'), item.text))),
+    h('button', { type: 'button', class: 'btn btn-sm', 'aria-expanded': String(opened), onclick: onToggle },
+      icon('lightbulb'), opened ? 'Скрыть подсказки' : 'Подсказка: как выставить настройки'),
+    hintBox,
+    ...(done ? [h('p', { class: 'task-ready' }, 'Условия выполнены: нажмите «Создать запуск».')] : []));
+  container.hidden = false;
 }
