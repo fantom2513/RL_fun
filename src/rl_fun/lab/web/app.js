@@ -122,6 +122,7 @@ function addRun(row) {
     gens: [],
     best: row.best ?? null,
     learner: row.learner ?? 'evolution',
+    archived: Boolean(row.archived),
     color: RUN_COLORS[state.colorIndex++ % RUN_COLORS.length],
     config: null,
     frame: null,
@@ -184,6 +185,7 @@ function renderNetworkState() {
   } else if (!run.net) {
     if (run.status === 'error') text = 'Запуск завершился с ошибкой, сеть не получена.';
     else if (run.connection === 'lost') text = 'Поток данных отключён, сети пока нет.';
+    else if (run.archived) text = 'Запуск из прошлого сеанса: кадров нет, но кривые и настройки на месте. «Изменить и перезапустить» запустит его снова.';
     else if (TERMINAL.has(run.status)) text = 'Запуск закончился до первого кадра, сети нет.';
     else text = 'Ждём первый кадр запуска…';
   }
@@ -549,7 +551,7 @@ function renderTabs() {
     meta.className = 'tab-meta';
     const dot = document.createElement('span');
     dot.className = 'tab-dot';
-    meta.append(dot, `${label} · ${run.learner === 'evolution' ? 'пок.' : 'итер.'} ${run.gens.length}${best}`);
+    meta.append(dot, `${label} · ${run.learner === 'evolution' ? 'пок.' : 'итер.'} ${run.gens.length}${best}${run.archived ? ' · архив' : ''}`);
     body.append(name, meta);
     tab.append(body);
     fragment.append(tab);

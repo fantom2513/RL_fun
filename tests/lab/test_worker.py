@@ -70,7 +70,8 @@ def test_messages_start_running_send_generations_in_order_and_end_finished(tmp_p
     # Assert
     kinds = [message["t"] for message in conn.sent]
     assert conn.sent[0] == {"t": "status", "status": "running"}
-    assert set(kinds) <= {"status", "frame", "gen"}
+    assert set(kinds) <= {"status", "frame", "gen", "meta"}
+    assert conn.of_type("meta") == [{"t": "meta", "dir": _only_run_dir(tmp_path).name}]
     assert [message["gen"] for message in conn.of_type("gen")] == [0, 1]
     assert kinds[-1] == "status"
     assert kinds.index("frame") < kinds.index("gen")

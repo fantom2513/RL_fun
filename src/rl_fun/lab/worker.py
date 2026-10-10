@@ -88,6 +88,7 @@ def _run(
     )
     learner.setup(cfg, fleet, rng, view)
     conn.send(status_message("running"))
+    conn.send({"t": "meta", "dir": run_dir.name})  # lets the manager find the folder again
 
     iteration = 0
     while cfg.generations is None or iteration < cfg.generations:

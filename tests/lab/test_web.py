@@ -1049,3 +1049,9 @@ def test_level_conditions_tell_how_to_fix_each_missing_setting() -> None:
         ["track", "laps", "steps", "hidden"],
     ]
     assert all("«" in how for row in result for _, how in row)
+
+
+def test_runs_of_an_earlier_session_are_marked_in_the_tabs_and_explained() -> None:
+    app = (WEB_DIR / "app.js").read_text("utf-8")
+
+    assert "archived" in app and "архив" in app and "прошлого сеанса" in app

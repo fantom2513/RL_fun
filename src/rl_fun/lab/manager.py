@@ -12,6 +12,7 @@ latest one is kept, so a slow subscriber skips frames but never other messages.
 
 from __future__ import annotations
 
+import json
 import multiprocessing
 import os
 import threading
@@ -30,6 +31,10 @@ TERMINAL_STATUSES = ("finished", "stopped", "error")
 UNEXPECTED_EXIT = "процесс запуска завершился неожиданно"
 _COMMANDS = ("pause", "resume", "stop", "speed", "update")
 _POLL_INTERVAL = 0.2
+ARCHIVE_LIMIT = 30
+"""How many run folders of earlier sessions are brought back (the newest ones)."""
+DISMISSED = ".dismissed"
+"""Marker file of a run folder whose run was deleted in the interface: it is not restored."""
 
 WorkerTarget = Callable[[dict[str, Any], Any, str], None]
 Event = tuple[str, dict[str, Any]]
@@ -62,6 +67,8 @@ class _Run:
 
     def __init__(self, run_id: str, config: dict[str, Any], process: Any, conn: Any) -> None:
         self.id = run_id
+        self.archived = False
+        self.dir_name: str | None = None
         self.name = str(config["name"])
         self.config = config
         self.process = process
@@ -99,6 +106,8 @@ class RunManager:
         self._runs: dict[str, _Run] = {}
         self._counter = 0
         self._closed = False
+        os.environ[TRACKS_ENV] = str(self.tracks_dir)
+        self._load_archive()
 
     @property
     def tracks_dir(self) -> Path:
@@ -156,6 +165,7 @@ class RunManager:
                     "status": run.status,
                     "gen": len(run.history),
                     "learner": run.config.get("learner", "evolution"),
+                    "archived": run.archived,
                     "best": max((entry["best"] for entry in run.history), default=None),
                 }
                 for run in self._runs.values()
@@ -199,6 +209,7 @@ class RunManager:
             run.deleted = True
             self._cond.notify_all()
         self._stop_runs([run])
+        self._dismiss(run)
 
     def subscribe(
         self, run_id: str, from_index: int = 0, *, idle_timeout: float | None = None
@@ -323,6 +334,9 @@ class RunManager:
             elif kind == "notice":
                 run.notices.append(str(message.get("text", "")))
                 run.events.append(("notice", message))
+            elif kind == "meta":
+                name = str(message.get("dir", ""))
+                run.dir_name = name if name and Path(name).name == name else None
             else:
                 return
             self._cond.notify_all()
@@ -339,6 +353,66 @@ class RunManager:
         run.events.append(("status", message))
 
     # ---- helpers -----------------------------------------------------------------------------
+
+    def _load_archive(self) -> None:
+        """Bring back the runs of earlier sessions from their folders: the config, the history of
+        generations and a final status. They cannot be continued, but they can be looked at,
+        compared and restarted with their settings."""
+        root = self._runs_dir
+        if not root.is_dir():
+            return
+        folders = [
+            path
+            for path in root.iterdir()
+            if path.is_dir()
+            and path.name != "tracks"
+            and (path / "config.json").is_file()
+            and not (path / DISMISSED).exists()
+        ]
+        folders.sort(key=lambda path: (path / "config.json").stat().st_mtime)
+        for path in folders[-ARCHIVE_LIMIT:]:
+            run = self._read_archived(path)
+            if run is not None:
+                self._runs[run.id] = run
+
+    def _read_archived(self, path: Path) -> _Run | None:
+        try:
+            config = RunConfig.from_dict(json.loads((path / "config.json").read_text("utf-8")))
+        except (OSError, ValueError, TypeError):
+            return None
+        history: list[dict[str, Any]] = []
+        try:
+            lines = (path / "history.jsonl").read_text("utf-8").splitlines()
+        except OSError:
+            lines = []
+        for line in lines:
+            try:
+                message = json.loads(line)
+            except ValueError:
+                continue  # the process died in the middle of writing this line
+            if isinstance(message, dict) and message.get("t") == "gen":
+                history.append(message)
+        self._counter += 1
+        run = _Run(f"r{self._counter}", config.to_dict(), None, None)
+        run.archived = True
+        run.dir_name = path.name
+        run.history = history
+        done = config.generations is not None and len(history) >= config.generations
+        status = "finished" if done else "stopped"
+        run.status = status
+        run.terminal = True
+        run.events = [("gen", message) for message in history]
+        run.events.append(("status", status_message(status)))
+        return run
+
+    def _dismiss(self, run: _Run) -> None:
+        """Mark the folder of a deleted run so a later session skips it. The files stay."""
+        if run.dir_name is None:
+            return
+        try:
+            (self._runs_dir / run.dir_name / DISMISSED).write_text("", encoding="utf-8")
+        except OSError:
+            return
 
     def _lookup(self, run_id: str) -> _Run:
         try:
@@ -357,6 +431,7 @@ class RunManager:
 
     def _stop_runs(self, runs: list[_Run]) -> None:
         """Ask the workers to stop, terminate the ones that do not, and reap everything."""
+        runs = [run for run in runs if run.process is not None]
         for run in runs:
             self._send(run, {"cmd": "stop"})
         deadline = time.monotonic() + self._stop_timeout

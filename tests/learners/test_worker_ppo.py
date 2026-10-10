@@ -72,7 +72,7 @@ def test_ppo_run_streams_running_frames_two_iterations_with_extra_and_finishes(t
     # Assert
     kinds = [message["t"] for message in conn.sent]
     assert conn.sent[0] == {"t": "status", "status": "running"}
-    assert set(kinds) <= {"status", "frame", "gen"}
+    assert set(kinds) <= {"status", "frame", "gen", "meta"}
     gens = conn.of_type("gen")
     assert [message["gen"] for message in gens] == [0, 1]
     assert all(set(message["extra"]) == EXTRA_KEYS for message in gens)
