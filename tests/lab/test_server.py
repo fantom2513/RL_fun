@@ -728,3 +728,55 @@ def test_a_run_can_use_a_saved_track(server: LabServer) -> None:
     )
     assert info["status"] == "finished"
     call_json(server, "DELETE", "/api/tracks/%D0%93%D0%BE%D0%BD%D0%BA%D0%B0")
+
+
+# ---- garage and demo drives over HTTP ----------------------------------------------------------
+
+
+def _finished_run(server: LabServer, **overrides: Any) -> str:
+    status, data = call_json(server, "POST", "/api/runs", _config(**overrides))
+    assert status == 201
+    wait_for(lambda: call_json(server, "GET", f"/api/runs/{data['id']}")[1]["status"] == "finished")
+    return str(data["id"])
+
+
+def test_garage_lists_runs_with_a_saved_network_and_exports_them(server: LabServer) -> None:
+    run_id = _finished_run(server, name="garage car")
+
+    status, cars = call_json(server, "GET", "/api/garage")
+    car = next(car for car in cars if car["id"] == run_id)
+    exported = call_json(server, "GET", f"/api/garage/{run_id}/export")
+
+    assert status == 200 and car["name"] == "garage car" and car["model"]["inputs"] == 8
+    assert exported[0] == 200 and exported[1]["snapshot"]["sizes"][0] == 8
+    assert call_json(server, "GET", "/api/garage/nope/export")[0] == 404
+
+
+def test_a_demo_drive_streams_frames_and_ends_with_a_result(server: LabServer) -> None:
+    run_id = _finished_run(server)
+
+    status, data = call_json(
+        server, "POST", "/api/demos", {"run": run_id, "track": "wavy", "speed": "max", "max_steps": 60}
+    )
+    _, events, closed = read_events(server, f"/api/runs/{data['id']}/stream")
+
+    assert status == 201 and data["id"].startswith("d")
+    kinds = [kind for kind, _ in events]
+    assert "frame" in kinds and "gen" in kinds and events[-1][1]["status"] == "finished"
+    [result] = [payload for kind, payload in events if kind == "gen"]
+    assert result["finished"] in (0, 1) and "steps" in result["extra"]
+    listed = call_json(server, "GET", "/api/runs")[1]
+    assert data["id"] not in [row["id"] for row in listed]
+    assert call_json(server, "DELETE", f"/api/runs/{data['id']}")[0] == 200
+    assert closed
+
+
+def test_a_bad_demo_request_gets_a_clear_error(server: LabServer) -> None:
+    run_id = _finished_run(server)
+
+    assert call_json(server, "POST", "/api/demos", {"run": "nope", "track": "oval"})[0] == 404
+    status, body = call_json(server, "POST", "/api/demos", {"run": run_id, "track": "mars"})
+    assert status == 400 and CYRILLIC.search(body["error"])
+    assert call_json(server, "POST", "/api/demos", {"run": run_id})[0] == 400
+    assert call_json(server, "POST", "/api/demos", {"run": run_id, "track": "oval", "laps": 99})[0] == 400
+    assert call_json(server, "GET", "/api/demos")[0] == 405

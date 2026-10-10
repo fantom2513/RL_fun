@@ -172,7 +172,12 @@ def test_a_finished_live_run_is_restored_after_a_restart_and_dismissed_when_dele
 
     second = manager_factory(runs)
     [row] = second.list()
-    assert (row["name"], row["status"], row["gen"], row["archived"]) == ("live", "finished", 2, True)
+    assert (row["name"], row["status"], row["gen"], row["archived"]) == (
+        "live",
+        "finished",
+        2,
+        True,
+    )
     second.delete(row["id"])
 
     assert manager_factory(runs).list() == []

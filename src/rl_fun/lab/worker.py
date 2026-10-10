@@ -21,7 +21,10 @@ from rl_fun.lab.config import RunConfig
 from rl_fun.lab.protocol import build_iteration_message, notice_message, status_message
 from rl_fun.lab.stream_view import StopRun, StreamView
 from rl_fun.learners.registry import get_learner
+from rl_fun.racing import reference
 from rl_fun.racing.fleet import RacingFleet
+from rl_fun.racing.generation import run_generation
+from rl_fun.racing.model_spec import ModelSpec
 
 _UNSAFE_NAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
@@ -118,6 +121,78 @@ def _run(
         iteration += 1
 
     conn.send(status_message("finished"))
+
+def run_demo(
+    config: dict[str, Any],
+    conn: WorkerConnection,
+    *,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """Drive one saved network around a track and report it like a one-generation run.
+
+    `config` has the car's `model`, `sizes`, `activation` and `weights` (a `best_weights.json`
+    snapshot) and the race: `track`, `laps`, `max_steps`, `ray_range`, `speed`. Frames stream while
+    it drives; at the end one `gen` message carries the result and the status becomes finished.
+    """
+    try:
+        _demo(config, conn, clock, sleep)
+    except StopRun:
+        _report(conn, status_message("stopped"))
+    except Exception as error:
+        _report(conn, status_message("error", f"{type(error).__name__}: {error}"))
+
+
+def _demo(
+    config: dict[str, Any],
+    conn: WorkerConnection,
+    clock: Callable[[], float],
+    sleep: Callable[[float], None],
+) -> None:
+    sizes = [int(size) for size in config["sizes"]]
+    activation = str(config["activation"])
+    weights = np.asarray(config["weights"], dtype=np.float64)
+    expected = sum((a + 1) * b for a, b in zip(sizes[:-1], sizes[1:], strict=True))
+    if weights.size != expected:
+        raise ValueError(f"в сети {weights.size} весов, а модель ждёт {expected}")
+    fleet = RacingFleet(
+        1,
+        track=config["track"],
+        model=ModelSpec.from_dict(config["model"]),
+        max_steps=int(config["max_steps"]),
+        laps=int(config["laps"]),
+        ray_range=float(config["ray_range"]),
+    )
+    view = StreamView(
+        conn.send, lambda: _drain(conn), clock=clock, sleep=sleep, speed=config.get("speed", 1)
+    )
+    conn.send(status_message("running"))
+    result = run_generation(
+        fleet,
+        weights[None, :],
+        lambda w, o: reference.forward(w, o, sizes, activation),
+        view=view,
+        inspect=lambda w, o: reference.inspect(w, o, sizes, activation),
+        label=f"Проверка: {config['track']}",
+    )
+    finished = bool(result.finished[0])
+    steps = int(result.steps_alive[0])
+    progress = float(result.progress[0])
+    crashed = not finished and steps < fleet.max_steps
+    conn.send(
+        build_iteration_message(
+            0,
+            best=progress,
+            mean=progress,
+            finished=int(finished),
+            best_fitness=progress,
+            best_lap_steps=int(result.lap_steps[0]) if finished else None,
+            params={},
+            extra={"steps": float(steps), "crashed": float(crashed)},
+        )
+    )
+    conn.send(status_message("finished"))
+
 
 def _drain(conn: WorkerConnection) -> list[dict[str, Any]]:
     commands: list[dict[str, Any]] = []

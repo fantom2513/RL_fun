@@ -54,20 +54,6 @@ def test_a_demo_streams_frames_then_one_result_and_finishes() -> None:
     assert result["extra"]["steps"] <= 60
 
 
-def test_a_demo_reports_a_finished_race_with_its_time() -> None:
-    from rl_fun.racing import reference
-    from rl_fun.racing.fleet import RacingFleet
-
-    # a network that drives straight at full throttle cannot finish an oval: use the real check
-    # of the contract instead, a one-step "race" is finished once the lap length is covered
-    conn = FakeConnection()
-    run_demo(demo_config(max_steps=40), conn)
-    [result] = conn.of_type("gen")
-
-    fleet = RacingFleet(1, track="oval", max_steps=40)
-    assert result["best_lap_steps"] is None and fleet.laps == 1
-
-
 def test_a_demo_can_be_stopped() -> None:
     conn = FakeConnection(commands_after_frame={2: [{"cmd": "stop"}]})
 

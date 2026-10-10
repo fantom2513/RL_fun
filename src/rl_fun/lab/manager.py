@@ -24,8 +24,8 @@ from typing import Any
 from rl_fun.lab.config import RunConfig
 from rl_fun.lab.protocol import status_message
 from rl_fun.lab.stream_view import SPEEDS
-from rl_fun.lab.worker import run_worker
-from rl_fun.racing.track import TRACKS_ENV
+from rl_fun.lab.worker import run_demo, run_worker
+from rl_fun.racing.track import TRACKS_ENV, available_tracks
 
 TERMINAL_STATUSES = ("finished", "stopped", "error")
 UNEXPECTED_EXIT = "процесс запуска завершился неожиданно"
@@ -43,6 +43,11 @@ Event = tuple[str, dict[str, Any]]
 def run_worker_entry(config: dict[str, Any], conn: Any, runs_dir: str) -> None:
     """Process entry point: a module-level function so `spawn` can import it in the child."""
     run_worker(config, conn, runs_dir)
+
+
+def run_demo_entry(config: dict[str, Any], conn: Any, runs_dir: str) -> None:
+    """Process entry point of a demo drive (there is nothing to save, so the folder is unused)."""
+    run_demo(config, conn)
 
 
 def _validate_command(command: Any) -> None:
@@ -68,6 +73,7 @@ class _Run:
     def __init__(self, run_id: str, config: dict[str, Any], process: Any, conn: Any) -> None:
         self.id = run_id
         self.archived = False
+        self.demo = False
         self.dir_name: str | None = None
         self.name = str(config["name"])
         self.config = config
@@ -105,6 +111,7 @@ class RunManager:
         self._shutdown_lock = threading.Lock()
         self._runs: dict[str, _Run] = {}
         self._counter = 0
+        self._demo_counter = 0
         self._closed = False
         os.environ[TRACKS_ENV] = str(self.tracks_dir)
         self._load_archive()
@@ -169,6 +176,7 @@ class RunManager:
                     "best": max((entry["best"] for entry in run.history), default=None),
                 }
                 for run in self._runs.values()
+                if not run.demo
             ]
 
     def get(self, run_id: str) -> dict[str, Any]:
@@ -185,6 +193,140 @@ class RunManager:
                 "error": run.error,
                 "exit_code": run.exit_code,
             }
+
+    # ---- garage and demo drives ---------------------------------------------------------------
+
+    def _snapshot(self, run: _Run) -> dict[str, Any] | None:
+        if run.demo or run.dir_name is None:
+            return None
+        path = self._runs_dir / run.dir_name / "best_weights.json"
+        try:
+            data = json.loads(path.read_text("utf-8"))
+        except (OSError, ValueError):
+            return None
+        keys = ("sizes", "activation", "weights")
+        return data if isinstance(data, dict) and all(key in data for key in keys) else None
+
+    def garage(self) -> list[dict[str, Any]]:
+        """The best network of every run that has saved one, newest last."""
+        with self._cond:
+            runs = [run for run in self._runs.values() if not run.demo]
+        cars = []
+        for run in runs:
+            snapshot = self._snapshot(run)
+            if snapshot is None:
+                continue
+            sizes = [int(size) for size in snapshot["sizes"]]
+            lap_steps = [e["best_lap_steps"] for e in run.history if e.get("best_lap_steps")]
+            cars.append(
+                {
+                    "id": run.id,
+                    "name": run.name,
+                    "track": run.config.get("track"),
+                    "laps": run.config.get("laps", 1),
+                    "learner": run.config.get("learner", "evolution"),
+                    "archived": run.archived,
+                    "best": max((e["best"] for e in run.history), default=None),
+                    "best_lap_steps": min(lap_steps) if lap_steps else None,
+                    "generation": snapshot.get("generation"),
+                    "model": {
+                        "inputs": sizes[0],
+                        "hidden": sizes[1:-1],
+                        "outputs": sizes[-1],
+                        "activation": snapshot["activation"],
+                    },
+                }
+            )
+        return cars
+
+    def weights(self, run_id: str) -> dict[str, Any]:
+        """The saved network snapshot of a run; KeyError when it has none."""
+        with self._cond:
+            run = self._lookup(run_id)
+        snapshot = self._snapshot(run)
+        if snapshot is None:
+            raise KeyError(f"у запуска {run_id} нет сохранённой сети")
+        return snapshot
+
+    def export(self, run_id: str) -> dict[str, Any]:
+        """Everything needed to look at a network elsewhere: the run's config and its snapshot."""
+        with self._cond:
+            config = dict(self._lookup(run_id).config)
+        return {"config": config, "snapshot": self.weights(run_id)}
+
+    def create_demo(
+        self,
+        run_id: str,
+        track: str,
+        *,
+        speed: Any = 1,
+        laps: int | None = None,
+        max_steps: int | None = None,
+    ) -> str:
+        """Drive the saved network of `run_id` on `track`; returns the id of the demo.
+
+        A demo is a run for streaming purposes (stream, command, delete) but is not listed.
+        """
+        with self._cond:
+            run = self._lookup(run_id)
+            if run.demo:
+                raise KeyError(f"неизвестный запуск: {run_id}")
+        snapshot = self.weights(run_id)
+        os.environ[TRACKS_ENV] = str(self.tracks_dir)
+        if track not in available_tracks():
+            raise ValueError(f"поле track: неизвестная трасса {track!r}")
+        laps = int(run.config.get("laps", 1)) if laps is None else laps
+        max_steps = int(run.config["max_steps"]) if max_steps is None else max_steps
+        if isinstance(laps, bool) or not isinstance(laps, int) or not 1 <= laps <= 10:
+            raise ValueError("поле laps: целое число от 1 до 10")
+        if isinstance(max_steps, bool) or not isinstance(max_steps, int):
+            raise ValueError("поле max_steps: нужно целое число")
+        if not 20 <= max_steps <= 5000:
+            raise ValueError("поле max_steps: от 20 до 5000")
+        if isinstance(speed, bool) or speed not in SPEEDS:
+            raise ValueError("поле speed: одно из 1, 2, 4, 8, max")
+        public = {
+            "name": f"Проверка: {run.name}",
+            "track": track,
+            "laps": laps,
+            "max_steps": max_steps,
+            "source": run_id,
+            "learner": "demo",
+        }
+        full = {
+            **public,
+            "model": run.config["model"],
+            "sizes": snapshot["sizes"],
+            "activation": snapshot["activation"],
+            "weights": snapshot["weights"],
+            "ray_range": run.config["ray_range"],
+            "speed": speed,
+        }
+        with self._cond:
+            if self._closed:
+                raise RuntimeError("менеджер запусков остановлен")
+            self._demo_counter += 1
+            demo_id = f"d{self._demo_counter}"
+        parent, child = self._context.Pipe(duplex=True)
+        process = self._context.Process(
+            target=run_demo_entry,
+            args=(full, child, str(self._runs_dir)),
+            name=f"lab-{demo_id}",
+            daemon=True,
+        )
+        try:
+            process.start()
+        finally:
+            child.close()
+        demo = _Run(demo_id, public, process, parent)
+        demo.demo = True
+        demo.reader = threading.Thread(
+            target=self._read, args=(demo,), name=f"lab-reader-{demo_id}", daemon=True
+        )
+        demo.reader.start()
+        with self._cond:
+            self._runs[demo_id] = demo
+        return demo_id
 
     def process(self, run_id: str) -> Any:
         """The worker's process object (for diagnostics and tests)."""

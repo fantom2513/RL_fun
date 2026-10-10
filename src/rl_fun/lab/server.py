@@ -254,6 +254,15 @@ class _Handler(BaseHTTPRequestHandler):
             except ValueError:
                 raise _HttpError(404, "трасса не найдена") from None
             self._send_json(200, data)
+        elif parts == ["garage"]:
+            self._expect(method, "GET")
+            self._send_json(200, manager.garage())
+        elif len(parts) == 3 and parts[0] == "garage" and parts[2] == "export":
+            self._expect(method, "GET")
+            self._send_json(200, self._found(lambda: manager.export(parts[1])))
+        elif parts == ["demos"]:
+            self._expect(method, "POST")
+            self._create_demo()
         elif parts == ["runs"]:
             if method == "GET":
                 self._send_json(200, manager.list())
@@ -313,6 +322,22 @@ class _Handler(BaseHTTPRequestHandler):
             raise _HttpError(404, "трасса не найдена") from None
         self.server.refresh_tracks()
         self._send_json(200, {"ok": True})
+
+    def _create_demo(self) -> None:
+        data = self._read_json_object()
+        run_id, track = data.get("run"), data.get("track")
+        if not isinstance(run_id, str) or not isinstance(track, str):
+            raise _HttpError(400, "нужны поля run (запуск) и track (трасса)")
+        options = {key: data[key] for key in ("speed", "laps", "max_steps") if key in data}
+        try:
+            demo_id = self.server.manager.create_demo(run_id, track, **options)
+        except KeyError:
+            raise _HttpError(404, "запуск или его сеть не найдены") from None
+        except ValueError as error:
+            raise _HttpError(400, str(error)) from None
+        except RuntimeError:
+            raise _HttpError(503) from None
+        self._send_json(201, {"id": demo_id})
 
     def _create_run(self) -> None:
         config = self._read_json_object()
