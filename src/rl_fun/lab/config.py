@@ -170,6 +170,7 @@ class RunConfig:
     mutation_scale: float = 0.3
     init_scale: float = 1.0
     max_steps: int = 1500
+    laps: int = 1
     ray_range: float = 40.0
     generations: int | None = None
     seed: int = 7
@@ -205,6 +206,7 @@ class RunConfig:
                 f"получено {mutation_rate:g}"
             )
         max_steps = _int_field("max_steps", self.max_steps, 50, 5000)
+        laps = _int_field("laps", self.laps, 1, 10)
         generations = self.generations
         if generations is not None:
             generations = _int_field("generations", generations, 1)
@@ -222,6 +224,7 @@ class RunConfig:
         object.__setattr__(self, "mutation_scale", mutation_scale)
         object.__setattr__(self, "init_scale", init_scale)
         object.__setattr__(self, "max_steps", max_steps)
+        object.__setattr__(self, "laps", laps)
         object.__setattr__(self, "ray_range", ray_range)
         object.__setattr__(self, "generations", generations)
         object.__setattr__(self, "seed", seed)
@@ -240,6 +243,7 @@ class RunConfig:
             "mutation_scale": self.mutation_scale,
             "init_scale": self.init_scale,
             "max_steps": self.max_steps,
+            "laps": self.laps,
             "ray_range": self.ray_range,
             "generations": self.generations,
             "seed": self.seed,

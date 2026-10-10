@@ -75,6 +75,7 @@ def _run(
         track=cfg.track,
         model=cfg.model,
         max_steps=cfg.max_steps,
+        laps=cfg.laps,
         ray_range=cfg.ray_range,
     )
     rng = np.random.default_rng(cfg.seed)
