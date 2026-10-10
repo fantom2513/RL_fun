@@ -888,11 +888,11 @@ def test_params_form_builds_the_learner_block_from_the_catalog_schema() -> None:
 
 
 def test_runs_of_other_learners_count_iterations_not_generations() -> None:
-    sources = {name: (WEB_DIR / name).read_text("utf-8") for name in ("app.js", "charts.js", "track_view.js")}
+    summary = (WEB_DIR / "core" / "run_summary.js").read_text("utf-8")
+    chart = (WEB_DIR / "charts.js").read_text("utf-8")
 
-    assert "итер." in sources["app.js"]
-    assert "итерация" in sources["charts.js"]
-    assert "Итер." in sources["track_view.js"]
+    assert "'Поколение' : 'Итерация'" in summary
+    assert "итерация" in chart
 
 
 def test_a_run_can_be_edited_and_restarted_in_place() -> None:
