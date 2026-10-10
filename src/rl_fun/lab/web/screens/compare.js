@@ -20,7 +20,7 @@ const COLUMNS = [
   { key: "iterations", label: "Итераций" },
   { key: "bestProgress", label: "Лучший прогресс" },
   { key: "meanProgress", label: "Средний прогресс" },
-  { key: "bestLap", label: "Лучший круг, с" },
+  { key: "bestLap", label: "Лучшее время, с" },
   { key: "firstLap", label: "Первый круг, итер." },
   { key: "finishedLast", label: "Финишировали" },
 ];

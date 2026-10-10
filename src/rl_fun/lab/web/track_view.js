@@ -114,6 +114,7 @@ export class TrackView {
     this.style = null;
     this.frame = null;
     this.iterationWord = 'Пок.';
+    this.laps = 1;
     this.parts = [];
     this.paths = null;
     this.background = null;
@@ -147,6 +148,16 @@ export class TrackView {
   }
 
   // ---- data -------------------------------------------------------------------------------
+
+  // The race length: with several laps the progress reads "1,4 из 3 кр." instead of a percentage.
+  setLaps(laps) {
+    this.laps = laps;
+  }
+
+  progressText(progress) {
+    if (this.laps <= 1) return `${Math.round(progress * 100)}%`;
+    return `${progress.toFixed(1).replace('.', ',')} из ${this.laps} кр.`;
+  }
 
   // Evolution counts generations, every other learner counts iterations.
   setLearner(learner) {
@@ -568,7 +579,7 @@ export class TrackView {
     const ctx = this.ctx;
     const frame = this.frame;
     const text = frame
-      ? `${this.iterationWord} ${frame.gen + 1} · ${frame.alive}/${frame.n} · ${Math.round(frame.hud.progress * 100)}%`
+      ? `${this.iterationWord} ${frame.gen + 1} · ${frame.alive}/${frame.n} · ${this.progressText(frame.hud.progress)}`
       : 'Ждём кадр…';
     ctx.font = HUD_FONT;
     const x = 10;
@@ -600,7 +611,7 @@ export class TrackView {
       ['Шаг', frame ? String(frame.step) : '—'],
       ['Живых', frame ? `${frame.alive} / ${frame.n}` : '—'],
       ['Скорость', frame ? `${frame.hud.speed.toFixed(1)} м/с` : '—'],
-      ['Прогресс', frame ? `${Math.round(frame.hud.progress * 100)}%` : '—'],
+      ['Прогресс', frame ? this.progressText(frame.hud.progress) : '—'],
     ];
     const x = 12;
     const y = 12;

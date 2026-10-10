@@ -857,33 +857,38 @@ def test_levels_are_judged_from_the_run_history_and_its_config() -> None:
         "core/levels.js",
         """(() => {
   const gens = [{finished: 0, best_lap_steps: null}, {finished: 2, best_lap_steps: 600}, {finished: 5, best_lap_steps: 450}];
-  const config = {track: 'oval', learner: 'evolution', model: {inputs: ['ray:-90', 'ray:0', 'ray:90', 'speed'], hidden: [6, 5]}};
+  const config = {track: 'oval', laps: 2, max_steps: 1100, learner: 'evolution',
+    model: {inputs: ['ray:-90', 'ray:0', 'ray:90', 'speed'], hidden: [6, 5]}};
   const level = (id) => m.byId(id);
   return [
     m.metrics(gens),
-    m.evaluate(level('oval-first'), {config, gens}),
-    m.evaluate(level('oval-fast'), {config, gens}),
-    m.evaluate(level('wavy-first'), {config, gens}),
-    m.evaluate(level('tiny-brain'), {config, gens}),
-    m.evaluate(level('rl-pilot'), {config: {...config, track: 'circuit'}, gens}),
-    m.evaluate(level('sharp-eye'), {config: {...config, track: 'circuit'}, gens: []}),
-    m.isUnlocked(level('oval-fast'), {}), m.isUnlocked(level('oval-fast'), {'oval-first': 1}),
-    m.bestStars([{config, gens}], {"oval-first": 3}),
+    m.evaluate(level('oval-two'), {config, gens}),
+    m.evaluate(level('quick-learner'), {config: {...config, track: 'wavy', max_steps: 1260}, gens}),
+    m.evaluate(level('wavy-two'), {config, gens}),
+    m.evaluate(level('oval-two'), {config: {...config, max_steps: 1500}, gens}),
+    m.evaluate(level('oval-two'), {config: {...config, laps: 1}, gens}),
+    m.evaluate(level('tiny-brain'), {config: {...config, max_steps: 1200}, gens}),
+    m.evaluate(level('rl-pilot'), {config: {...config, track: 'circuit', max_steps: 2400}, gens}),
+    m.evaluate(level('sharp-eye'), {config: {...config, track: 'circuit', max_steps: 2400}, gens: []}),
+    m.isUnlocked(level('wavy-two'), {}), m.isUnlocked(level('wavy-two'), {'oval-two': 1}),
+    m.bestStars([{config, gens}], {}),
     m.bestStars([{config: {...config, track: 'circuit'}, gens}], {}),
   ];
 })()""",
     )
 
-    assert result[0] == {"finish_iter": 2, "lap_seconds": 15.0}
-    assert result[1] == {"counts": True, "value": 2, "stars": 3}
-    assert result[2] == {"counts": True, "value": 15.0, "stars": 3}
-    assert result[3]["counts"] is False
-    assert result[4]["counts"] is False  # ten hidden neurons break the four-neuron limit
-    assert result[5]["counts"] is False  # evolution run, the level wants PPO
-    assert result[6] == {"counts": True, "value": None, "stars": 0}
-    assert result[7:9] == [False, True]
-    assert result[9]["oval-first"] == 3 and result[9]["oval-fast"] == 3
-    assert result[10] == {}  # nothing counts while the level before it has no stars
+    assert result[0] == {"finish_iter": 2, "race_seconds": 15.0}
+    assert result[1] == {"counts": True, "value": 15.0, "stars": 3}
+    assert result[2] == {"counts": True, "value": 2, "stars": 3}
+    assert result[3]["counts"] is False  # another track
+    assert result[4]["counts"] is False  # the step limit was relaxed past the level's
+    assert result[5]["counts"] is False  # one lap is not the two the level asks for
+    assert result[6]["counts"] is False  # ten hidden neurons break the four-neuron limit
+    assert result[7]["counts"] is False  # evolution run, the level wants PPO
+    assert result[8] == {"counts": True, "value": None, "stars": 0}
+    assert result[9:11] == [False, True]
+    assert result[11]["oval-two"] == 3 and "wavy-two" not in result[11]
+    assert result[12] == {}  # nothing counts on a track no level fits
 
 
 @pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
@@ -891,14 +896,17 @@ def test_every_level_is_playable_and_start_configs_fit_their_own_limits() -> Non
     result = _node_json(
         "core/levels.js",
         """(() => {
-  const defaults = {track: 'circuit', name: 'run', learner: 'evolution',
+  const defaults = {track: 'circuit', name: 'run', learner: 'evolution', laps: 1, max_steps: 1500,
     model: {inputs: ['ray:-90', 'ray:-30', 'ray:0', 'ray:30', 'ray:90', 'speed'], hidden: [6, 5], outputs: ['steer', 'throttle']}};
-  return m.LEVELS.map((level) => [level.id, m.fits(level, m.startConfig(level, defaults)), level.stars.length,
-    [...level.stars].sort((a, b) => b - a).join() === level.stars.join()]);
+  return m.LEVELS.map((level) => [level.id, m.fits(level, m.startConfig(level, defaults)), m.fits(level, defaults),
+    level.stars.length, [...level.stars].sort((a, b) => b - a).join() === level.stars.join(),
+    level.metric === 'race_seconds' ? level.stars[0] <= level.maxSteps / 30 : true]);
 })()""",
     )
 
-    assert all(fits and count == 3 and descending for _, fits, count, descending in result), result
+    for level_id, fits_start, fits_defaults, count, tightening, in_limit in result:
+        assert fits_start and count == 3 and tightening and in_limit, level_id
+        assert not fits_defaults, f"{level_id} must not be passable with the stock settings"
     assert len({row[0] for row in result}) == len(result) >= 8
 
 
@@ -985,3 +993,21 @@ def test_the_editor_canvas_edits_points_with_mouse_and_keyboard() -> None:
 
     for needle in ("pointerdown", "contextmenu", "Delete", "ArrowLeft", "KeyZ", "insertPoint", "selfIntersections"):
         assert needle in source
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_a_training_budget_counts_only_the_first_iterations() -> None:
+    result = _node_json(
+        "core/levels.js",
+        """(() => {
+  const config = {track: 'oval', laps: 3, max_steps: 1500, learner: 'evolution', model: {inputs: ['ray:0'], hidden: [4]}};
+  const slow = Array.from({length: 50}, (_, i) => ({finished: i === 44 ? 3 : 0, best_lap_steps: i === 44 ? 1400 : null}));
+  const quick = [{finished: 0, best_lap_steps: null}, {finished: 4, best_lap_steps: 1380}];
+  const level = m.byId('oval-three');
+  return [m.evaluate(level, {config, gens: slow}), m.evaluate(level, {config, gens: quick}), m.startConfig(level, config).generations];
+})()""",
+    )
+
+    assert result[0] == {"counts": True, "value": None, "stars": 0}  # the finish came after iteration 40
+    assert result[1]["value"] == 46.0 and result[1]["stars"] == 2
+    assert result[2] == 40

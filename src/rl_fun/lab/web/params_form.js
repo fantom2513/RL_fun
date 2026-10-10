@@ -117,7 +117,8 @@ export class ParamsForm {
       this.selectField('track', 'Трасса', c.tracks.map((id) => [id, id])),
       this.sliderField('population', 'Популяция', { min: 2, max: 200, step: 1, int: true, hint: 'машинок в поколении' }),
       h('div', { class: 'field-grid' },
-        this.numberField('max_steps', 'Лимит шагов', { min: 50, max: 5000, step: 50, hint: 'Шагов симуляции на заезд, 50–5000' }),
+        this.numberField('laps', 'Кругов', { min: 1, max: 10, step: 1, hint: 'Сколько кругов нужно проехать: заезд закончен, когда пройдены все' }),
+        this.numberField('max_steps', 'Лимит шагов', { min: 50, max: 5000, step: 50, hint: 'Шагов симуляции на заезд, 50–5000: 30 шагов — одна секунда. Не успели за лимит — заезд обрывается' }),
         this.numberField('ray_range', 'Дальность лучей, м', { min: 1, step: 5, hint: 'Дальше этого расстояния луч ничего не видит' }),
         this.numberField('seed', 'Seed', { min: 0, step: 1, hint: 'Одинаковый seed — одинаковый ход обучения' }),
         this.numberField('generations', 'Поколений', { min: 1, step: 1, placeholder: 'без лимита', hint: 'Пусто — обучение идёт до остановки' }),
@@ -587,6 +588,7 @@ export class ParamsForm {
       mutation_scale: this.num('mutation_scale'),
       init_scale: this.passthrough.init_scale,
       max_steps: this.num('max_steps'),
+      laps: this.num('laps'),
       ray_range: this.num('ray_range'),
       generations: this.num('generations'),
       seed: this.num('seed'),
@@ -630,7 +632,7 @@ export class ParamsForm {
       this.fields.track.append(h('option', { value: c.track, text: c.track }));
     }
     this.fields.track.value = c.track;
-    for (const key of ['population', 'max_steps', 'ray_range', 'seed', 'generations', 'mutation_rate', 'mutation_scale']) {
+    for (const key of ['population', 'max_steps', 'laps', 'ray_range', 'seed', 'generations', 'mutation_rate', 'mutation_scale']) {
       this.setValue(key, c[key]);
     }
     this.fields.elite.max = Math.max(1, c.population - 1);
@@ -710,6 +712,7 @@ export class ParamsForm {
     const range = config.ray_range;
     if (range == null || !Number.isFinite(range) || range <= 0) errors.ray_range = 'Число больше 0.';
     intIn('max_steps', 50, 5000, 'Целое число от 50 до 5000.');
+    intIn('laps', 1, 10, 'Целое число от 1 до 10.');
     intIn('seed', 0, null, 'Целое число, не меньше 0.');
     if (config.generations != null) intIn('generations', 1, null, 'Целое число от 1 или пустое поле.');
     if (!config.track) errors.track = 'Выберите трассу.';

@@ -2,17 +2,20 @@
 
 import { h, icon } from '../core/dom.js';
 import { number } from '../core/format.js';
-import { LEVELS, byId, evaluate, isUnlocked, totalStars } from '../core/levels.js';
+import { LEVELS, bestValue, byId, isUnlocked, totalStars } from '../core/levels.js';
 
-const UNITS = { finish_iter: 'итер.', lap_seconds: 'с' };
-const GOAL_TITLE = { finish_iter: 'Итераций до первого круга', lap_seconds: 'Лучший круг, с' };
+const UNITS = { finish_iter: 'итер.', race_seconds: 'с' };
+const GOAL_TITLE = { finish_iter: 'Итераций до финиша', race_seconds: 'Время заезда, с' };
 const TRACK_NAMES = { oval: 'Овал', wavy: 'Волны', circuit: 'Гран-при' };
 const LEARNER_NAMES = { ppo: 'только PPO', evolution: 'только эволюция' };
 
-const formatValue = (level, value) => (level.metric === 'lap_seconds' ? number(value, 2) : number(value, 0));
+const formatValue = (level, value) => (level.metric === 'race_seconds' ? number(value, 2) : number(value, 0));
+
+const lapWord = (count) => (count === 1 ? 'круг' : count < 5 ? 'круга' : 'кругов');
 
 function constraints(level) {
-  const items = [TRACK_NAMES[level.track] ?? level.track];
+  const items = [TRACK_NAMES[level.track] ?? level.track, `${level.laps} ${lapWord(level.laps)}`, `лимит ${number(level.maxSteps / 30, 0)} с`];
+  if (level.maxIterations) items.push(`не больше ${level.maxIterations} итераций`);
   if (level.learner) items.push(LEARNER_NAMES[level.learner] ?? level.learner);
   if (level.maxRays != null) items.push(`лучей не больше ${level.maxRays}`);
   if (level.maxHidden != null) items.push(`скрытых нейронов не больше ${level.maxHidden}`);
@@ -26,16 +29,6 @@ function starRow(count, large = false) {
     return star;
   });
   return h('span', { class: `stars${large ? ' stars-lg' : ''}`, role: 'img', 'aria-label': `Звёзд: ${count} из 3` }, ...stars);
-}
-
-// The best result any run has reached on the level so far (the metric value, not the stars).
-function bestValue(level, runs) {
-  let best = null;
-  for (const run of runs) {
-    const { counts, value } = evaluate(level, run);
-    if (counts && value != null && (best === null || value < best)) best = value;
-  }
-  return best;
 }
 
 function card(level, stars, runs, onStart) {
@@ -73,3 +66,48 @@ export function renderChallenges(container, { stars, runs, onStart }) {
 }
 
 export const starSummary = (stars) => `Звёзд: ${totalStars(stars)} из ${LEVELS.length * 3}`;
+
+// ---- the dialog after a level was passed ------------------------------------------------------
+
+const VERDICTS = ['', 'Уровень пройден!', 'Отличная езда!', 'Идеальный заезд!'];
+const queue = [];
+let open = false;
+
+function showNext() {
+  const item = queue.shift();
+  if (!item) {
+    open = false;
+    return;
+  }
+  open = true;
+  const { level, stars, value, unlocked, onNext } = item;
+  const dialog = h('dialog', { class: 'dialog level-dialog', 'aria-labelledby': 'level-dialog-title' });
+  const close = () => dialog.close();
+  const result = value == null ? '' : `${formatValue(level, value)} ${UNITS[level.metric]}`;
+  const buttons = [];
+  if (unlocked && onNext) {
+    buttons.push(h('button', { type: 'button', class: 'btn btn-primary', onclick: () => { close(); onNext(unlocked); } }, `Дальше: «${unlocked.title}»`));
+  }
+  buttons.push(h('button', { type: 'button', class: `btn${buttons.length ? '' : ' btn-primary'}`, onclick: close }, 'Продолжить обучение'));
+  dialog.append(
+    h('div', { class: 'level-dialog-body' },
+      icon('trophy', { size: 40 }),
+      h('h2', { id: 'level-dialog-title' }, VERDICTS[stars] ?? VERDICTS[1]),
+      starRow(stars, true),
+      h('p', null, `«${level.title}»${result ? `: ${result}` : ''}`),
+      stars < 3 ? h('p', { class: 'muted' }, `Ещё ${3 - stars} ${3 - stars === 1 ? 'звезда' : 'звезды'}: ${level.stars[stars]} ${UNITS[level.metric]} или лучше.`) : h('p', { class: 'muted' }, 'Все звёзды этого уровня ваши.'),
+      unlocked ? h('p', { class: 'level-dialog-unlock' }, `Открыт новый уровень: «${unlocked.title}».`) : null,
+      h('div', { class: 'level-dialog-actions' }, ...buttons)));
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+    showNext();
+  });
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
+// Shown when a level got its first star or more stars than before; several are shown one by one.
+export function showLevelComplete(details) {
+  queue.push(details);
+  if (!open) showNext();
+}

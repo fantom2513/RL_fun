@@ -9,8 +9,8 @@ import { getTheme, initTheme, setTheme, toggleTheme } from './core/theme.js';
 import { modelLabels, NetworkView } from './network_view.js';
 import { ParamsForm } from './params_form.js';
 import { TrackView } from './track_view.js';
-import { LEVELS, bestStars, loadStars, saveStars, startConfig } from './core/levels.js';
-import { renderChallenges, starSummary } from './screens/challenges.js';
+import { LEVELS, bestStars, bestValue, isUnlocked, loadStars, saveStars, startConfig } from './core/levels.js';
+import { renderChallenges, showLevelComplete, starSummary } from './screens/challenges.js';
 import { initTracks } from './screens/tracks.js';
 import { compareRows, renderCompare, sortRows } from './screens/compare.js';
 import { initTooltips } from './ui/tooltip.js';
@@ -230,6 +230,7 @@ async function select(id) {
     const config = await ensureConfig(run);
     if (state.activeId !== id) return;
     form.showRun(run, config);
+    view.setLaps(config.laps ?? 1);
     network.setLabels(modelLabels(config.model, state.catalog));
     network.setNet(run.net);
     renderNetworkState();
@@ -411,10 +412,16 @@ function refreshGame() {
   let changed = false;
   for (const level of LEVELS) {
     const count = next[level.id] ?? 0;
-    if (count > (state.stars[level.id] ?? 0)) {
-      changed = true;
-      toast(`«${level.title}»: ${'★'.repeat(count)} из ★★★`);
-    }
+    if (count <= (state.stars[level.id] ?? 0)) continue;
+    changed = true;
+    // The first pass after the page loaded only restores what the history already earned.
+    if (!state.gameReady) continue;
+    const unlocked = LEVELS.find((other) => other.requires?.level === level.id
+      && isUnlocked(other, next) && !isUnlocked(other, state.stars));
+    showLevelComplete({
+      level, stars: count, value: bestValue(level, runs), unlocked,
+      onNext: (target) => startLevel(target),
+    });
   }
   state.stars = next;
   if (changed) saveStars(next);
@@ -745,6 +752,7 @@ async function start() {
   }
   await Promise.all(rows.map((row) => ensureConfig(state.runs.get(row.id)).catch(() => null)));
   refreshGame();
+  state.gameReady = true;
   const ids = rows.map((row) => row.id);
   await select(ids.includes(initial) ? initial : (ids[ids.length - 1] ?? null));
 }
