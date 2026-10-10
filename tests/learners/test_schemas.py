@@ -61,7 +61,18 @@ def test_keys_exist_in_run_config_and_defaults_match(schemas):
     # Act / Assert
     for schema in schemas:
         for param in _params(schema):
+            if schema["id"] == "a2c" and param["key"] in A2C_OWN_DEFAULTS:
+                continue  # A2C recommends other values than the API defaults, see its schema
             assert _lookup(config, param["key"]) == param["default"], param["key"]
+
+
+A2C_OWN_DEFAULTS = {"ppo.learning_rate", "ppo.rollout_steps"}
+
+
+def test_a2c_recommends_short_rollouts_and_a_bigger_step_unlike_ppo(schemas):
+    a2c = {p["key"]: p["default"] for p in _params(next(s for s in schemas if s["id"] == "a2c"))}
+
+    assert (a2c["ppo.rollout_steps"], a2c["ppo.learning_rate"]) == (16, 0.003)
 
 
 def test_default_lies_between_min_and_max(schemas):

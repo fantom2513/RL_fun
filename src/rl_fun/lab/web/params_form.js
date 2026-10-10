@@ -472,24 +472,67 @@ export class ParamsForm {
     });
     this.fields[key] = input;
     this.fields[`range:${key}`] = range;
-    const bounds = `от ${number(min, 'auto')} до ${number(max, 'auto')}`;
-    return this.field(key, param.label, h('div', { class: 'slide' }, range, input), `${param.hint} (${bounds})`);
+    return this.field(key, param.label, h('div', { class: 'slide' }, range, input), this.hintOf(param));
   }
 
   learnerId() {
     return this.fields.learner.value || 'evolution';
   }
 
-  // Shows the groups of the chosen learner and adapts the shared fields to it.
+  // The parameters of the chosen learner by key, from its schema in the catalog.
+  learnerParams() {
+    const learner = this.learners.find((item) => item.id === this.learnerId());
+    const wanted = new Map();
+    for (const group of learner?.groups ?? []) {
+      for (const param of group.params) wanted.set(param.key, param);
+    }
+    return wanted;
+  }
+
+  // Shows the fields and groups of the chosen learner with its own labels and hints, and adapts
+  // the shared fields to it. Learners that share a family (evolution and CEM, PPO and A2C) share
+  // the fields: each one only shows what its schema lists and describes it in its own words.
   syncLearner() {
     const id = this.learnerId();
+    const wanted = this.learnerParams();
+    const managed = new Set();
+    for (const learner of this.learners) {
+      for (const group of learner.groups) group.params.forEach((param) => managed.add(param.key));
+    }
+    for (const key of managed) {
+      if (SHARED_KEYS.has(key)) continue;
+      const wrapper = this.form.querySelector(`[data-field="${key}"]`);
+      if (!wrapper) continue;
+      const param = wanted.get(key);
+      wrapper.hidden = !param;
+      if (!param) continue;
+      const label = wrapper.querySelector('label');
+      if (label) label.textContent = param.label;
+      const hint = wrapper.querySelector('.hint');
+      if (hint) hint.textContent = this.schemaParams.has(key) ? this.hintOf(param) : param.hint;
+    }
     for (const group of this.form.querySelectorAll('[data-learner-group]')) {
-      group.hidden = group.dataset.learnerGroup !== id;
+      const fields = [...group.querySelectorAll('[data-field]')];
+      group.hidden = !fields.some((wrapper) => !wrapper.hidden);
     }
     const learner = this.learners.find((item) => item.id === id);
     this.learnerNote.textContent = learner?.description ?? '';
     const label = this.fields.population.closest('.field')?.querySelector('label');
-    if (label) label.textContent = id === 'evolution' ? 'Популяция' : 'Число машинок';
+    if (label) label.textContent = id === 'evolution' || id === 'cem' ? 'Популяция' : 'Число машинок';
+    const title = this.form.querySelector('[data-learner-group="evolution"] > summary');
+    if (title) title.textContent = id === 'cem' ? 'Облако весов' : 'Эволюция';
+  }
+
+  hintOf(param) {
+    return `${param.hint} (от ${number(param.min, 'auto')} до ${number(param.max, 'auto')})`;
+  }
+
+  // Switching the learner starts it from its own recommended values, not the previous one's.
+  applyLearnerDefaults() {
+    for (const [key, param] of this.learnerParams()) {
+      if (SHARED_KEYS.has(key) || !this.fields[key]) continue;
+      this.setValue(key, param.default);
+    }
   }
 
   termField(term) {
@@ -767,13 +810,15 @@ export class ParamsForm {
     if (!config.name) errors.name = 'Введите название запуска.';
     else if (config.name.length > MAX_NAME) errors.name = `Не длиннее ${MAX_NAME} символов (сейчас ${config.name.length}).`;
     intIn('population', 2, 200, 'Целое число от 2 до 200.');
-    if (config.learner === 'evolution') {
+    if (config.learner === 'evolution' || config.learner === 'cem') {
       const eliteMax = Number.isFinite(config.population) ? config.population - 1 : 199;
       intIn('elite', 1, eliteMax, config.elite >= config.population && Number.isFinite(config.elite)
         ? `Элита должна быть меньше популяции: от 1 до ${eliteMax}.`
         : `Целое число от 1 до ${eliteMax}.`);
       const rate = config.mutation_rate;
-      if (rate == null || !Number.isFinite(rate) || rate <= 0 || rate > 1) errors.mutation_rate = 'Число больше 0 и не больше 1.';
+      if (config.learner === 'evolution' && (rate == null || !Number.isFinite(rate) || rate <= 0 || rate > 1)) {
+        errors.mutation_rate = 'Число больше 0 и не больше 1.';
+      }
       const scale = config.mutation_scale;
       if (scale == null || !Number.isFinite(scale) || scale <= 0) errors.mutation_scale = 'Число больше 0.';
     } else {
@@ -820,8 +865,9 @@ export class ParamsForm {
 
   // Range and integer checks of the chosen learner's parameters, from the schema in the catalog.
   validateSchema(errors) {
+    const wanted = this.learnerParams();
     for (const [key, param] of this.schemaParams) {
-      if (SHARED_KEYS.has(key)) continue;
+      if (SHARED_KEYS.has(key) || !wanted.has(key)) continue;
       const value = this.num(key);
       const bounds = `${number(param.min, 'auto')}–${number(param.max, 'auto')}`;
       if (value == null || !Number.isFinite(value) || value < param.min || value > param.max) {
@@ -868,7 +914,10 @@ export class ParamsForm {
       this.fields.elite.max = max;
       this.fields['range:elite'].max = max;
     }
-    if (key === 'learner') this.syncLearner();
+    if (key === 'learner') {
+      this.syncLearner();
+      this.applyLearnerDefaults();
+    }
     if (key === 'track') this.hooks.onTrack?.(this.fields.track.value);
     this.clearServerError();
     this.dirty = true;
@@ -1057,7 +1106,7 @@ export class ParamsForm {
     const step = this.learnerId() === 'evolution' ? 'поколении' : 'итерации';
     const when = this.learnerId() === 'evolution' ? 'со следующего поколения' : 'со следующей итерации';
     let applied = `Параметры можно менять на ходу — изменения вступят в силу ${when}.`;
-    if (echo && this.learnerId() === 'evolution') {
+    if (echo && this.learnerId() === 'evolution' && 'mutation_rate' in echo) {
       applied = `Сервер применил в поколении ${run.gens.length}: мутация ${fmt(echo.mutation_rate)}, ` +
         `сила ${fmt(echo.mutation_scale)}, элита ${echo.elite}.`;
     } else if (echo) {

@@ -363,8 +363,14 @@ def _a2c_schema() -> dict[str, Any]:
         "шаги ничем не ограничены, и обучение легче срывается. Сравните с PPO на том же задании."
     )
     dropped = {"ppo.clip_epsilon", "ppo.epochs", "ppo.minibatch_size"}
+    # with one step per rollout, short rollouts and a bigger step are what make A2C learn: a form
+    # switched to A2C starts from these values (the API defaults stay those of PPO)
+    recommended = {"ppo.learning_rate": 0.003, "ppo.rollout_steps": 16}
     for group in schema["groups"]:
         group["params"] = [param for param in group["params"] if param["key"] not in dropped]
+        for param in group["params"]:
+            if param["key"] in recommended:
+                param["default"] = recommended[param["key"]]
     schema["groups"] = [group for group in schema["groups"] if group["params"]]
     return schema
 

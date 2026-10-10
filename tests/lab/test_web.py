@@ -819,6 +819,18 @@ def test_run_summary_handles_archives_multilap_and_missing_frames() -> None:
 
 
 @pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_finished_run_labels_its_retained_frame_as_last_race() -> None:
+    result = _node_json(
+        "core/run_summary.js",
+        "m.summarizeRun({status:'finished',frame:{gen:2,alive:0,n:1,"
+        "hud:{progress:1},cars:[[0,0,0,2]]}})",
+    )
+
+    assert result["raceHint"] == "В последнем заезде"
+    assert result["finished"] == "1 / 1"
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
 def test_leader_only_view_keeps_leader_and_hides_other_cars() -> None:
     result = _node_json(
         "track_view.js",
@@ -1120,3 +1132,10 @@ def test_the_garage_screen_lists_cars_drives_demos_and_checks_every_track() -> N
     for needle in ("api.createDemo", "api.getGarage", "checkEverywhere", "Скачать JSON", "учили здесь", "TrackView"):
         assert needle in screen
     assert "initGarage" in app and 'id="garage-root"' in _index_html()
+
+
+def test_the_form_adapts_to_each_learner_from_its_schema() -> None:
+    form = (WEB_DIR / "params_form.js").read_text("utf-8")
+
+    for needle in ("learnerParams", "applyLearnerDefaults", "hintOf", "'cem'"):
+        assert needle in form
