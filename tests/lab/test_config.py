@@ -48,6 +48,7 @@ def test_defaults_match_plan():
     assert config.mutation_scale == 0.3
     assert config.init_scale == 1.0
     assert config.max_steps == 1500
+    assert config.laps == 1
     assert config.ray_range == 40.0
     assert config.generations is None
     assert config.seed == 7
@@ -136,6 +137,9 @@ def test_unknown_top_level_key_is_rejected_by_name():
         ({"ray_range": 0.0}, "ray_range"),
         ({"max_steps": 49}, "max_steps"),
         ({"max_steps": 5001}, "max_steps"),
+        ({"laps": 0}, "laps"),
+        ({"laps": 11}, "laps"),
+        ({"laps": 1.5}, "laps"),
         ({"generations": 0}, "generations"),
         ({"name": ""}, "name"),
         ({"name": "я" * 41}, "name"),
@@ -219,3 +223,11 @@ def test_invalid_nested_model_raises_value_error_with_original_reason():
     assert "model" in str(error.value)
     assert "inputs must not be empty" in str(error.value)
     assert CYRILLIC.search(str(error.value))
+
+
+def test_laps_round_trip_and_default_to_one_lap():
+    config = RunConfig(laps=3)
+
+    assert config.to_dict()["laps"] == 3
+    assert RunConfig.from_dict(config.to_dict()) == config
+    assert RunConfig.from_dict({}).laps == 1

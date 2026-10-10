@@ -216,3 +216,20 @@ def test_same_seed_gives_same_best_progress_per_generation(tmp_path):
     second_gens = [(message["best"], message["mean"]) for message in second.of_type("gen")]
     assert len(first_gens) == 2
     assert first_gens == second_gens
+
+
+def test_the_fleet_drives_the_configured_number_of_laps(tmp_path, monkeypatch):
+    import rl_fun.lab.worker as worker
+
+    seen: dict[str, Any] = {}
+    real = worker.RacingFleet
+
+    def spy(*args: Any, **kwargs: Any):
+        seen.update(kwargs)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(worker, "RacingFleet", spy)
+
+    _run(FakeConnection(), tmp_path, laps=3, generations=1)
+
+    assert seen["laps"] == 3
