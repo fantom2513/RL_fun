@@ -55,6 +55,25 @@
   .activation-text { display: grid; gap: var(--sp-1); font-size: var(--fs-body-s); }
   .activation-text p { margin: 0; }
 
+  .garage { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: var(--sp-4); align-items: start; max-width: 1280px; }
+  .garage-cars { display: grid; gap: var(--sp-2); }
+  .garage-car { display: grid; gap: var(--sp-1); width: 100%; padding: var(--sp-3); text-align: left; cursor: pointer; color: inherit; }
+  .garage-car[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .garage-car-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+  .garage-car-meta { font-size: var(--fs-body-s); }
+  .garage-test { display: grid; gap: var(--sp-3); min-width: 0; }
+  .garage-test[hidden] { display: none; }
+  .garage-test-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+  .garage-title { margin: 0; font: 600 var(--fs-title-m)/1.3 var(--font-display); }
+  .garage-sub { margin: 0; }
+  .garage-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+  .garage-stage { position: relative; height: clamp(260px, 42vh, 460px); border-radius: var(--r-m); overflow: hidden; background: var(--scene-grass); box-shadow: var(--shadow-1), 0 0 0 1px var(--border) inset; }
+  .garage-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .garage-verdict { margin: 0; font-weight: 600; min-height: 1.4em; }
+  .garage-results tbody tr { cursor: pointer; }
+  .garage-results tbody tr[aria-selected="true"] { background: var(--surface-3); }
+  @media (max-width: 1000px) { .garage { grid-template-columns: minmax(0, 1fr); } }
+
   .screen-head .screen-action { margin-left: auto; }
   .tracks { max-width: 1180px; }
   .track-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--sp-3); }

@@ -57,6 +57,8 @@ export const listTracks = () => request('GET', '/api/tracks');
 // Errors of saving a track are shown next to the editor, not as a toast.
 export const saveTrack = (definition) => request('POST', '/api/tracks', definition, { quiet: true });
 export const deleteTrack = (name) => request('DELETE', `/api/tracks/${encodeURIComponent(name)}`);
+export const getGarage = () => request('GET', '/api/garage');
+export const createDemo = (body) => request('POST', '/api/demos', body, { quiet: true });
 export const listRuns = () => request('GET', '/api/runs');
 export const getRun = (id) => request('GET', `/api/runs/${encodeURIComponent(id)}`);
 // Errors of creating a run are shown by the form that submitted it, not as a toast.

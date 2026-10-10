@@ -11,9 +11,11 @@ import { ParamsForm } from './params_form.js';
 import { TrackView } from './track_view.js';
 import { LEVELS, bestStars, bestValue, isUnlocked, loadStars, saveStars } from './core/levels.js';
 import { renderChallenges, renderTaskPanel, showLevelComplete, starSummary } from './screens/challenges.js';
+import { initGarage } from './screens/garage.js';
 import { initTracks } from './screens/tracks.js';
 import { compareRows, renderCompare, sortRows } from './screens/compare.js';
 import { initTooltips } from './ui/tooltip.js';
+import { summarizeRun } from './core/run_summary.js';
 import './ui/seg.js';
 
 const RUN_COLORS = ['#3b82c4', '#e08a3c', '#2fa59a', '#9a6fd0', '#d05d8f', '#8fa83a', '#5ab4e0', '#a8795a'];
@@ -47,6 +49,12 @@ const el = {
   zoomIn: $('zoom-in'),
   zoomOut: $('zoom-out'),
   hint: $('stage-hint'),
+  layout: $('run-layout'),
+  paramsToggle: $('params-toggle'),
+  fleetToggle: $('fleet-toggle'),
+  raysToggle: $('rays-toggle'),
+  networkToggle: $('network-toggle'),
+  networkContent: $('network-content'),
   toasts: $('toasts'),
   announcer: $('announcer'),
   paramsPanel: document.querySelector('.params'),
@@ -135,16 +143,19 @@ function addRun(row) {
   run.subscription = api.subscribe(run.id, {
     frame: (frame) => {
       run.frame = frame;
+      run.best = Math.max(run.best ?? 0, frame.hud.progress);
       const first = !run.net && Boolean(frame.net);
       if (frame.net) run.net = frame.net;
       if (run.id !== state.activeId) return;
       view.setFrame(frame);
+      renderSummary();
       if (run.config) network.setNet(frame.net);
       if (first) renderNetworkState();
     },
     gen: (gen) => {
       run.gens.push(gen);
       run.best = Math.max(run.best ?? 0, gen.best);
+      if (run.id === state.activeId) renderSummary();
       renderTabs();
       chart.update();
       form.onGen(run);
@@ -216,6 +227,7 @@ async function select(id) {
   renderControls();
   renderBanner();
   chart.setHighlight(id);
+  renderSummary();
   const run = activeRun();
   if (run) view.setLearner(run.learner);
   el.empty.hidden = Boolean(run);
@@ -232,6 +244,7 @@ async function select(id) {
   try {
     const config = await ensureConfig(run);
     if (state.activeId !== id) return;
+    renderSummary();
     form.showRun(run, config);
     view.setLaps(config.laps ?? 1);
     network.setLabels(modelLabels(config.model, state.catalog));
@@ -270,6 +283,7 @@ function nextRunName() {
 function openNewForm() {
   if (!state.catalog) return;
   form.showNew({ name: nextRunName() });
+  setParamsOpen(true);
   el.paramsPanel.scrollIntoView({ block: 'nearest' });
   form.focusName();
 }
@@ -281,6 +295,7 @@ function copySettings(run) {
   let name = `${run.name} копия`.slice(0, 40);
   for (let n = 2; names.has(name); n += 1) name = `${run.name} копия ${n}`.slice(0, 40);
   form.showNew({ config: { ...config, name } });
+  setParamsOpen(true);
   el.paramsPanel.scrollIntoView({ block: 'nearest' });
   form.focusName();
 }
@@ -379,6 +394,7 @@ async function removeRun() {
 // ---- tracks: the list, the editor and the use of a track in a new run -------------------------
 
 let tracksScreen = null;
+let garageScreen = null;
 
 // A track was saved or deleted: the catalog (the form's list of tracks) follows the server.
 async function reloadTracks() {
@@ -461,6 +477,7 @@ async function startLevel(level) {
   await select(null);
   const config = structuredClone(state.catalog.defaults);
   form.showNew({ config: { ...config, track: level.track, name: level.title } });
+  setParamsOpen(true);
   renderTask();
   el.paramsPanel.scrollIntoView({ block: 'nearest' });
   form.focusName();
@@ -539,7 +556,6 @@ function renderTabs() {
       tab.title = 'Этот запуск показан на трассе; справа открыта форма нового запуска';
     }
     const label = STATUS_LABELS[run.status] ?? run.status;
-    const best = run.best == null ? '' : ` · ${Math.round(run.best * 100)}%`;
     tab.setAttribute('aria-label', `${run.name}, ${label}`);
     const body = document.createElement('span');
     body.className = 'tab-body';
@@ -551,7 +567,7 @@ function renderTabs() {
     meta.className = 'tab-meta';
     const dot = document.createElement('span');
     dot.className = 'tab-dot';
-    meta.append(dot, `${label} · ${run.learner === 'evolution' ? 'пок.' : 'итер.'} ${run.gens.length}${best}${run.archived ? ' · архив' : ''}`);
+    meta.append(dot, `${label}${run.archived ? ' · архив' : ''}`);
     body.append(name, meta);
     tab.append(body);
     fragment.append(tab);
@@ -636,6 +652,24 @@ function renderHint() {
   el.hint.textContent = `Колесо или + / −: масштаб ${view.zoomLabel} · C: камера · Пробел: пауза${follow ? '' : ' · перетаскивание: сдвиг'}`;
 }
 
+function renderSummary() {
+  const summary = summarizeRun(activeRun());
+  for (const key of ['iteration', 'best', 'alive', 'finished']) {
+    const node = $(`stat-${key}`);
+    if (node.textContent !== summary[key]) node.textContent = summary[key];
+  }
+  $('stat-iteration-label').textContent = summary.iterationLabel;
+  document.querySelectorAll('.stat-race-hint').forEach((node) => {
+    node.textContent = summary.raceHint;
+  });
+}
+
+function setParamsOpen(open) {
+  el.layout.dataset.paramsOpen = String(open);
+  el.paramsToggle.setAttribute('aria-expanded', String(open));
+  el.paramsToggle.textContent = open ? 'Скрыть параметры' : 'Параметры';
+}
+
 // ---- wiring -------------------------------------------------------------------------------
 
 // Pause or resume the open run (button and Space).
@@ -661,6 +695,26 @@ function zoom(factor) {
 }
 
 function wire() {
+  setParamsOpen(window.matchMedia('(min-width: 981px)').matches);
+  el.paramsToggle.addEventListener('click', () => {
+    setParamsOpen(el.paramsToggle.getAttribute('aria-expanded') !== 'true');
+  });
+  el.networkToggle.addEventListener('click', () => {
+    const open = el.networkContent.hidden;
+    el.networkContent.hidden = !open;
+    el.networkToggle.setAttribute('aria-expanded', String(open));
+    el.networkToggle.textContent = open ? 'Скрыть сеть' : 'Показать сеть';
+  });
+  el.fleetToggle.addEventListener('click', () => {
+    const leaderOnly = el.fleetToggle.getAttribute('aria-pressed') !== 'true';
+    el.fleetToggle.setAttribute('aria-pressed', String(leaderOnly));
+    view.setDisplay({ showFleet: !leaderOnly });
+  });
+  el.raysToggle.addEventListener('click', () => {
+    const showRays = el.raysToggle.getAttribute('aria-pressed') !== 'true';
+    el.raysToggle.setAttribute('aria-pressed', String(showRays));
+    view.setDisplay({ showRays });
+  });
   el.newRun.addEventListener('click', openNewForm);
   el.emptyNew.addEventListener('click', openNewForm);
   el.tabs.addEventListener('click', (event) => {
@@ -816,9 +870,12 @@ function initShell() {
   tracksScreen = initTracks({
     root: $('tracks-root'), api, onUse: useTrack, onChanged: reloadTracks, toast,
   });
+  garageScreen = initGarage({ root: $('garage-root'), api, getCatalog: () => state.catalog, toast });
   startRouter((route) => {
     showLabView(route.name === 'lab' && route.rest[0] === 'compare');
     if (route.name === 'tracks') tracksScreen.show(route);
+    if (route.name === 'garage') garageScreen.show();
+    else garageScreen.hide();
     $('track-new').hidden = route.name === 'tracks' && route.rest.length > 0;
   });
   startKeys({ navigate: (name) => { location.hash = hashFor(name); }, toggleTheme });

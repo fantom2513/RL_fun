@@ -117,6 +117,8 @@ select {
   overflow: hidden;
   cursor: pointer;
   text-align: left;
+  height: auto;
+  min-height: 48px;
 }
 
 .tab::before {
@@ -255,14 +257,106 @@ select {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(260px, 330px) minmax(0, 1fr) minmax(260px, 340px);
-  grid-template-rows: minmax(0, 1fr) clamp(150px, 24vh, 240px);
+  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-rows: auto minmax(320px, 1fr) auto clamp(160px, 22vh, 220px);
   grid-template-areas:
-    "params stage network"
+    "params summary"
+    "params stage"
+    "params network"
     "curves curves curves";
   gap: 10px;
   padding: 10px;
   min-height: 0;
+  overflow: auto;
+}
+
+.layout[data-params-open="false"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "summary" "stage" "network" "curves";
+}
+
+.layout[data-params-open="false"] .params {
+  display: none;
+}
+
+.run-summary {
+  grid-area: summary;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.run-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 1 1 500px;
+  gap: 8px;
+  margin: 0;
+}
+
+.run-stat {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.run-stat dt {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.run-stat dd {
+  margin: 4px 0;
+  font: 600 22px/1.2 var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.run-stat small {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.run-stat-best {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.run-stat-best dd {
+  color: var(--accent-text);
+}
+
+.network-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#network-content .network-body {
+  height: 300px;
+}
+
+#network-content .net-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scene-tools {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.chip[aria-pressed="true"] {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .params {
@@ -1103,10 +1197,41 @@ input[type="range"] {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
     grid-template-areas:
+      "summary"
+      "params"
       "stage"
       "network"
-      "params"
       "curves";
+  }
+
+  .params {
+    max-height: 65vh;
+  }
+
+  .lab-screen {
+    overflow: auto;
+  }
+
+  .lab-screen .layout {
+    overflow: visible;
+  }
+
+  .topbar {
+    gap: 10px;
+  }
+
+  .tabs-wrap {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+  }
+
+  .tabs {
+    flex: 1 1 100%;
+  }
+
+  .run-stats {
+    flex-basis: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .stage {
@@ -1131,6 +1256,19 @@ input[type="range"] {
     max-width: calc(100% - 28px);
     top: 54px;
   }
+}
+
+@media (max-width: 480px) {
+  .scene-tools, .camera-tools {
+    top: 10px;
+    gap: 4px;
+  }
+
+  .scene-tools { left: 8px; }
+  .camera-tools { right: 8px; }
+  .stage .chip { padding: 0 6px; font-size: 12px; }
+  .stage .chip-square { width: 26px; }
+  #network-content .net-legend { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {

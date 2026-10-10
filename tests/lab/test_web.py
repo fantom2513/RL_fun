@@ -727,7 +727,7 @@ def test_every_section_has_a_screen_with_a_focusable_title(name: str) -> None:
 
 def test_placeholder_sections_say_they_are_coming_soon() -> None:
     html = _index_html()
-    for name in ("garage", "settings"):
+    for name in ("settings",):
         screen = re.search(
             rf"""<section\b[^>]*data-screen=["']{name}["'][^>]*>(.*?)(?=<section\b[^>]*data-screen=|</main>)""",
             html,
@@ -773,6 +773,62 @@ def _node_json(module: str, expression: str) -> object:
     url = (WEB_DIR / module).as_uri()
     script = f"import * as m from {json.dumps(url)};console.log(JSON.stringify({expression}));"
     return json.loads(_node(script))
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_run_summary_distinguishes_record_from_current_race() -> None:
+    result = _node_json(
+        "core/run_summary.js",
+        "m.summarizeRun({best:0.8,learner:'ppo',config:{laps:1},"
+        "gens:[{gen:3,best:0.8,finished:5}],"
+        "frame:{gen:4,alive:2,n:4,hud:{progress:0.3},"
+        "cars:[[0,0,0,0],[0,0,0,1],[0,0,0,2],[0,0,0,1]]}})",
+    )
+
+    assert result == {
+        "iterationLabel": "Итерация",
+        "iteration": "5",
+        "best": "80%",
+        "alive": "2 / 4",
+        "finished": "1 / 4",
+        "raceHint": "В текущем заезде",
+    }
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_run_summary_handles_archives_multilap_and_missing_frames() -> None:
+    result = _node_json(
+        "core/run_summary.js",
+        "[m.summarizeRun(null),m.summarizeRun({learner:'evolution',config:{laps:3,population:60},"
+        "gens:[{gen:9,best:1.5,finished:2}],best:1.5}),"
+        "m.summarizeRun({best:0.2,config:{laps:1},"
+        "frame:{gen:0,alive:1,n:1,hud:{progress:0.6},cars:[[0,0,0,1]]}})]",
+    )
+
+    assert result[0]["best"] == "—"
+    assert result[0]["iteration"] == "—"
+    assert result[1] == {
+        "iterationLabel": "Поколение",
+        "iteration": "10",
+        "best": "1,5 / 3 кр.",
+        "alive": "—",
+        "finished": "2 / 60",
+        "raceHint": "В последнем заезде",
+    }
+    assert result[2]["best"] == "60%"
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_leader_only_view_keeps_leader_and_hides_other_cars() -> None:
+    result = _node_json(
+        "track_view.js",
+        "(() => {const painted=[];const view={width:500,height:500,showFleet:false,"
+        "frame:{leader:1,cars:[[10,10,0,1],[20,20,0,1],[30,30,0,0]]},"
+        "drawCar:(x,y,h,s,state,leader)=>painted.push([x,leader])};"
+        "m.TrackView.prototype.drawCars.call(view,(x,y)=>[x,y],1);return painted;})()",
+    )
+
+    assert result == [[20, True]]
 
 
 @pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
@@ -1055,3 +1111,12 @@ def test_runs_of_an_earlier_session_are_marked_in_the_tabs_and_explained() -> No
     app = (WEB_DIR / "app.js").read_text("utf-8")
 
     assert "archived" in app and "архив" in app and "прошлого сеанса" in app
+
+
+def test_the_garage_screen_lists_cars_drives_demos_and_checks_every_track() -> None:
+    screen = (WEB_DIR / "screens" / "garage.js").read_text("utf-8")
+    app = (WEB_DIR / "app.js").read_text("utf-8")
+
+    for needle in ("api.createDemo", "api.getGarage", "checkEverywhere", "Скачать JSON", "учили здесь", "TrackView"):
+        assert needle in screen
+    assert "initGarage" in app and 'id="garage-root"' in _index_html()

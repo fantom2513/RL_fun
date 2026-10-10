@@ -4,6 +4,7 @@
 
 const CAR_LENGTH = 4.5; // metres, nose to rear wing tip
 const MIN_CAR_PIXELS = 13; // keep cars legible when the whole track is in view
+const MIN_LEADER_PIXELS = 22;
 const BACKGROUND_MARGIN = 28; // metres of grass around the track
 const BACKGROUND_MAX_SIDE = 4096; // px
 const BACKGROUND_MAX_SCALE = 8; // px per metre
@@ -14,10 +15,7 @@ const CURB_STRIPE = 2;
 const DEFAULT_FOLLOW_ZOOM = 3;
 const LEADER_COLOR = '#f2b01e';
 const CRASH_COLOR = '#d62e3e';
-const COMPACT_HUD_WIDTH = 640; // canvases narrower or lower than this get the one-line HUD plate
-const COMPACT_HUD_HEIGHT = 480;
 const HUD_FONT ='600 13px ui-monospace, "Cascadia Mono", Consolas, monospace';
-const LABEL_FONT = '500 12px Bahnschrift, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif';
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
@@ -113,6 +111,8 @@ export class TrackView {
     this.track = null;
     this.style = null;
     this.frame = null;
+    this.showFleet = true;
+    this.showRays = false;
     this.iterationWord = 'Пок.';
     this.laps = 1;
     this.parts = [];
@@ -162,6 +162,12 @@ export class TrackView {
   // Evolution counts generations, every other learner counts iterations.
   setLearner(learner) {
     this.iterationWord = learner === 'evolution' ? 'Пок.' : 'Итер.';
+  }
+
+  setDisplay({ showFleet = this.showFleet, showRays = this.showRays }) {
+    this.showFleet = showFleet;
+    this.showRays = showRays;
+    this.dirty = true;
   }
 
   setStyle(style) {
@@ -470,7 +476,7 @@ export class TrackView {
 
     const toScreen = (x, y) => [(x - cx) * scale + width / 2, height / 2 - (y - cy) * scale];
     if (this.frame) {
-      this.drawCrashes(toScreen, scale);
+      if (this.showFleet) this.drawCrashes(toScreen, scale);
       this.drawCars(toScreen, scale);
       this.drawLeader(toScreen, scale);
     }
@@ -479,6 +485,7 @@ export class TrackView {
 
   drawCrashes(toScreen, scale) {
     const ctx = this.ctx;
+    ctx.globalAlpha = 0.3;
     const size = Math.max(4, 1.1 * scale);
     ctx.lineCap = 'round';
     for (const [color, width] of [['rgba(255,255,255,0.8)', 4.5], [CRASH_COLOR, 2.4]]) {
@@ -495,15 +502,16 @@ export class TrackView {
       }
       ctx.stroke();
     }
+    ctx.globalAlpha = 1;
   }
 
   drawCar(sx, sy, heading, scale, state, leader) {
     const { ctx, dpr, style } = this;
-    const k = Math.max(scale, MIN_CAR_PIXELS / CAR_LENGTH) * dpr;
+    const k = Math.max(scale, (leader ? MIN_LEADER_PIXELS : MIN_CAR_PIXELS) / CAR_LENGTH) * dpr;
     const cos = Math.cos(heading) * k;
     const sin = Math.sin(heading) * k;
     ctx.setTransform(cos, -sin, -sin, -cos, sx * dpr, sy * dpr);
-    ctx.globalAlpha = state === 0 ? 0.5 : 1;
+    ctx.globalAlpha = leader ? 1 : state === 0 ? 0.15 : state === 2 ? 0.65 : 0.45;
     for (const part of this.parts) {
       const colors = style.car_colors[part.key];
       let color = state === 0 ? colors.dead : colors.alive;
@@ -519,7 +527,7 @@ export class TrackView {
   drawCars(toScreen, scale) {
     const { cars, leader } = this.frame;
     const margin = 30;
-    for (const wanted of [0, 1, 2]) {
+    for (const wanted of this.showFleet ? [0, 1, 2] : []) {
       for (let index = 0; index < cars.length; index += 1) {
         const [x, y, heading, state] = cars[index];
         if (state !== wanted || index === leader) continue;
@@ -541,6 +549,7 @@ export class TrackView {
     if (!lead) return;
     const ctx = this.ctx;
     const [sx, sy] = toScreen(lead[0], lead[1]);
+    if (this.showRays) {
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'rgba(255,255,255,0.78)';
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -558,8 +567,14 @@ export class TrackView {
       ctx.arc(ex, ey, 2, 0, Math.PI * 2);
     }
     ctx.fill();
+    }
 
-    const radius = Math.max(13, 3.4 * scale);
+    const radius = Math.max(18, 3.4 * scale);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(22,31,39,0.7)';
+    ctx.beginPath();
+    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = LEADER_COLOR;
     ctx.beginPath();
@@ -574,22 +589,22 @@ export class TrackView {
     ctx.fill();
   }
 
-  // On small canvases the five-row plate would cover a good part of the track: one line instead.
-  drawCompactHud() {
+  // Training totals are in the HTML summary; the scene only shows the current leader.
+  drawHud() {
     const ctx = this.ctx;
     const frame = this.frame;
     const text = frame
-      ? `${this.iterationWord} ${frame.gen + 1} · ${frame.alive}/${frame.n} · ${this.progressText(frame.hud.progress)}`
+      ? `Лидер: ${this.progressText(frame.hud.progress)} · ${frame.hud.speed.toFixed(1)} м/с`
       : 'Ждём кадр…';
     ctx.font = HUD_FONT;
     const x = 10;
-    const y = 10;
-    const plateWidth = Math.min(ctx.measureText(text).width + 24, Math.max(this.width - 150, 120));
+    const y = this.height - 76;
+    const plateWidth = Math.min(ctx.measureText(text).width + 24, Math.max(this.width - 24, 120));
     ctx.fillStyle = 'rgba(22, 31, 39, 0.84)';
     ctx.beginPath();
     ctx.roundRect(x, y, plateWidth, 26, 8);
     ctx.fill();
-    ctx.fillStyle = CRASH_COLOR;
+    ctx.fillStyle = LEADER_COLOR;
     ctx.beginPath();
     ctx.roundRect(x, y + 6, 3, 14, 2);
     ctx.fill();
@@ -599,44 +614,4 @@ export class TrackView {
     ctx.fillText(text, x + 12, y + 13, plateWidth - 18);
   }
 
-  drawHud() {
-    if (this.width < COMPACT_HUD_WIDTH || this.height < COMPACT_HUD_HEIGHT) {
-      this.drawCompactHud();
-      return;
-    }
-    const ctx = this.ctx;
-    const frame = this.frame;
-    const rows = [
-      [this.iterationWord === 'Пок.' ? 'Поколение' : 'Итерация', frame ? String(frame.gen + 1) : '—'],
-      ['Шаг', frame ? String(frame.step) : '—'],
-      ['Живых', frame ? `${frame.alive} / ${frame.n}` : '—'],
-      ['Скорость', frame ? `${frame.hud.speed.toFixed(1)} м/с` : '—'],
-      ['Прогресс', frame ? this.progressText(frame.hud.progress) : '—'],
-    ];
-    const x = 12;
-    const y = 12;
-    const rowHeight = 20;
-    const plateWidth = 168;
-    const plateHeight = rows.length * rowHeight + 14;
-    ctx.fillStyle = 'rgba(22, 31, 39, 0.84)';
-    ctx.beginPath();
-    ctx.roundRect(x, y, plateWidth, plateHeight, 10);
-    ctx.fill();
-    ctx.fillStyle = CRASH_COLOR;
-    ctx.beginPath();
-    ctx.roundRect(x, y + 8, 3, plateHeight - 16, 2);
-    ctx.fill();
-    ctx.textBaseline = 'middle';
-    rows.forEach(([label, value], index) => {
-      const rowY = y + 7 + rowHeight / 2 + index * rowHeight;
-      ctx.font = LABEL_FONT;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = 'rgba(214, 224, 232, 0.72)';
-      ctx.fillText(label, x + 14, rowY);
-      ctx.font = HUD_FONT;
-      ctx.textAlign = 'right';
-      ctx.fillStyle = '#f4f7f9';
-      ctx.fillText(value, x + plateWidth - 12, rowY);
-    });
-  }
 }

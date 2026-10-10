@@ -28,7 +28,7 @@
       <a class="rail-item" href="#/lab" data-tip="Запуски обучения: кривые, сеть лидера и параметры. Здесь машинки учатся ездить." data-tip-key="1" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-flask-conical"/></svg><span>Лаборатория</span></a>
       <a class="rail-item" href="#/tracks" data-tip="Выберите трассу для запуска или нарисуйте свою: точки мышью, ширина, сохранение." data-tip-key="2" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-route"/></svg><span>Трассы</span></a>
       <a class="rail-item" href="#/challenges" data-tip="Задания со звёздами: уложись в лимиты и побей цель. Скоро." data-tip-key="3" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-trophy"/></svg><span>Челленджи</span></a>
-      <a class="rail-item" href="#/garage" data-tip="Сохранённые сети: проверка на любой трассе, импорт и экспорт. Скоро." data-tip-key="4" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-warehouse"/></svg><span>Гараж</span></a>
+      <a class="rail-item" href="#/garage" data-tip="Лучшие сети ваших запусков: проверьте любую на всех трассах — научилась ездить или только запомнила одну трассу." data-tip-key="4" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-warehouse"/></svg><span>Гараж</span></a>
       <div class="rail-spacer"></div>
       <a class="rail-item" href="#/settings" data-tip="Тема оформления, звуки и клавиши. Остальные настройки скоро." data-tip-key="5" data-tip-side="right"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#i-settings"/></svg><span>Настройки</span></a>
     </nav>
@@ -64,8 +64,8 @@
         </header>
 
         <section id="compare-view" class="compare-view" aria-label="Сравнение запусков" hidden></section>
-        <div class="layout">
-          <aside class="panel params" aria-labelledby="params-title">
+        <div class="layout" id="run-layout">
+          <aside class="panel params" id="params-panel" aria-labelledby="params-title">
             <h2 id="params-title" class="panel-title">Параметры</h2>
             <div id="task-panel" class="task-panel" hidden></div>
             <div id="params-body" class="params-body">
@@ -74,8 +74,22 @@
             </div>
           </aside>
 
+          <section class="run-summary" aria-label="Результаты обучения">
+            <dl class="run-stats">
+              <div class="run-stat"><dt id="stat-iteration-label">Итерация</dt><dd id="stat-iteration">—</dd><small>Сейчас</small></div>
+              <div class="run-stat run-stat-best"><dt>Лучший прогресс</dt><dd id="stat-best">—</dd><small>За всё обучение</small></div>
+              <div class="run-stat"><dt>На трассе</dt><dd id="stat-alive">—</dd><small class="stat-race-hint">В текущем заезде</small></div>
+              <div class="run-stat"><dt>Финишировали</dt><dd id="stat-finished">—</dd><small class="stat-race-hint">В текущем заезде</small></div>
+            </dl>
+            <button id="params-toggle" class="btn" type="button" aria-expanded="true" aria-controls="params-panel">Скрыть параметры</button>
+          </section>
+
           <section class="stage" aria-label="Трасса">
             <canvas id="track" tabindex="0" aria-label="Трасса с машинками"></canvas>
+            <div class="scene-tools" role="group" aria-label="Отображение заезда">
+              <button id="fleet-toggle" class="chip" type="button" aria-pressed="false">Только лидер</button>
+              <button id="rays-toggle" class="chip" type="button" aria-pressed="false">Лучи</button>
+            </div>
             <div class="camera-tools" role="group" aria-label="Камера">
               <button id="camera-mode" class="chip" type="button" aria-label="Режим камеры: вписать или следовать (клавиша C)" title="Режим камеры (C)">Вписать</button>
               <button id="zoom-out" class="chip chip-square" type="button" aria-label="Уменьшить масштаб (клавиша −)" title="Уменьшить (−)">−</button>
@@ -97,9 +111,14 @@
           </section>
 
           <aside class="panel network" aria-labelledby="network-title">
-            <h2 id="network-title" class="panel-title">Сеть лидера</h2>
-            <div id="network-body" class="network-body"></div>
-            <ul id="network-legend" class="net-legend" aria-label="Как читать граф"></ul>
+            <div class="network-head">
+              <h2 id="network-title" class="panel-title">Сеть лидера</h2>
+              <button id="network-toggle" class="btn btn-small" type="button" aria-expanded="false" aria-controls="network-content">Показать сеть</button>
+            </div>
+            <div id="network-content" hidden>
+              <div id="network-body" class="network-body"></div>
+              <ul id="network-legend" class="net-legend" aria-label="Как читать граф"></ul>
+            </div>
           </aside>
 
           <section class="panel curves" aria-labelledby="curves-title">
@@ -139,10 +158,7 @@
           <span class="screen-sub">Сохранённые сети</span>
         </header>
         <div class="screen-body">
-          <div class="empty">
-            <b>Скоро</b>
-            <p>Здесь появятся сохранённые сети, проверка на любой трассе и импорт с экспортом. Пока лучшая сеть каждого запуска лежит в папке runs.</p>
-          </div>
+          <div id="garage-root" class="garage-root"></div>
         </div>
       </section>
       <section class="screen-pane" data-screen="settings" hidden>
