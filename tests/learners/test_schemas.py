@@ -30,7 +30,7 @@ def test_catalog_lists_evolution_and_ppo(schemas):
     ids = [schema["id"] for schema in schemas]
 
     # Assert
-    assert ids == ["evolution", "ppo"]
+    assert ids == ["evolution", "ppo", "cem", "a2c"]
     assert all(schema["label"] and schema["description"] for schema in schemas)
 
 

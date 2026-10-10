@@ -19,9 +19,23 @@ def _ppo() -> Learner:
     return PPOLearner()
 
 
+def _cem() -> Learner:
+    from rl_fun.learners.cem import CEMLearner
+
+    return CEMLearner()
+
+
+def _a2c() -> Learner:
+    from rl_fun.learners.a2c import A2CLearner
+
+    return A2CLearner()
+
+
 _FACTORIES: dict[str, Callable[[], Learner]] = {
     "evolution": _evolution,
     "ppo": _ppo,
+    "cem": _cem,
+    "a2c": _a2c,
 }
 
 

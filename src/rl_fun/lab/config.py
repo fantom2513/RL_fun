@@ -12,7 +12,7 @@ from rl_fun.racing.model_spec import ModelSpec
 from rl_fun.racing.track import available_tracks
 
 MAX_NAME_LENGTH = 40
-LEARNERS = ("evolution", "ppo")
+LEARNERS = ("evolution", "ppo", "cem", "a2c")
 
 def _default_fitness() -> FitnessSpec:
     return FitnessSpec(dict(PRESETS["balanced"].weights))
@@ -197,7 +197,7 @@ class RunConfig:
             )
         # `elite` belongs to evolution; PPO runs ignore it, so it is not tied to the population.
         elite = _int_field(
-            "elite", self.elite, 1, population - 1 if self.learner == "evolution" else None
+            "elite", self.elite, 1, population - 1 if self.learner in ("evolution", "cem") else None
         )
         mutation_rate = _number_field("mutation_rate", self.mutation_rate)
         if not 0 < mutation_rate <= 1:

@@ -181,7 +181,7 @@ def test_schema_is_the_evolution_schema():
 def test_registry_creates_the_evolution_learner():
     # Arrange / Act / Assert
     assert isinstance(get_learner("evolution"), EvolutionLearner)
-    assert available_learners() == ("evolution", "ppo")
+    assert available_learners() == ("evolution", "ppo", "cem", "a2c")
 
 
 def test_registry_creates_the_ppo_learner():

@@ -4,7 +4,7 @@ import { h } from "../core/dom.js";
 import { number, percent } from "../core/format.js";
 import { STEP_SECONDS } from "../core/levels.js";
 
-export const LEARNER_LABELS = { evolution: "Эволюция", ppo: "PPO" };
+export const LEARNER_LABELS = { evolution: "Эволюция", ppo: "PPO", cem: "CEM", a2c: "A2C" };
 
 const STATUS_LABELS = {
   running: "идёт",

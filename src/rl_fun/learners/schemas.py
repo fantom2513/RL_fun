@@ -53,6 +53,7 @@ def _max_steps() -> dict[str, Any]:
         live=False,
     )
 
+
 EVOLUTION_SCHEMA: dict[str, Any] = {
     "id": "evolution",
     "label": "Эволюция",
@@ -320,7 +321,58 @@ PPO_SCHEMA: dict[str, Any] = {
     ],
 }
 
-LEARNER_SCHEMAS: list[dict[str, Any]] = [EVOLUTION_SCHEMA, PPO_SCHEMA]
+
+def _cem_schema() -> dict[str, Any]:
+    """Cross-entropy method: the evolution parameters that make sense, described for CEM."""
+    schema = copy.deepcopy(EVOLUTION_SCHEMA)
+    schema["id"] = "cem"
+    schema["label"] = "Кросс-энтропия (CEM)"
+    schema["description"] = (
+        "Метод кросс-энтропии: вокруг одной «средней» сети разбрасывается облако вариантов, "
+        "лучшие из них задают новое среднее и новый разброс весов. Нет мутаций и скрещивания: "
+        "облако само сжимается к удачным весам. Очень простой метод и хороший соперник эволюции."
+    )
+    population, mutation = schema["groups"]
+    population["params"][1]["hint"] = (
+        "Сколько лучших вариантов из облака определяют новое среднее. Меньше — быстрее "
+        "сходится, но легче застрять; больше — осторожнее. Должно быть меньше размера популяции."
+    )
+    mutation["label"] = "Облако весов"
+    mutation["params"] = [param for param in mutation["params"] if param["key"] != "mutation_rate"]
+    for param in mutation["params"]:
+        if param["key"] == "mutation_scale":
+            param["label"] = "Добавочный шум"
+            param["hint"] = (
+                "Что прибавляется к разбросу весов после каждого поколения (одна десятая этого "
+                "числа), чтобы облако не схлопнулось слишком рано. Больше — дольше ищет."
+            )
+        if param["key"] == "init_scale":
+            param["label"] = "Начальный разброс весов"
+            param["hint"] = "Размах облака в первом поколении. Влияет только на старт."
+    return schema
+
+
+def _a2c_schema() -> dict[str, Any]:
+    """A2C: PPO without the clip, the epochs and the minibatches."""
+    schema = copy.deepcopy(PPO_SCHEMA)
+    schema["id"] = "a2c"
+    schema["label"] = "A2C"
+    schema["description"] = (
+        "Actor-critic без «предохранителей» PPO: после каждого сбора опыта делается один шаг "
+        "градиента по всему опыту сразу. Это самый прямой policy gradient: быстрее и проще, но "
+        "шаги ничем не ограничены, и обучение легче срывается. Сравните с PPO на том же задании."
+    )
+    dropped = {"ppo.clip_epsilon", "ppo.epochs", "ppo.minibatch_size"}
+    for group in schema["groups"]:
+        group["params"] = [param for param in group["params"] if param["key"] not in dropped]
+    schema["groups"] = [group for group in schema["groups"] if group["params"]]
+    return schema
+
+
+CEM_SCHEMA: dict[str, Any] = _cem_schema()
+A2C_SCHEMA: dict[str, Any] = _a2c_schema()
+
+LEARNER_SCHEMAS: list[dict[str, Any]] = [EVOLUTION_SCHEMA, PPO_SCHEMA, CEM_SCHEMA, A2C_SCHEMA]
 
 
 def copy_schema(schema: dict[str, Any]) -> dict[str, Any]:

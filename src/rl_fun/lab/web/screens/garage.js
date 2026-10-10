@@ -8,7 +8,7 @@ import '../ui/seg.js';
 
 const STEP_SECONDS = 1 / 30;
 const TERMINAL = new Set(['finished', 'stopped', 'error']);
-const LEARNERS = { evolution: 'Эволюция', ppo: 'PPO' };
+const LEARNERS = { evolution: 'Эволюция', ppo: 'PPO', cem: 'CEM', a2c: 'A2C' };
 
 const options = (...items) => JSON.stringify(items.map(([value, label]) => ({ value, label })));
 

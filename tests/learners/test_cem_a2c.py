@@ -154,3 +154,25 @@ def test_a2c_best_snapshot_is_in_the_shared_format():
     snapshot = learner.best_snapshot()
 
     assert snapshot is not None and len(snapshot["weights"]) == config.model.weight_count
+
+
+# ---- through the worker ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("learner", ["cem", "a2c"])
+def test_the_worker_runs_the_new_learners_and_saves_a_network(learner, tmp_path):
+    import json
+
+    from rl_fun.lab.worker import run_worker
+    from .test_worker_ppo import FakeConnection
+
+    conn = FakeConnection()
+    config = _config(learner, generations=2).to_dict()
+
+    run_worker(config, conn, tmp_path, speed="max")
+
+    assert conn.sent[-1] == {"t": "status", "status": "finished"}
+    assert [message["gen"] for message in conn.of_type("gen")] == [0, 1]
+    [folder] = [path for path in tmp_path.iterdir() if path.is_dir()]
+    snapshot = json.loads((folder / "best_weights.json").read_text("utf-8"))
+    assert len(snapshot["weights"]) == RunConfig().model.weight_count
