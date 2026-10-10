@@ -90,6 +90,8 @@ class LabServer(ThreadingHTTPServer):
         self._close_lock = threading.Lock()
         self._thread: threading.Thread | None = None
         super().__init__(("127.0.0.1", port), _Handler)
+        from rl_fun.snake.manager import SnakeManager
+        self.snake = SnakeManager(getattr(manager, "runs_dir", self.tracks_dir.parent))
 
     @property
     def port(self) -> int:
@@ -133,7 +135,10 @@ class LabServer(ThreadingHTTPServer):
                 self._thread.join(5.0)
             self.server_close()
         finally:
-            self.manager.shutdown()
+            try:
+                self.snake.shutdown()
+            finally:
+                self.manager.shutdown()
 
 
 def make_server(
@@ -234,7 +239,10 @@ class _Handler(BaseHTTPRequestHandler):
     def _route_api(self, method: str, path: str, query: str) -> None:
         manager = self.server.manager
         parts = [unquote(part) for part in path.split("/")]
-        if parts == ["catalog"]:
+        if parts[0] == "snake":
+            from rl_fun.snake.api import handle_snake_request
+            handle_snake_request(self, method, parts[1:])
+        elif parts == ["catalog"]:
             self._expect(method, "GET")
             self._send_json(200, self.server.catalog)
         elif parts == ["tracks"]:

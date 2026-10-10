@@ -2,6 +2,66 @@
 
 RL Fun — учебная лаборатория обучения с подкреплением на Gymnasium. Один runtime запускает стационарного многорукого бандита и CartPole, сохраняет метрики каждого seed и сравнивает результаты. Доступны алгоритмы `random`, `bandit_greedy` и `bandit_epsilon`. Последние два требуют StationaryBanditEnv с неизменёнными действиями.
 
+## Snake Lab
+
+The local laboratory includes a Snake sandbox with manual play, DQN training,
+evolutionary neural-policy training, and human-left/agent-right comparison.
+Launch it from the repository root:
+
+```powershell
+uv run --all-groups python scripts/lab.py
+```
+
+Open the **Змейка** navigation item (or `http://127.0.0.1:8765/#/snake`).
+Choose **Я играю**, **Нейросеть**, or **Я vs нейросеть**. Click **Играть**;
+arrows/WASD turn the human snake, Space pauses. Click the human board to restore
+keyboard focus. The direction buttons support touch input. Losing browser focus
+pauses playback. Both sides share the initial seed and tick rate; either side
+can continue after the other loses. Changing the board, seed, mode or model
+creates a fresh paused game.
+
+The training panel runs a separate CPU process. **DQN** learns from replayed
+experience using a target network and epsilon-greedy exploration. **Эволюция**
+evaluates a population on shared seeds, retains elites and mutates offspring.
+Both use an 11-feature observation and an `11 → 64 → 64 → 3` MLP. Scores count
+food eaten; reward is `+10` for food, `-10` for collision and `-0.01` per ordinary
+step. The score graph distinguishes training averages from greedy evaluation on
+fixed seeds. A short run checks execution; substantial playing strength needs
+more training and parameter tuning.
+
+Start, pause/resume, stop and save training from the panel. Models auto-save
+after the first completed iteration, every 20 iterations, and on completion or
+stop. Select a saved model under **Агент на поле** to load it into the game.
+To resume training, select the model and check **Продолжить выбранную модель**;
+the new episode/generation budget is added to the saved count. Continuation
+requires the same algorithm, board size and (for evolution) population size.
+DQN restores optimizer, target network and replay; evolution restores the
+population and champion. Before training, agent play is explicitly labeled
+**Необученная сеть**.
+
+Artifacts live in `<runs-dir>/snake/<run-id>/`: `record.json`, `metrics.jsonl`
+and the safely loaded tensor checkpoint `model.pt`. Use `--runs-dir` and `--port`
+to launch an independent sandbox. Saved models and metric history remain
+available after server restart. One Snake training job can run at a time.
+
+For custom algorithms, use the environment directly from Python:
+
+```python
+import gymnasium as gym
+import rl_fun.environments
+
+env = gym.make("RLFun/Snake-v0", size=16)
+observation, info = env.reset(seed=42)
+# Relative actions: 0 = straight, 1 = left, 2 = right.
+observation, reward, terminated, truncated, info = env.step(0)
+env.close()
+```
+
+Learners and policies are in `src/rl_fun/snake/`; the independent environment
+also exposes `snapshot()` for custom visualizations. Snake-specific API routes
+are under `/api/snake`, including `catalog`, `state`, `models`, `train`,
+`control`, `events`, and `games`.
+
 ## Установка и ноутбук
 
 Нужны Python 3.12 или новее и uv. Выполняйте команды из корня репозитория:

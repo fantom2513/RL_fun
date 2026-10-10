@@ -1,7 +1,7 @@
 # Snake Lab design
 
 Date: 2026-10-10
-Status: proposed written specification; conversational scope approved
+Status: approved and implemented
 
 ## Intent and scope
 

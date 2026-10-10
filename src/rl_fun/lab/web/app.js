@@ -17,6 +17,7 @@ import { compareRows, renderCompare, sortRows } from './screens/compare.js';
 import { initTooltips } from './ui/tooltip.js';
 import { summarizeRun } from './core/run_summary.js';
 import './ui/seg.js';
+import { initSnake } from './snake/screen.js';
 
 const RUN_COLORS = ['#3b82c4', '#e08a3c', '#2fa59a', '#9a6fd0', '#d05d8f', '#8fa83a', '#5ab4e0', '#a8795a'];
 const STATUS_LABELS = {
@@ -867,11 +868,14 @@ async function start() {
 function initShell() {
   initTheme();
   initTooltips();
+  const snakeScreen = initSnake({ root: $('snake-root'), toast });
   tracksScreen = initTracks({
     root: $('tracks-root'), api, onUse: useTrack, onChanged: reloadTracks, toast,
   });
   garageScreen = initGarage({ root: $('garage-root'), api, getCatalog: () => state.catalog, toast });
   startRouter((route) => {
+    if (route.name === 'snake') snakeScreen.show();
+    else snakeScreen.hide();
     showLabView(route.name === 'lab' && route.rest[0] === 'compare');
     if (route.name === 'tracks') tracksScreen.show(route);
     if (route.name === 'garage') garageScreen.show();

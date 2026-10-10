@@ -1,6 +1,6 @@
 // Hash router for the lab shell: parses '#/section/...' routes and shows the matching screen.
 
-export const SECTIONS = ['lab', 'tracks', 'challenges', 'garage', 'settings'];
+export const SECTIONS = ['lab', 'tracks', 'challenges', 'garage', 'settings', 'snake'];
 
 export const TITLES = {
   lab: 'Лаборатория',
@@ -8,6 +8,7 @@ export const TITLES = {
   challenges: 'Челленджи',
   garage: 'Гараж',
   settings: 'Настройки',
+  snake: 'Змейка',
 };
 
 export function parseRoute(hash) {

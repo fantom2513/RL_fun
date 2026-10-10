@@ -852,7 +852,7 @@ def test_router_parses_hash_routes() -> None:
     )
 
     assert result == [
-        ["lab", "tracks", "challenges", "garage", "settings"],
+        ["lab", "tracks", "challenges", "garage", "settings", "snake"],
         {"name": "lab", "rest": [], "valid": False},
         {"name": "tracks", "rest": ["new"], "valid": True},
         {"name": "lab", "rest": ["new", "network"], "valid": True},
