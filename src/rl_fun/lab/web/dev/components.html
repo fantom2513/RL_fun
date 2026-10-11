@@ -185,7 +185,103 @@
         <p class="field-hint">Покой и «на ходу» · изменено (точка и «вернуть») · логарифмическая шкала · ошибка · применяется (крутилка) · недоступен · компактные.</p>
       </section>
 
-      <!-- PART-3 -->
+      <!-- run tabs -->
+      <section class="card sc sc-wide" aria-labelledby="sc-runtab">
+        <header><h2 id="sc-runtab" class="section-title">Вкладка запуска</h2><code>.run-tab</code></header>
+        <div class="sc-row" role="tablist" aria-label="Запуски">
+          <button class="run-tab" role="tab" aria-selected="true" data-status="running" style="--c: var(--run-1)" title="Гонщик · 5 лучей">
+            <span class="run-tab-name"><i data-icon="dna"></i>Гонщик · 5 лучей</span><span class="run-tab-best">64 %</span>
+            <span class="run-tab-meta"><span class="dot dot-running"></span>идёт · <span class="mono">пок. 44</span></span><span class="run-tab-cap">прогресс</span>
+          </button>
+          <button class="run-tab is-hover" role="tab" aria-selected="false" data-status="paused" style="--c: var(--run-2)">
+            <span class="run-tab-name"><i data-icon="brain"></i>PPO · осторожный</span><span class="run-tab-best">54 %</span>
+            <span class="run-tab-meta"><i data-icon="pause"></i>пауза · <span class="mono">ит. 120</span></span><span class="run-tab-cap">наведение</span>
+          </button>
+          <button class="run-tab" role="tab" aria-selected="false" data-status="finished" style="--c: var(--run-3)">
+            <span class="run-tab-name"><i data-icon="dna"></i>Три луча</span><span class="run-tab-best">36,90</span>
+            <span class="run-tab-meta"><span class="dot dot-finished"></span>готово · <span class="mono">пок. 80</span></span><span class="run-tab-cap">круг, с</span>
+          </button>
+          <button class="run-tab" role="tab" aria-selected="false" data-status="stopped" style="--c: var(--run-4)">
+            <span class="run-tab-name"><i data-icon="dna"></i>Простая</span><span class="run-tab-best">41 %</span>
+            <span class="run-tab-meta"><span class="dot"></span>остановлен · <span class="mono">пок. 12</span></span><span class="run-tab-cap">прогресс</span>
+          </button>
+          <button class="run-tab" role="tab" aria-selected="false" data-status="error" style="--c: var(--run-5)">
+            <span class="run-tab-name"><i data-icon="brain"></i>PPO · большой батч</span><span class="run-tab-best">—</span>
+            <span class="run-tab-meta"><i data-icon="triangle-alert"></i>ошибка</span><span class="run-tab-cap"></span>
+          </button>
+          <button class="run-tab is-focus" role="tab" aria-selected="false" data-status="running" style="--c: var(--run-6)">
+            <span class="run-tab-name"><i data-icon="trophy"></i>Быстрее 35 секунд</span><span class="run-tab-best">35,10</span>
+            <span class="run-tab-meta"><span class="dot dot-running"></span><span class="run-tab-stars" aria-label="1 звезда из 3"><i data-icon="star"></i></span>челлендж</span><span class="run-tab-cap">фокус</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- cards -->
+      <section class="card sc sc-wide" aria-labelledby="sc-card">
+        <header><h2 id="sc-card" class="section-title">Карточки выбора</h2><code>.card · .tpl-card · .learner-card · .track-card</code></header>
+        <div class="sc-cards" role="radiogroup" aria-label="Шаблон">
+          <button class="tpl-card" role="radio" aria-checked="false" type="button"><b>Простая</b><span>3 луча и один слой. Учится за пару минут.</span><span class="mono">3 → 4 → 2</span></button>
+          <button class="tpl-card" role="radio" aria-checked="true" type="button"><b>Осторожная</b><span>Ценит центр трассы и плавный руль.</span><span class="mono">8 → 6 → 5 → 2</span></button>
+          <button class="tpl-card is-hover" role="radio" aria-checked="false" type="button"><b>Гонщик</b><span>Наведение: подъём на 1 px.</span><span class="mono">8 → 6 → 5 → 3</span></button>
+        </div>
+        <div class="sc-cards" role="radiogroup" aria-label="Обучатель">
+          <button class="learner-card" role="radio" aria-checked="false" type="button"><i data-icon="dna"></i><b>Эволюция</b><span>Поколения машинок: лучшие передают веса потомкам.</span></button>
+          <button class="learner-card" role="radio" aria-checked="true" type="button"><i data-icon="brain"></i><b>PPO</b><span>Одна сеть учится на опыте всех машинок сразу.</span></button>
+          <button class="learner-card" role="radio" aria-checked="false" aria-disabled="true" type="button"><i data-icon="git-compare-arrows"></i><b>Кросс-энтропия <span class="tag">скоро</span></b><span>Простой метод для сравнения с эволюцией.</span></button>
+        </div>
+        <div class="sc-cards" role="radiogroup" aria-label="Трасса">
+          <button class="track-card" role="radio" aria-checked="true" type="button"><span class="thumb sc-thumb"><i data-icon="route" class="icon-l"></i></span><b>Гран-при</b><span>circuit · 612 м</span></button>
+          <button class="track-card" role="radio" aria-checked="false" type="button"><span class="thumb sc-thumb"><i data-icon="waves" class="icon-l"></i></span><b>Волны</b><span>wavy · 390 м</span></button>
+          <button class="track-card add" type="button"><i data-icon="pencil"></i><b>Нарисовать свою</b></button>
+        </div>
+      </section>
+
+      <!-- groups & callouts -->
+      <section class="card sc" aria-labelledby="sc-group">
+        <header><h2 id="sc-group" class="section-title">Группы и сообщения</h2><code>details.group · .callout</code></header>
+        <details class="group">
+          <summary><i data-icon="chevron-right" class="chev"></i>Исследование и регуляризация<span class="muted">энтропия 0,01 · ценность 0,5 · σ 0,6</span><span class="right"><span class="tag">по умолчанию</span></span></summary>
+        </details>
+        <details class="group" open>
+          <summary><i data-icon="chevron-right" class="chev"></i>Основное<span class="muted">4 параметра</span></summary>
+          <div class="group-body"><lab-param label="Популяция" kind="int" min="4" max="200" value="60" compact></lab-param><lab-param label="Элита" kind="int" min="1" max="20" value="4" compact></lab-param></div>
+        </details>
+        <details class="group" open>
+          <summary><i data-icon="chevron-right" class="chev"></i>Оптимизация<span class="muted">4 параметра</span><span class="right"><span class="tag tag-err"><i data-icon="triangle-alert"></i>1 ошибка</span></span></summary>
+        </details>
+        <div class="callout"><i data-icon="info"></i><span>У PPO награда начисляется на каждом шаге.</span></div>
+        <div class="callout callout-ok"><i data-icon="circle-check"></i><span><strong>Сеть собрана правильно:</strong> есть руль и газ</span></div>
+        <div class="callout callout-warn"><i data-icon="triangle-alert"></i><span>Поворот радиусом меньше 12 м</span></div>
+        <div class="callout callout-err"><i data-icon="octagon-x"></i><span><strong>Мини-батч больше роллаута.</strong> Исправить</span></div>
+      </section>
+
+      <!-- overlays -->
+      <section class="card sc" aria-labelledby="sc-pop">
+        <header><h2 id="sc-pop" class="section-title">Подсказка, меню, тост</h2><code>.tooltip · .popover · .toast</code></header>
+        <div class="sc-row">
+          <div class="sc-anchor"><span class="tooltip" role="tooltip">Пауза и продолжить</span></div>
+          <div class="sc-anchor"><span class="tooltip" role="tooltip">Новый запуск <span class="kbd">N</span></span></div>
+        </div>
+        <div class="sc-row">
+          <div class="sc-anchor"><div class="popover" role="menu">
+            <button class="menu-item" role="menuitem" type="button"><i data-icon="rotate-ccw"></i>Повторить с изменениями</button>
+            <button class="menu-item is-hover" role="menuitem" type="button"><i data-icon="save"></i>Сохранить в гараж</button>
+            <button class="menu-item" role="menuitem" type="button"><i data-icon="download"></i>Скачать веса<span class="kbd">D</span></button>
+            <div class="menu-sep"></div>
+            <button class="menu-item danger" role="menuitem" type="button"><i data-icon="trash-2"></i>Удалить</button>
+          </div></div>
+          <div class="sc-anchor"><div class="popover popover-board" role="menu">
+            <button class="menu-item" role="menuitem" type="button"><i data-icon="plus"></i>Добавить нейрон в слой<span class="kbd">+</span></button>
+            <button class="menu-item danger" role="menuitem" type="button"><i data-icon="minus"></i>Убрать этот нейрон<span class="kbd">Del</span></button>
+          </div></div>
+        </div>
+        <div class="sc-toasts">
+          <div class="toast toast-success" role="status"><i data-icon="circle-check"></i><span class="toast-text">Мутация 0,20 применится со следующего поколения</span><button class="btn btn-sm btn-ghost" type="button">Отменить</button></div>
+          <div class="toast toast-error" role="alert"><i data-icon="triangle-alert"></i><span class="toast-text">Запуск остановился с ошибкой</span><button class="btn btn-sm btn-ghost btn-icon" type="button" aria-label="Закрыть"><i data-icon="x"></i></button></div>
+        </div>
+      </section>
+
+      <!-- PART-4 -->
     </div>
   </main>
   <lab-toast-host></lab-toast-host>
