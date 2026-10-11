@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Витрина компонентов · Лаборатория</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/dev/components.css">
+</head>
+<body>
+  <header class="sc-head">
+    <h1>Витрина компонентов</h1>
+    <p>DESIGN.md §8 · все состояния · клавиша T — схема</p>
+    <span class="sc-spacer"></span>
+    <lab-seg id="theme" class="seg-sm" label="Цветовая схема" value="system">
+      <button value="system"><i data-icon="monitor"></i>Как в системе</button>
+      <button value="light"><i data-icon="sun"></i>Светлая</button>
+      <button value="dark"><i data-icon="moon"></i>Тёмная</button>
+    </lab-seg>
+    <button id="toast-demo" class="btn btn-sm" type="button"><i data-icon="info"></i>Показать тост</button>
+  </header>
+
+  <main class="sc-page">
+    <div class="sc-grid">
+
+      <!-- buttons -->
+      <section class="card sc sc-wide" aria-labelledby="sc-btn">
+        <header><h2 id="sc-btn" class="section-title">Кнопка</h2><code>.btn</code></header>
+        <div class="sc-row">
+          <div class="sc-state"><button class="btn" type="button">Обычная</button><small>покой</small></div>
+          <div class="sc-state"><button class="btn is-hover" type="button">Обычная</button><small>наведение</small></div>
+          <div class="sc-state"><button class="btn is-active" type="button">Обычная</button><small>нажатие</small></div>
+          <div class="sc-state"><button class="btn is-focus" type="button">Обычная</button><small>фокус</small></div>
+          <div class="sc-state"><button class="btn" type="button" disabled>Обычная</button><small>недоступна</small></div>
+          <div class="sc-state"><button class="btn is-loading" type="button"><span>Обычная</span></button><small>загрузка</small></div>
+        </div>
+        <div class="sc-row">
+          <div class="sc-state"><button class="btn btn-primary" type="button"><i data-icon="play"></i>Запустить<span class="kbd">Ctrl Enter</span></button><small>главная</small></div>
+          <div class="sc-state"><button class="btn btn-primary is-hover" type="button">Запустить</button><small>наведение</small></div>
+          <div class="sc-state"><button class="btn btn-primary is-active" type="button">Запустить</button><small>нажатие</small></div>
+          <div class="sc-state"><button class="btn btn-primary is-focus" type="button">Запустить</button><small>фокус</small></div>
+          <div class="sc-state"><button class="btn btn-primary" type="button" aria-disabled="true">Запустить</button><small>недоступна</small></div>
+          <div class="sc-state"><button class="btn btn-primary is-loading" type="button"><span>Запустить</span></button><small>загрузка</small></div>
+        </div>
+        <div class="sc-row">
+          <div class="sc-state"><button class="btn btn-ghost" type="button"><i data-icon="upload"></i>Загрузить JSON</button><small>тихая</small></div>
+          <div class="sc-state"><button class="btn btn-ghost is-hover" type="button">Отмена</button><small>тихая · наведение</small></div>
+          <div class="sc-state"><button class="btn btn-danger" type="button"><i data-icon="trash-2"></i>Удалить</button><small>опасная</small></div>
+          <div class="sc-state"><button class="btn btn-danger is-hover" type="button">Удалить</button><small>опасная · наведение</small></div>
+          <div class="sc-state"><button class="btn btn-icon" type="button" aria-label="Пауза (пробел)" title="Пауза · пробел"><i data-icon="pause"></i></button><small>иконка</small></div>
+          <div class="sc-state"><button class="btn btn-ghost btn-icon" type="button" aria-label="Ещё" title="Ещё"><i data-icon="ellipsis"></i></button><small>иконка · тихая</small></div>
+        </div>
+        <div class="sc-row">
+          <div class="sc-state"><button class="btn btn-sm" type="button"><i data-icon="copy"></i>28 px</button><small>btn-sm</small></div>
+          <div class="sc-state"><button class="btn" type="button"><i data-icon="copy"></i>32 px</button><small>обычная</small></div>
+          <div class="sc-state"><button class="btn btn-lg btn-primary" type="button"><i data-icon="play"></i>40 px</button><small>btn-lg</small></div>
+          <div class="sc-state"><button class="btn btn-sm btn-icon" type="button" aria-label="Закрыть"><i data-icon="x"></i></button><small>28 · иконка</small></div>
+          <div class="sc-state"><button class="btn btn-lg btn-icon" type="button" aria-label="Сохранить"><i data-icon="save"></i></button><small>40 · иконка</small></div>
+          <div class="sc-state"><span class="sc-row"><span class="kbd">N</span><span class="kbd">Shift</span><span class="kbd">?</span></span><small>клавиши .kbd</small></div>
+        </div>
+      </section>
+
+      <!-- segmented -->
+      <section class="card sc" aria-labelledby="sc-seg">
+        <header><h2 id="sc-seg" class="section-title">Сегменты</h2><code>.seg · &lt;lab-seg&gt;</code></header>
+        <div class="sc-state">
+          <lab-seg label="Вид" value="race"><button value="race"><i data-icon="flag"></i>Заезд</button><button value="compare"><i data-icon="git-compare-arrows"></i>Сравнение</button></lab-seg>
+          <small>обычные (стрелки ← → меняют выбор)</small>
+        </div>
+        <div class="sc-state">
+          <lab-seg class="seg-sm" label="Показатель" value="best"><button value="best">Лучший прогресс</button><button value="mean" class="is-hover">Средний</button><button value="done">Финишировали</button><button value="lap" disabled>Время круга</button></lab-seg>
+          <small>малые · наведение на «Средний» · недоступен «Время круга»</small>
+        </div>
+        <div class="sc-state">
+          <lab-seg class="seg-mono seg-sm" label="Скорость" value="2"><button value="1">×1</button><button value="2" class="is-focus">×2</button><button value="4">×4</button><button value="8">×8</button><button value="max">макс</button></lab-seg>
+          <small>моноширинные · фокус на «×2»</small>
+        </div>
+        <div class="sc-world">
+          <div class="sc-state">
+            <lab-seg class="seg-glass seg-sm" label="Камера" value="fit"><button value="fit"><i data-icon="scan"></i>Вписать</button><button value="leader"><i data-icon="crosshair"></i>Лидер</button></lab-seg>
+            <small>над миром — стеклянные</small>
+          </div>
+          <div class="sc-row glass">
+            <button class="glass-btn" type="button" aria-label="Уменьшить"><i data-icon="zoom-out"></i></button>
+            <button class="glass-btn is-hover" type="button" aria-label="Увеличить"><i data-icon="zoom-in"></i></button>
+            <button class="glass-btn" type="button" aria-label="Рядом (V)"><i data-icon="columns-2"></i></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- switch & chips -->
+      <section class="card sc" aria-labelledby="sc-switch">
+        <header><h2 id="sc-switch" class="section-title">Переключатель и чипы</h2><code>.switch · .chip</code></header>
+        <div class="sc-row">
+          <label class="switch"><input type="checkbox" role="switch" checked><span class="track"></span>Вкл</label>
+          <label class="switch"><input type="checkbox" role="switch"><span class="track"></span>Выкл</label>
+          <label class="switch is-focus"><input type="checkbox" role="switch" checked><span class="track"></span>Фокус</label>
+          <label class="switch"><input type="checkbox" role="switch" disabled><span class="track"></span>Недоступен</label>
+        </div>
+        <div class="chips sc-row">
+          <button class="chip" type="button" aria-pressed="false">Ускорение</button>
+          <button class="chip" type="button" aria-pressed="true"><i data-icon="check"></i>Скорость</button>
+          <button class="chip is-hover" type="button" aria-pressed="false">Угол колёс</button>
+          <button class="chip is-focus" type="button" aria-pressed="true"><i data-icon="check"></i>Боковое скольжение</button>
+          <span class="chip is-locked"><i data-icon="lock"></i>Руль</span>
+          <button class="chip" type="button" aria-pressed="true"><span class="mono">−30°</span><i data-icon="x"></i></button>
+          <button class="chip chip-dashed" type="button"><i data-icon="plus"></i>Луч</button>
+        </div>
+      </section>
+
+      <!-- tags & dots -->
+      <section class="card sc" aria-labelledby="sc-tag">
+        <header><h2 id="sc-tag" class="section-title">Метки и статусы</h2><code>.tag · .dot</code></header>
+        <div class="sc-row">
+          <span class="tag">Овал</span>
+          <span class="tag tag-live"><i data-icon="zap"></i>на ходу</span>
+          <span class="tag tag-ok"><i data-icon="check"></i>выполнено</span>
+          <span class="tag tag-warn">начат</span>
+          <span class="tag tag-err"><i data-icon="triangle-alert"></i>1 ошибка</span>
+          <span class="tag tag-best">лучший</span>
+          <span class="tag tag-info">готово</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-row"><span class="dot dot-running"></span>идёт</span>
+          <span class="sc-row"><span class="dot dot-paused"></span>пауза</span>
+          <span class="sc-row"><span class="dot dot-finished"></span>готово</span>
+          <span class="sc-row"><span class="dot"></span>остановлен</span>
+          <span class="sc-row"><span class="dot dot-error"></span>ошибка</span>
+          <span class="sc-row"><span class="swatch" style="--c: var(--run-1)"></span><span class="swatch" style="--c: var(--run-2)"></span><span class="swatch" style="--c: var(--run-3)"></span><span class="swatch" style="--c: var(--run-4)"></span><span class="swatch" style="--c: var(--run-5)"></span><span class="swatch" style="--c: var(--run-6)"></span>цвета запусков</span>
+        </div>
+      </section>
+
+      <!-- fields -->
+      <section class="card sc" aria-labelledby="sc-field">
+        <header><h2 id="sc-field" class="section-title">Поля</h2><code>.field · .input · .select · .value-field</code></header>
+        <div class="sc-cols">
+          <label class="field"><span class="field-label">Название</span><input class="input" value="PPO · осторожный"><span class="field-hint">До 40 символов</span></label>
+          <label class="field"><span class="field-label">Фокус</span><input class="input is-focus" placeholder="не останавливать"></label>
+          <label class="field"><span class="field-label">Ошибка</span><input class="input" aria-invalid="true" value="0"><span class="field-error"><i data-icon="triangle-alert"></i>Лимит шагов — от 50 до 5000</span></label>
+          <label class="field"><span class="field-label">Недоступно</span><input class="input" value="7" disabled></label>
+          <label class="field"><span class="field-label">Трасса <span class="help" title="Где учится машинка"><i data-icon="circle-help"></i></span></span><select class="select"><option>Гран-при</option><option>Овал</option><option>Волны</option></select></label>
+          <label class="field"><span class="field-label">Список · фокус</span><select class="select is-focus"><option>Овал</option></select></label>
+          <label class="field"><span class="field-label">Список · недоступен</span><select class="select" disabled><option>Волны</option></select></label>
+        </div>
+        <div class="sc-row">
+          <div class="sc-state"><span class="value-field"><input value="2048" aria-label="Длина роллаута"><span class="unit">шагов</span></span><small>с единицей</small></div>
+          <div class="sc-state"><span class="value-field is-focus"><input value="0,99" aria-label="Дисконт"></span><small>фокус</small></div>
+          <div class="sc-state"><span class="value-field" aria-invalid="true"><input value="4096" aria-label="Мини-батч"><span class="unit">шагов</span></span><small>ошибка</small></div>
+          <div class="sc-state"><span class="value-field is-readonly"><input value="32" aria-label="Машинок" readonly></span><small>только чтение</small></div>
+        </div>
+      </section>
+
+      <!-- steppers & tabs -->
+      <section class="card sc" aria-labelledby="sc-stepper">
+        <header><h2 id="sc-stepper" class="section-title">Счётчик и вкладки</h2><code>&lt;lab-stepper&gt; · .tabs</code></header>
+        <div class="sc-row">
+          <div class="sc-state"><lab-stepper value="6" min="1" max="64" label="Нейронов в слое 1"></lab-stepper><small>обычный</small></div>
+          <div class="sc-state"><lab-stepper value="1" min="1" max="64" label="Нейронов в слое 2"></lab-stepper><small>на минимуме</small></div>
+          <div class="sc-state"><lab-stepper value="64" min="1" max="64" label="Нейронов в слое 3"></lab-stepper><small>на максимуме</small></div>
+          <div class="sc-state"><lab-stepper value="10" min="1" max="20" label="Эпох" disabled></lab-stepper><small>недоступен</small></div>
+        </div>
+        <div class="tabs" role="tablist" aria-label="На ходу">
+          <button role="tab" aria-selected="true" type="button">Эволюция</button>
+          <button role="tab" aria-selected="false" type="button" class="is-hover">Награда</button>
+          <button role="tab" aria-selected="false" type="button" class="is-focus">Камера</button>
+        </div>
+      </section>
+
+      <!-- params -->
+      <section class="card sc sc-wide" aria-labelledby="sc-param">
+        <header><h2 id="sc-param" class="section-title">Ползунок с полем</h2><code>&lt;lab-param&gt; · .param · .range</code></header>
+        <div id="params" class="group-body sc-params">
+          <lab-param label="Мутация" hint="Доля весов, которые меняются у потомков." min="0" max="1" step="0.01" digits="2" value="0.1" default="0.1" live></lab-param>
+          <lab-param label="Сила мутации" hint="Насколько сильно меняется вес." min="0" max="2" step="0.01" digits="2" value="0.6" default="0.3" live></lab-param>
+          <lab-param label="Скорость обучения" hint="Шаг изменения весов. Меньше — стабильнее, но медленнее." kind="log" min="0.00001" max="0.01" value="0.0001" default="0.0003" live></lab-param>
+          <lab-param label="Мини-батч" hint="Сколько шагов в одном обновлении." kind="int" min="64" max="8192" step="64" value="4096" unit="шагов" error="Не больше длины роллаута — уменьшите до 2048 или меньше"></lab-param>
+          <lab-param label="Элита" hint="Сколько лучших переходят в новое поколение без изменений." kind="int" min="1" max="20" value="4" live applying></lab-param>
+          <lab-param label="Машинок" hint="Сеть, популяция и трасса меняются в новом запуске." kind="int" min="2" max="200" value="32" unit="копий" disabled></lab-param>
+          <lab-param label="Дисконт γ" min="0.9" max="0.999" step="0.001" digits="3" value="0.99" compact></lab-param>
+          <lab-param label="Клип ε" min="0.05" max="0.5" step="0.01" digits="2" value="0.2" compact></lab-param>
+        </div>
+        <p class="field-hint">Покой и «на ходу» · изменено (точка и «вернуть») · логарифмическая шкала · ошибка · применяется (крутилка) · недоступен · компактные.</p>
+      </section>
+
+      <!-- PART-3 -->
+    </div>
+  </main>
+  <lab-toast-host></lab-toast-host>
+  <script type="module" src="/static/dev/components.js"></script>
+</body>
+</html>

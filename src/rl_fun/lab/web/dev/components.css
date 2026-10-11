@@ -1,0 +1,46 @@
+/* Layout of the dev showcase page only (not part of the app). */
+
+@layer screens {
+  .sc-page { max-width: 1320px; margin: 0 auto; padding: var(--sp-6) var(--sp-6) var(--sp-12); display: grid; gap: var(--sp-5); }
+  .sc-head {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    min-height: var(--runbar-h);
+    padding: var(--sp-2) var(--sp-6);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-1);
+  }
+  .sc-head h1 { font: 600 var(--fs-title-l)/var(--lh-title-l) var(--font-display); letter-spacing: -0.015em; }
+  .sc-head p { color: var(--text-2); font-size: var(--fs-body-s); }
+  .sc-head .sc-spacer { flex: 1; }
+  .sc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-5); align-items: start; }
+  .sc-wide { grid-column: 1 / -1; }
+  .sc { padding: var(--sp-5); display: grid; gap: var(--sp-4); align-content: start; }
+  .sc > header { display: flex; align-items: baseline; gap: var(--sp-3); }
+  .sc > header code { color: var(--text-3); font: var(--fs-label)/var(--lh-label) var(--font-mono); }
+  .sc-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); }
+  .sc-state { display: grid; gap: 6px; justify-items: start; }
+  .sc-state > small { color: var(--text-3); font-size: var(--fs-label); line-height: var(--lh-label); }
+  .sc-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-3) var(--sp-6); }
+  .sc-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
+  .sc-world { position: relative; display: grid; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--r-m); background: var(--scene-grass); }
+  .sc-world .sc-state > small { color: var(--hud-text); }
+  .sc-anchor { position: relative; min-height: 120px; }
+  .sc-anchor > .tooltip,
+  .sc-anchor > .popover { position: relative; }
+  .sc-dialog { position: relative; display: grid; place-items: center; padding: var(--sp-6); border-radius: var(--r-m); background: var(--scrim); }
+  .sc-toasts { display: grid; gap: var(--sp-2); justify-items: start; }
+  .sc-toasts > .toast { animation: none; }
+  .sc-skeletons { display: grid; gap: var(--sp-2); }
+  .sc-board { height: 220px; }
+  .sc-board svg { flex: 1; min-height: 0; width: 100%; display: block; }
+  .sc-thumb { display: grid; place-items: center; color: var(--scene-line); }
+  @media (max-width: 1180px) {
+    .sc-grid { grid-template-columns: minmax(0, 1fr); }
+    .sc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+}
