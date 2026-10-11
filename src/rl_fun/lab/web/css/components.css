@@ -580,7 +580,7 @@
   /* ---- collapsible parameter group (details.group) ------------------------------------------ */
   .group { border: 1px solid var(--border); border-radius: var(--r-m); background: var(--surface-1); }
   .group + .group { margin-top: var(--sp-3); }
-  .group > summary { display: flex; align-items: center; gap: var(--sp-3); height: 48px; padding: 0 var(--sp-4); border-radius: var(--r-m); cursor: pointer; list-style: none; font-weight: 600; }
+  .group > summary { display: flex; align-items: center; gap: var(--sp-3); height: 48px; padding: 0 var(--sp-4); border-radius: var(--r-m); cursor: pointer; list-style: none; font-weight: 600; white-space: nowrap; }
   .group > summary::-webkit-details-marker { display: none; }
   .group > summary .chev { width: 16px; height: 16px; color: var(--text-3); transition: transform var(--t-base) var(--ease-standard); }
   .group[open] > summary .chev { transform: rotate(90deg); }
@@ -744,7 +744,7 @@
     text-align: left;
     white-space: nowrap;
   }
-  .table th.num { font-family: var(--font-ui); letter-spacing: 0; }
+  .table th.col-num { text-align: right; }
   .table :is(th, td).num { text-align: right; }
   .table th button { all: unset; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
   .table th button:is(:hover, .is-hover) { color: var(--text); }

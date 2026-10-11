@@ -26,7 +26,8 @@ applyTheme(new URLSearchParams(location.search).get('theme') ?? 'system');
 document.getElementById('theme').addEventListener('change', (event) => applyTheme(event.detail.value));
 
 document.addEventListener('keydown', (event) => {
-  if (event.target.closest('input, select, textarea, lab-seg, lab-stepper')) return;
+  if (event.target instanceof Element && event.target.closest('input, select, textarea, lab-seg, lab-stepper')) return;
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
   if (event.key === 't' || event.key === 'T' || event.key === 'е' || event.key === 'Е') {
     applyTheme(currentScheme() === 'light' ? 'dark' : 'light');
   }
