@@ -182,6 +182,19 @@
           <lab-param label="Дисконт γ" min="0.9" max="0.999" step="0.001" digits="3" value="0.99" compact></lab-param>
           <lab-param label="Клип ε" min="0.05" max="0.5" step="0.01" digits="2" value="0.2" compact></lab-param>
         </div>
+        <div class="group-body">
+          <div class="param param-compact is-changed">
+            <label class="param-label" for="sc-static-lr">Без JS: компактный, изменён</label>
+            <span class="param-value"><span class="value-field"><input id="sc-static-lr" value="1e−4"></span></span>
+            <div class="param-range"><input class="range" type="range" min="0" max="100" value="33" style="--p: 33%" aria-label="Скорость обучения"><div class="range-scale" aria-hidden="true"><span>10⁻⁵</span><span>10⁻⁴</span><span>10⁻³</span><span>10⁻²</span></div></div>
+          </div>
+          <div class="param is-disabled">
+            <label class="param-label" for="sc-static-dis">Без JS: недоступен</label>
+            <span class="param-value"><span class="value-field"><input id="sc-static-dis" value="0,95" disabled></span></span>
+            <div class="param-range"><input class="range is-focus" type="range" min="0" max="100" value="80" style="--p: 80%" aria-label="GAE λ" disabled></div>
+            <span class="param-hint">Разметка, которую строит &lt;lab-param&gt;; классы — те же.</span>
+          </div>
+        </div>
         <p class="field-hint">Покой и «на ходу» · изменено (точка и «вернуть») · логарифмическая шкала · ошибка · применяется (крутилка) · недоступен · компактные.</p>
       </section>
 
@@ -281,7 +294,74 @@
         </div>
       </section>
 
-      <!-- PART-4 -->
+      <!-- dialog -->
+      <section class="card sc" aria-labelledby="sc-dialog">
+        <header><h2 id="sc-dialog" class="section-title">Диалог</h2><code>.scrim · .dialog</code></header>
+        <div class="sc-dialog">
+          <div class="dialog" role="dialog" aria-modal="false" aria-labelledby="sc-dialog-title">
+            <div class="dialog-head"><h3 id="sc-dialog-title" class="dialog-title">Удалить запуск?</h3></div>
+            <div class="dialog-body"><p>«Гонщик · 5 лучей»: история и лучшие веса останутся в <span class="mono">runs/lab</span>.</p></div>
+            <div class="dialog-foot"><button class="btn btn-ghost" type="button">Отмена</button><button class="btn btn-danger" type="button">Удалить</button></div>
+          </div>
+        </div>
+        <p class="field-hint">Настоящий диалог: <button id="dialog-demo" class="btn btn-sm" type="button">Открыть</button> (Esc закрывает, фокус внутри)</p>
+      </section>
+
+      <!-- board -->
+      <section class="card sc" aria-labelledby="sc-board">
+        <header><h2 id="sc-board" class="section-title">Доска сети</h2><code>.board · .legend-swatch</code></header>
+        <div class="board sc-board">
+          <div class="board-head"><span class="board-title">Сеть лидера</span><span class="tag mono">8 → 6 → 5 → 2</span><span class="sc-spacer"></span><button class="btn btn-sm btn-ghost" type="button"><i data-icon="pencil"></i>Изменить</button></div>
+          <svg viewBox="0 0 300 100" role="img" aria-label="Пример графа">
+            <line x1="40" y1="25" x2="150" y2="50" style="stroke: var(--net-edge-pos)" stroke-width="3"/>
+            <line x1="40" y1="75" x2="150" y2="50" style="stroke: var(--net-edge-neg)" stroke-width="1.5"/>
+            <line x1="150" y1="50" x2="260" y2="30" style="stroke: var(--net-edge-pos)" stroke-width="2"/>
+            <line x1="150" y1="50" x2="260" y2="70" style="stroke: var(--net-edge-neg)" stroke-width="2.5"/>
+            <circle cx="40" cy="25" r="9" style="fill: var(--net-node-pos); stroke: var(--net-node-ring)" stroke-width="2"/>
+            <circle cx="40" cy="75" r="9" style="fill: var(--net-node-neutral); stroke: var(--net-node-ring)" stroke-width="2"/>
+            <circle cx="150" cy="50" r="9" style="fill: var(--net-node-neg); stroke: var(--net-node-ring)" stroke-width="2"/>
+            <circle cx="260" cy="30" r="9" style="fill: var(--net-node-pos); stroke: var(--net-node-ring)" stroke-width="2"/>
+            <circle cx="260" cy="70" r="9" style="fill: var(--net-node-neutral); stroke: var(--board-accent-text)" stroke-width="3"/>
+          </svg>
+          <div class="board-foot"><span class="legend-swatch"><i style="--c: var(--net-edge-pos)"></i>вес плюс</span><span class="legend-swatch"><i style="--c: var(--net-edge-neg)"></i>вес минус</span><span class="tag">светлая всегда</span></div>
+        </div>
+      </section>
+
+      <!-- table -->
+      <section class="card sc sc-wide" aria-labelledby="sc-table">
+        <header><h2 id="sc-table" class="section-title">Таблица и кривые</h2><code>.table · .legend · .progress · .stars</code></header>
+        <div class="legend" aria-label="Запуски на графике">
+          <button type="button" aria-pressed="true" style="--c: var(--run-1)"><span class="swatch"></span>Гонщик</button>
+          <button type="button" aria-pressed="true" style="--c: var(--run-2)" class="is-hover"><span class="swatch"></span>PPO · осторожный</button>
+          <button type="button" aria-pressed="false" style="--c: var(--run-3)"><span class="swatch"></span>Три луча (скрыт)</button>
+        </div>
+        <table class="table">
+          <thead><tr>
+            <th scope="col">Запуск</th><th scope="col">Статус</th>
+            <th scope="col" class="num" aria-sort="descending"><button type="button">Лучший прогресс<i data-icon="chevron-down"></i></button></th>
+            <th scope="col" class="num"><button type="button">Лучший круг, с</button></th><th scope="col">Динамика</th>
+          </tr></thead>
+          <tbody>
+            <tr><td><span class="sc-row"><span class="swatch" style="--c: var(--run-1)"></span>Гонщик · 5 лучей</span></td><td><span class="sc-row"><span class="dot dot-running"></span>идёт</span></td><td class="num mono"><span class="cell-best">64 %</span></td><td class="num mono">37,40</td><td><div class="progress" style="width: 96px"><i style="width: 64%"></i></div></td></tr>
+            <tr aria-selected="true"><td><span class="sc-row"><span class="swatch" style="--c: var(--run-2)"></span>PPO · осторожный (выбрана)</span></td><td><span class="sc-row"><span class="dot dot-paused"></span>пауза</span></td><td class="num mono">54 %</td><td class="num mono"><span class="cell-best">36,90</span></td><td><div class="progress" style="width: 96px"><i style="width: 54%"></i></div></td></tr>
+            <tr class="is-hover"><td><span class="sc-row"><span class="swatch" style="--c: var(--run-3)"></span>Три луча (наведение)</span></td><td><span class="sc-row"><span class="dot dot-finished"></span>готово</span></td><td class="num mono">41 %</td><td class="num mono cell-pb">38,05</td><td><div class="progress" style="width: 96px"><i style="width: 41%"></i></div></td></tr>
+          </tbody>
+        </table>
+        <div class="sc-row">
+          <span class="stars" aria-label="2 звезды из 3"><i data-icon="star" class="on"></i><i data-icon="star" class="on"></i><i data-icon="star"></i></span>
+          <span class="stars stars-lg" aria-label="1 звезда из 3"><i data-icon="star" class="on"></i><i data-icon="star"></i><i data-icon="star"></i></span>
+          <button id="star-demo" class="btn btn-sm btn-ghost" type="button">Получить звезду</button>
+        </div>
+      </section>
+
+      <!-- loading & empty -->
+      <section class="card sc sc-wide" aria-labelledby="sc-empty">
+        <header><h2 id="sc-empty" class="section-title">Загрузка и пусто</h2><code>.skeleton · .empty</code></header>
+        <div class="sc-grid">
+          <div class="sc-skeletons" aria-label="Загрузка"><div class="skeleton" style="height: 18px; width: 60%"></div><div class="skeleton" style="height: 64px"></div><div class="skeleton" style="height: 18px; width: 40%"></div></div>
+          <div class="empty"><h2>Трасса ждёт машинок</h2><p>Создайте запуск — машинки появятся здесь и начнут учиться.</p><div class="sc-row"><button class="btn btn-primary" type="button"><i data-icon="plus"></i>Новый запуск</button><button class="btn" type="button"><i data-icon="trophy"></i>Челленджи</button></div></div>
+        </div>
+      </section>
     </div>
   </main>
   <lab-toast-host></lab-toast-host>
