@@ -1,4 +1,7 @@
 // Separate the training record from the live fleet and the last completed race.
+// A retained frame of an ended run is the last race, not a live one.
+const ENDED = new Set(['finished', 'stopped', 'error']);
+
 export function summarizeRun(run) {
   const frame = run?.frame;
   const last = run?.gens?.at(-1);
@@ -18,6 +21,6 @@ export function summarizeRun(run) {
       : `${Math.round(best * 100)}%`,
     alive: count(frame?.alive),
     finished: count(finished),
-    raceHint: frame ? 'В текущем заезде' : 'В последнем заезде',
+    raceHint: frame && !ENDED.has(run?.status) ? 'В текущем заезде' : 'В последнем заезде',
   };
 }

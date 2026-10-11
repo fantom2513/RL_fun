@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-from rl_fun.lab.stream_view import StopRun, StreamView
 
+from rl_fun.lab.stream_view import StopRun, StreamView
 from rl_fun.racing.fleet import RacingFleet
 
 DT = 1 / 30

@@ -6,8 +6,8 @@ import json
 import re
 
 import pytest
-from rl_fun.lab.catalog import build_catalog, build_track
 
+from rl_fun.lab.catalog import build_catalog, build_track
 from rl_fun.lab.config import RunConfig
 from rl_fun.racing.fitness import PRESETS, available_terms
 from rl_fun.racing.model_spec import available_inputs, available_outputs

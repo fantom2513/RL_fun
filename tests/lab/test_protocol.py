@@ -3,8 +3,8 @@ import math
 
 import numpy as np
 import pytest
-from rl_fun.lab.protocol import build_frame, build_gen_message, notice_message, status_message
 
+from rl_fun.lab.protocol import build_frame, build_gen_message, notice_message, status_message
 from rl_fun.racing.fleet import RacingFleet
 from rl_fun.racing.generation import GenerationResult
 

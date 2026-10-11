@@ -164,6 +164,7 @@ def test_the_worker_runs_the_new_learners_and_saves_a_network(learner, tmp_path)
     import json
 
     from rl_fun.lab.worker import run_worker
+
     from .test_worker_ppo import FakeConnection
 
     conn = FakeConnection()
