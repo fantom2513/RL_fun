@@ -26,7 +26,8 @@ class FourierDrawing(Scene):
     def __init__(self, spec: DrawingSpec, **kwargs):
         super().__init__(**kwargs)
         self.spec = spec
-        self._n = spec.stages[0]
+        self._terms = 0  # number of series terms in play (circles, plus a fixed offset)
+        self._trail_steps = TRAIL_STEPS
         self._show_chain = True
 
     def _place(self, z: np.ndarray) -> np.ndarray:
@@ -35,6 +36,14 @@ class FourierDrawing(Scene):
     def construct(self):
         spec = self.spec
         t = ValueTracker(0.0)
+
+        # The zero-frequency term is a fixed offset, not a circle: put it first so a stage
+        # of N shows exactly N circles; the rest keep their descending |c| order.
+        zero = np.flatnonzero(spec.freqs == 0)
+        order = np.concatenate((zero, np.setdiff1d(np.arange(len(spec.freqs)), zero)))
+        freqs = spec.freqs[order]
+        coeffs = spec.coeffs[order]
+        has_offset = len(zero) > 0
 
         outline = VMobject().set_stroke(WHITE, 2, opacity=0.12).set_fill(opacity=0)
         closed = np.append(spec.outline, spec.outline[0])
@@ -47,7 +56,7 @@ class FourierDrawing(Scene):
         ring = np.exp(1j * angles)
 
         def positions() -> np.ndarray:
-            chain = chain_positions(spec.freqs, spec.coeffs, self._n, t.get_value())
+            chain = chain_positions(freqs, coeffs, self._terms, t.get_value())
             return self._place(chain)
 
         def update_circles(mob: VMobject) -> None:
@@ -55,9 +64,9 @@ class FourierDrawing(Scene):
             if not self._show_chain:
                 return
             centres = positions()
-            for k in range(self._n):
-                radius = abs(spec.coeffs[k]) * spec.scale
-                if spec.freqs[k] == 0 or radius < MIN_RADIUS:
+            for k in range(self._terms):
+                radius = abs(coeffs[k]) * spec.scale
+                if freqs[k] == 0 or radius < MIN_RADIUS:
                     continue  # the zero frequency is a fixed offset, not a circle
                 pts = _to_points(centres[k] + radius * ring)
                 mob.start_new_path(pts[0])
@@ -70,8 +79,8 @@ class FourierDrawing(Scene):
 
         def update_trail(mob: VMobject) -> None:
             tv = t.get_value()
-            times = np.linspace(0.0, tv, max(2, int(TRAIL_STEPS * tv)))
-            curve = partial_sum(spec.freqs, spec.coeffs, self._n, times)
+            times = np.linspace(0.0, tv, max(2, int(self._trail_steps * tv)))
+            curve = partial_sum(freqs, coeffs, self._terms, times)
             mob.set_points_as_corners(_to_points(self._place(curve)))
 
         circles.add_updater(update_circles)
@@ -81,7 +90,9 @@ class FourierDrawing(Scene):
 
         label: Text | None = None
         for n in spec.stages:
-            self._n = n
+            self._terms = n + 1 if has_offset else n
+            top_frequency = int(np.max(np.abs(freqs[: self._terms])))
+            self._trail_steps = max(TRAIL_STEPS, 16 * top_frequency)
             new_label = Text(f"N = {n}", font_size=56).to_edge(UP, buff=1.2)
             if label is not None:
                 self.remove(label)
