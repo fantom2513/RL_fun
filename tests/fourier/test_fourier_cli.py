@@ -103,7 +103,8 @@ def test_missing_animation_dependencies_are_a_usage_error(monkeypatch, capsys):
 def test_missing_dependencies_at_render_time_are_a_usage_error(monkeypatch, capsys):
     import numpy as np
 
-    monkeypatch.setattr(cli, "load_contour", lambda *a, **k: np.exp(2j * np.pi * np.arange(64) / 64))
+    circle = np.exp(2j * np.pi * np.arange(64) / 64)
+    monkeypatch.setattr(cli, "load_contour", lambda *a, **k: circle)
 
     def missing(*args, **kwargs):
         raise ImportError("no manim")

@@ -129,9 +129,8 @@ def load_contour(
 ) -> ComplexArray:
     """Preset name, ``.svg`` path or raster image path -> normalised closed curve."""
     text = str(source)
-    preset = ASSETS_DIR / f"{text}.svg"
-    if preset.exists():
-        return contour_from_svg(preset, count)
+    if text in available_presets():
+        return contour_from_svg(ASSETS_DIR / f"{text}.svg", count)
     path = Path(text)
     if path.suffix.lower() == ".svg" and path.exists():
         return contour_from_svg(path, count)

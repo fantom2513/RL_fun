@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from pathlib import Path
 
 from rl_fun.fourier.contour import available_presets, load_contour
 from rl_fun.fourier.series import coefficients
 from rl_fun.fourier.spec import DrawingSpec
+
+MISSING_DEPENDENCIES = (
+    "this source needs the optional animation dependencies: "
+    "run with `uv run --group animation ...`"
+)
 
 
 def parse_stages(text: str) -> tuple[int, ...]:
@@ -62,7 +68,7 @@ def _render(spec: DrawingSpec, out: Path, quality: str) -> Path:
     return render(spec, out, quality)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     if max(args.stages) > args.points:
@@ -73,6 +79,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ValueError as error:
         parser.error(str(error))
+    except ImportError:
+        parser.error(MISSING_DEPENDENCIES)
     freqs, coeffs = coefficients(outline)
     spec = DrawingSpec(
         freqs=freqs,
@@ -82,5 +90,9 @@ def main(argv: list[str] | None = None) -> int:
         seconds_per_stage=args.seconds_per_stage,
     )
     out = args.out or Path("runs") / "fourier" / f"{Path(args.source).stem}.mp4"
-    print(f"wrote {_render(spec, out, args.quality)}")
+    try:
+        written = _render(spec, out, args.quality)
+    except ImportError:
+        parser.error(MISSING_DEPENDENCIES)
+    print(f"wrote {written}")
     return 0
