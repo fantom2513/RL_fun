@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from rl_fun.fourier.contour import available_presets, load_contour
-from rl_fun.fourier.series import coefficients
+from rl_fun.fourier.series import real_series
 from rl_fun.fourier.spec import DrawingSpec
 
 MISSING_DEPENDENCIES = (
@@ -71,8 +71,11 @@ def _render(spec: DrawingSpec, out: Path, quality: str) -> Path:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if max(args.stages) > args.points:
-        parser.error(f"largest stage {max(args.stages)} exceeds --points {args.points}")
+    if max(args.stages) > args.points // 2:
+        parser.error(
+            f"largest stage {max(args.stages)} exceeds the {args.points // 2} terms "
+            f"that --points {args.points} provides"
+        )
     try:
         outline = load_contour(
             args.source, args.points, threshold=args.threshold, invert=args.invert
@@ -81,10 +84,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(str(error))
     except ImportError:
         parser.error(MISSING_DEPENDENCIES)
-    freqs, coeffs = coefficients(outline)
     spec = DrawingSpec(
-        freqs=freqs,
-        coeffs=coeffs,
+        x=real_series(outline.real),
+        y=real_series(outline.imag),
         outline=outline,
         stages=args.stages,
         seconds_per_stage=args.seconds_per_stage,

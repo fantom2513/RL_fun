@@ -2,21 +2,33 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import NDArray
 
+from rl_fun.fourier.series import RealSeries
+
+
+@dataclass(frozen=True)
+class Layout:
+    """Frame is 9 x 16 units, origin at the centre, y up. Starting values; tune by eye."""
+
+    shape_scale: float = 2.2
+    shape_centre: complex = 1.4 - 1.2j
+    x_row_y: float = 4.4
+    y_col_x: float = -2.9
+
 
 @dataclass(frozen=True)
 class DrawingSpec:
-    freqs: NDArray[np.float64]
-    coeffs: NDArray[np.complex128]
+    x: RealSeries
+    y: RealSeries
     outline: NDArray[np.complex128]
     stages: tuple[int, ...]
     seconds_per_stage: float = 5.0
-    scale: float = 3.6  # frame units for a normalised half-extent of 1
-    centre: complex = 1.5j  # moves the drawing up to leave room for the counter
+    layout: Layout = field(default_factory=Layout)
+
 
 def format_error(fraction: float) -> str:
     """Error as a short percentage: '42 %', '4.2 %', '0.42 %', '<0.01 %'."""
