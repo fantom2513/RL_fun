@@ -412,13 +412,13 @@ def test_longest_contour_wins_over_small_specks(tmp_path):
 
 def test_image_is_not_upside_down(tmp_path):
     gray = np.full((100, 100), 255)
-    gray[10:30, 40:60] = 0  # blob in the upper part of the picture
+    gray[10:30, 30:70] = 0  # wide blob in the upper part of the picture
     gray[30:90, 48:52] = 0  # thin tail going down
     path = _save(tmp_path / "t.png", gray)
 
     points = contour_from_image(path, 400)
 
-    # after normalising, imag spans [-1, 1] and real [-0.5, 0.5]
+    # after normalising, imag spans [-1, 1] and the 40 px wide blob reaches |real| = 0.5
     assert np.abs(points.real[points.imag > 0.5]).max() > 0.3  # wide blob on top
     assert np.abs(points.real[points.imag < -0.5]).max() < 0.1  # thin tail at the bottom
 

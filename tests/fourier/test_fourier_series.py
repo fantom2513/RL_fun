@@ -46,7 +46,7 @@ def test_error_never_grows_with_more_terms():
 
     errors = [_mean_squared_error(points, n) for n in (1, 3, 10, 50, 200)]
 
-    assert all(later <= earlier + 1e-12 for earlier, later in zip(errors, errors[1:]))
+    assert all(later <= earlier + 1e-12 for earlier, later in zip(errors, errors[1:], strict=False))
     assert errors[-1] < errors[0] / 100
 
 
