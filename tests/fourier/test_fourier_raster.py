@@ -65,3 +65,39 @@ def test_blank_image_is_rejected(tmp_path):
 
     with pytest.raises(ValueError):
         contour_from_image(path, 100)
+
+
+def test_transparent_background_is_treated_as_white(tmp_path):
+    yy, xx = np.mgrid[0:100, 0:100]
+    rgba = np.zeros((100, 100, 4), dtype=np.uint8)  # fully transparent black
+    rgba[(xx - 50) ** 2 + (yy - 50) ** 2 < 30**2] = (0, 0, 0, 255)
+    path = tmp_path / "disc_alpha.png"
+    Image.fromarray(rgba, "RGBA").save(path)
+
+    points = contour_from_image(path, 200)
+
+    assert np.allclose(np.abs(points), 1.0, atol=0.06)
+
+
+def test_load_contour_passes_invert_to_raster_sources(tmp_path):
+    from rl_fun.fourier.contour import load_contour
+
+    gray = np.full((100, 100), 0)
+    gray[40:60, 20:80] = 255  # white bar on black
+    path = _save(tmp_path / "bar.png", gray)
+
+    points = load_contour(path, 200, invert=True)
+
+    assert np.isclose(points.imag.max(), 1 / 3, atol=0.05)
+
+
+def test_load_contour_passes_threshold_to_raster_sources(tmp_path):
+    from rl_fun.fourier.contour import load_contour
+
+    gray = np.full((100, 100), 255)
+    gray[40:60, 20:80] = 200  # light grey bar: invisible at threshold 0.5
+    path = _save(tmp_path / "grey.png", gray)
+
+    with pytest.raises(ValueError):
+        load_contour(path, 200)
+    assert load_contour(path, 200, threshold=0.9).shape == (200,)

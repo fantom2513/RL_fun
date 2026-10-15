@@ -48,3 +48,40 @@ def test_main_builds_the_spec_and_hands_it_to_the_renderer(monkeypatch, tmp_path
     assert captured["quality"] == "low"
     assert captured["spec"].stages == (3, 10)
     assert len(captured["spec"].coeffs) == 2048
+
+
+def test_raster_option_defaults():
+    args = cli.build_parser().parse_args(["--source", "pi"])
+
+    assert args.threshold == 0.5
+    assert args.invert is False
+
+
+def test_raster_option_flags():
+    args = cli.build_parser().parse_args(["--source", "a.png", "--threshold", "0.3", "--invert"])
+
+    assert args.threshold == 0.3
+    assert args.invert is True
+
+
+@pytest.mark.parametrize("bad", ["0", "1", "-0.2", "1.5", "abc"])
+def test_threshold_outside_open_unit_interval_is_a_usage_error(bad):
+    with pytest.raises(SystemExit) as error:
+        cli.build_parser().parse_args(["--source", "pi", "--threshold", bad])
+
+    assert error.value.code == 2
+
+
+def test_main_passes_raster_options_to_load_contour(monkeypatch):
+    captured = {}
+
+    def fake_load(source, count, threshold=0.5, invert=False):
+        captured.update(threshold=threshold, invert=invert)
+        raise ValueError("stop here")
+
+    monkeypatch.setattr(cli, "load_contour", fake_load)
+
+    with pytest.raises(SystemExit):
+        cli.main(["--source", "x.png", "--threshold", "0.3", "--invert"])
+
+    assert captured == {"threshold": 0.3, "invert": True}
