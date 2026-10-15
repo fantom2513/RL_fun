@@ -74,3 +74,11 @@ def test_load_contour_dispatches_on_extension(tmp_path):
 def test_unknown_source_is_a_clear_error():
     with pytest.raises(ValueError, match="no-such-shape"):
         load_contour("no-such-shape", 100)
+
+
+def test_svg_without_paths_names_the_file(tmp_path):
+    path = tmp_path / "empty.svg"
+    path.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>')
+
+    with pytest.raises(ValueError, match="no drawable paths"):
+        contour_from_svg(path, 100)
