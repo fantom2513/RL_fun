@@ -1,0 +1,65 @@
+"""Command line: ``python scripts/fourier.py --source pi --stages 3,10,50,200``."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from rl_fun.fourier.contour import available_presets, load_contour
+from rl_fun.fourier.series import coefficients
+from rl_fun.fourier.spec import DrawingSpec
+
+
+def parse_stages(text: str) -> tuple[int, ...]:
+    try:
+        values = tuple(int(part) for part in text.split(","))
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"stages must be integers separated by commas: {text!r}"
+        ) from None
+    if any(v < 1 for v in values) or list(values) != sorted(set(values)):
+        raise argparse.ArgumentTypeError("stages must be positive and strictly increasing")
+    return values
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Draw a contour with Fourier epicycles.")
+    parser.add_argument(
+        "--source",
+        required=True,
+        help=f"preset ({', '.join(available_presets())}) or path to an .svg/.png/.jpg file",
+    )
+    parser.add_argument("--stages", type=parse_stages, default=(3, 10, 50, 200))
+    parser.add_argument("--points", type=int, default=2048, help="samples of the contour")
+    parser.add_argument("--seconds-per-stage", type=float, default=5.0)
+    parser.add_argument("--quality", choices=["low", "high"], default="high")
+    parser.add_argument("--out", type=Path, default=None, help="default: runs/fourier/<name>.mp4")
+    return parser
+
+
+def _render(spec: DrawingSpec, out: Path, quality: str) -> Path:
+    from rl_fun.fourier.scene import render
+
+    return render(spec, out, quality)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if max(args.stages) > args.points:
+        parser.error(f"largest stage {max(args.stages)} exceeds --points {args.points}")
+    try:
+        outline = load_contour(args.source, args.points)
+    except ValueError as error:
+        parser.error(str(error))
+    freqs, coeffs = coefficients(outline)
+    spec = DrawingSpec(
+        freqs=freqs,
+        coeffs=coeffs,
+        outline=outline,
+        stages=args.stages,
+        seconds_per_stage=args.seconds_per_stage,
+    )
+    out = args.out or Path("runs") / "fourier" / f"{Path(args.source).stem}.mp4"
+    print(f"wrote {_render(spec, out, args.quality)}")
+    return 0
