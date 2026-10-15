@@ -1,0 +1,50 @@
+import argparse
+
+import pytest
+
+from rl_fun.fourier import cli
+
+
+def test_parse_stages_reads_a_comma_list():
+    assert cli.parse_stages("3,10,50") == (3, 10, 50)
+
+
+@pytest.mark.parametrize("bad", ["", "a,b", "0,5", "5,3", "3,3", "-1,4"])
+def test_parse_stages_rejects_bad_input(bad):
+    with pytest.raises(argparse.ArgumentTypeError):
+        cli.parse_stages(bad)
+
+
+def test_defaults():
+    args = cli.build_parser().parse_args(["--source", "pi"])
+
+    assert args.stages == (3, 10, 50, 200)
+    assert args.quality == "high"
+    assert args.points == 2048
+
+
+def test_stages_larger_than_points_exit_with_usage_error():
+    with pytest.raises(SystemExit) as error:
+        cli.main(["--source", "pi", "--stages", "3,500", "--points", "256"])
+
+    assert error.value.code == 2
+
+
+def test_main_builds_the_spec_and_hands_it_to_the_renderer(monkeypatch, tmp_path):
+    pytest.importorskip("manim")
+    captured = {}
+
+    def fake_render(spec, out, quality):
+        captured.update(spec=spec, out=out, quality=quality)
+        return out
+
+    monkeypatch.setattr(cli, "_render", fake_render)
+    out = tmp_path / "pi.mp4"
+
+    code = cli.main(["--source", "pi", "--stages", "3,10", "--quality", "low", "--out", str(out)])
+
+    assert code == 0
+    assert captured["out"] == out
+    assert captured["quality"] == "low"
+    assert captured["spec"].stages == (3, 10)
+    assert len(captured["spec"].coeffs) == 2048
