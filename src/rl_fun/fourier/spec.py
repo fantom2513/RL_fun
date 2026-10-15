@@ -17,3 +17,14 @@ class DrawingSpec:
     seconds_per_stage: float = 5.0
     scale: float = 3.6  # frame units for a normalised half-extent of 1
     centre: complex = 1.5j  # moves the drawing up to leave room for the counter
+
+def format_error(fraction: float) -> str:
+    """Error as a short percentage: '42 %', '4.2 %', '0.42 %', '<0.01 %'."""
+    percent = fraction * 100
+    if percent >= 10:
+        return f"{percent:.0f} %"
+    if percent >= 1:
+        return f"{percent:.1f} %"
+    if percent >= 0.01:
+        return f"{percent:.2f} %"
+    return "<0.01 %"
