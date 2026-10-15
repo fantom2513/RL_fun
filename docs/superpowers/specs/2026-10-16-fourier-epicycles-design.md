@@ -1,6 +1,7 @@
 # Fourier epicycles animation — design
 
-Date: 2026-10-16. Status: approved in conversation, not yet implemented.
+Date: 2026-10-16. Status: approved, not yet implemented. Plan:
+`docs/superpowers/plans/2026-10-16-fourier-epicycles.md`.
 
 ## Goal
 
@@ -26,16 +27,19 @@ code; it only shares the repository and `uv` environment.
 
 ## Layout
 
-New package `animations/fourier/` at the repository root (RL code in `src/`
-is untouched):
+New package `src/rl_fun/fourier/`, following the repository layout (scripts are
+thin wrappers, tests in `tests/fourier/`). Existing RL code is untouched. Manim
+is imported only by `scene.py`, so the rest works and tests without it.
 
 | File | Responsibility |
 | --- | --- |
 | `contour.py` | Turn a source into a closed curve of M complex points, uniformly spaced by arc length. |
-| `fourier.py` | FFT of the point sequence into coefficients sorted by descending `abs(c)`; evaluation of the partial sum for N terms. Pure numpy. |
-| `scene.py` | Manim scene `FourierDrawing`: circles, arms, trail, stage schedule, counter. |
-| `assets/` | Preset SVGs (π, heart, star, …). |
-| `scripts/fourier.py` | CLI wrapper: `--source pi\|path.svg\|path.png --stages 3,10,50,200 --quality low\|high --out …`. |
+| `series.py` | FFT of the point sequence into coefficients sorted by descending `abs(c)`; partial sum for N terms; chain positions. Pure numpy. |
+| `spec.py` | `DrawingSpec` dataclass (no Manim import). |
+| `scene.py` | Manim scene `FourierDrawing`: circles, arms, trail, stage schedule, counter; `render()`. |
+| `cli.py` | Argument parsing and orchestration. |
+| `assets/` | Preset SVGs (π, heart, star). |
+| `scripts/fourier.py` | Wrapper: `--source pi\|path.svg\|path.png --stages 3,10,50,200 --quality low\|high --out …`. |
 
 ### contour.py
 
@@ -48,7 +52,7 @@ is untouched):
 - Output is normalised (centred, scaled to fit the frame) so the scene does
   not depend on the source size.
 
-### fourier.py
+### series.py
 
 - `coefficients(points)` returns frequencies and complex coefficients, with
   frequency order by descending magnitude so the largest circles come first.
@@ -59,7 +63,7 @@ is untouched):
 ## Testing
 
 TDD per project rules (tests first, committed separately). Tests live in
-`tests/animations/` and do not render video.
+`tests/fourier/` and do not render video.
 
 - Reconstruction error decreases monotonically (within tolerance) as N grows
   and is ~0 for N equal to the number of points.
