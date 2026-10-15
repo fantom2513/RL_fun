@@ -67,7 +67,13 @@ def contour_from_image(
     import contourpy
     from PIL import Image
 
-    gray = np.asarray(Image.open(path).convert("L"), dtype=float) / 255.0
+    image = Image.open(path)
+    if image.mode in ("RGBA", "LA", "PA") or "transparency" in image.info:
+        rgba = image.convert("RGBA")
+        background = Image.new("RGB", rgba.size, (255, 255, 255))
+        background.paste(rgba, mask=rgba.getchannel("A"))
+        image = background
+    gray = np.asarray(image.convert("L"), dtype=float) / 255.0
     if invert:
         gray = 1.0 - gray
     padded = np.pad(gray, 1, constant_values=1.0)  # background border closes every loop
@@ -115,7 +121,12 @@ def contour_from_svg(path: str | Path, count: int, per_curve: int = 24) -> Compl
     return normalize(resample(join_subpaths(paths), count))
 
 
-def load_contour(source: str | Path, count: int) -> ComplexArray:
+def load_contour(
+    source: str | Path,
+    count: int,
+    threshold: float = 0.5,
+    invert: bool = False,
+) -> ComplexArray:
     """Preset name, ``.svg`` path or raster image path -> normalised closed curve."""
     text = str(source)
     preset = ASSETS_DIR / f"{text}.svg"
@@ -125,7 +136,7 @@ def load_contour(source: str | Path, count: int) -> ComplexArray:
     if path.suffix.lower() == ".svg" and path.exists():
         return contour_from_svg(path, count)
     if path.suffix.lower() in RASTER_SUFFIXES and path.exists():
-        return contour_from_image(path, count)
+        return contour_from_image(path, count, threshold=threshold, invert=invert)
     raise ValueError(
         f"unknown source {text!r}: use a preset ({', '.join(available_presets())}) "
         "or a path to an existing .svg/.png/.jpg file"
