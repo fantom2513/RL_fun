@@ -23,9 +23,9 @@ def test_defaults():
     assert args.points == 2048
 
 
-def test_stages_larger_than_points_exit_with_usage_error():
+def test_stages_larger_than_the_term_count_exit_with_usage_error():
     with pytest.raises(SystemExit) as error:
-        cli.main(["--source", "pi", "--stages", "3,500", "--points", "256"])
+        cli.main(["--source", "pi", "--stages", "3,200", "--points", "256"])
 
     assert error.value.code == 2
 
@@ -47,7 +47,9 @@ def test_main_builds_the_spec_and_hands_it_to_the_renderer(monkeypatch, tmp_path
     assert captured["out"] == out
     assert captured["quality"] == "low"
     assert captured["spec"].stages == (3, 10)
-    assert len(captured["spec"].coeffs) == 2048
+    assert len(captured["spec"].x.freqs) == 1024  # 2048 samples -> 1024 cosine terms
+    assert len(captured["spec"].y.freqs) == 1024
+    assert len(captured["spec"].outline) == 2048
 
 
 def test_raster_option_defaults():
