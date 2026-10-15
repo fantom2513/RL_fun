@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -42,3 +44,32 @@ def join_subpaths(paths: list[ComplexArray]) -> ComplexArray:
         ordered.append(following)
         end = following[-1]
     return np.concatenate(ordered)
+
+def _path_length(points: ComplexArray) -> float:
+    return float(np.abs(np.diff(points)).sum())
+
+
+def contour_from_image(
+    path: str | Path,
+    count: int,
+    threshold: float = 0.5,
+    invert: bool = False,
+) -> ComplexArray:
+    """Outline of the largest dark shape on a light background.
+
+    ``invert=True`` treats light shapes on a dark background instead. The image
+    y axis points down, so it is flipped to get an upright curve.
+    """
+    import contourpy
+    from PIL import Image
+
+    gray = np.asarray(Image.open(path).convert("L"), dtype=float) / 255.0
+    if invert:
+        gray = 1.0 - gray
+    padded = np.pad(gray, 1, constant_values=1.0)  # background border closes every loop
+    lines = contourpy.contour_generator(z=padded).lines(threshold)
+    candidates = [line[:, 0] - 1j * line[:, 1] for line in lines if len(line) > 2]
+    if not candidates:
+        raise ValueError(f"no contour found in {path}; try another threshold or invert=True")
+    longest = max(candidates, key=_path_length)
+    return normalize(resample(longest, count))
