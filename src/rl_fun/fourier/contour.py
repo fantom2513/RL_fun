@@ -110,6 +110,8 @@ def contour_from_svg(path: str | Path, count: int, per_curve: int = 24) -> Compl
         for part in drawing.family_members_with_points()
         for sub in part.get_subpaths()
     ]
+    if not paths:
+        raise ValueError(f"{path}: no drawable paths found")
     return normalize(resample(join_subpaths(paths), count))
 
 
