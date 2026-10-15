@@ -12,6 +12,8 @@ ComplexArray = NDArray[np.complex128]
 
 def resample(points: ComplexArray, count: int) -> ComplexArray:
     """Closed polyline -> ``count`` points spaced equally by arc length."""
+    if len(points) < 2:
+        raise ValueError("need at least 2 points")
     closed = np.append(points, points[0])
     cumulative = np.concatenate(([0.0], np.cumsum(np.abs(np.diff(closed)))))
     targets = np.linspace(0.0, cumulative[-1], count, endpoint=False)
@@ -28,6 +30,8 @@ def normalize(points: ComplexArray, fit: float = 1.0) -> ComplexArray:
     )
     shifted = points - centre
     half = max(np.abs(shifted.real).max(), np.abs(shifted.imag).max())
+    if half == 0:
+        raise ValueError("shape has zero extent")
     return shifted * (fit / half)
 
 
