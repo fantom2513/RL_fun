@@ -73,3 +73,54 @@ def contour_from_image(
         raise ValueError(f"no contour found in {path}; try another threshold or invert=True")
     longest = max(candidates, key=_path_length)
     return normalize(resample(longest, count))
+
+
+ASSETS_DIR = Path(__file__).parent / "assets"
+RASTER_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
+
+
+def available_presets() -> list[str]:
+    return sorted(p.stem for p in ASSETS_DIR.glob("*.svg"))
+
+
+def _sample_beziers(points: NDArray[np.float64], per_curve: int) -> ComplexArray:
+    """Cubic Bezier control points (4k x 3) -> dense polyline as complex numbers."""
+    curves = points.reshape(-1, 4, 3)
+    t = np.linspace(0.0, 1.0, per_curve, endpoint=False)[:, None, None]
+    p0, p1, p2, p3 = (curves[None, :, i, :] for i in range(4))
+    dense = (
+        (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t**2 * p2 + t**3 * p3
+    )  # (per_curve, k, 3)
+    ordered = dense.transpose(1, 0, 2).reshape(-1, 3)
+    ordered = np.vstack([ordered, curves[-1, 3][None, :]])
+    return ordered[:, 0] + 1j * ordered[:, 1]
+
+
+def contour_from_svg(path: str | Path, count: int, per_curve: int = 24) -> ComplexArray:
+    """Outline of every path in an SVG file as one closed curve (Manim parses the SVG)."""
+    from manim import SVGMobject
+
+    drawing = SVGMobject(str(path))
+    paths = [
+        _sample_beziers(sub, per_curve)
+        for part in drawing.family_members_with_points()
+        for sub in part.get_subpaths()
+    ]
+    return normalize(resample(join_subpaths(paths), count))
+
+
+def load_contour(source: str | Path, count: int) -> ComplexArray:
+    """Preset name, ``.svg`` path or raster image path -> normalised closed curve."""
+    text = str(source)
+    preset = ASSETS_DIR / f"{text}.svg"
+    if preset.exists():
+        return contour_from_svg(preset, count)
+    path = Path(text)
+    if path.suffix.lower() == ".svg" and path.exists():
+        return contour_from_svg(path, count)
+    if path.suffix.lower() in RASTER_SUFFIXES and path.exists():
+        return contour_from_image(path, count)
+    raise ValueError(
+        f"unknown source {text!r}: use a preset ({', '.join(available_presets())}) "
+        "or a path to an existing .svg/.png/.jpg file"
+    )
