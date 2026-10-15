@@ -82,3 +82,9 @@ def test_svg_without_paths_names_the_file(tmp_path):
 
     with pytest.raises(ValueError, match="no drawable paths"):
         contour_from_svg(path, 100)
+
+
+@pytest.mark.parametrize("source", ["../x", "sub/pi", "..\\pi"])
+def test_path_like_sources_are_never_presets(source):
+    with pytest.raises(ValueError, match="unknown source"):
+        load_contour(source, 100)
