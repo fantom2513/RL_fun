@@ -176,7 +176,7 @@ uv run python scripts/ppo_check.py --track circuit --minutes 5 --every 10
 
 ## Fourier epicycle animation
 
-A video of circles drawing a contour (π, a heart, your own SVG or a silhouette image).
+Two chains of rotating circles (x on top, y on the left) draw a contour (π, a heart, your own SVG\nor a silhouette image); the error of the current approximation is shown under the counter.
 It is unrelated to the RL code and uses the optional `animation` dependency group:
 
 ```bash

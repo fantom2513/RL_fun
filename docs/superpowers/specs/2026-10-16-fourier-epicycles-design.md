@@ -86,3 +86,17 @@ user supplies a clean silhouette or SVG).
   fails, fall back to documenting the missing system library.
 - Raster contours of noisy photos will be jagged; mitigated by the threshold
   parameter and optional smoothing before the FFT.
+
+## Revision 2 (2026-10-16): x/y chains, error readout, smooth curves
+
+Requested after the first render. Plan: `docs/superpowers/plans/2026-10-16-fourier-xy-chains.md`.
+
+- The single complex epicycle chain is replaced by two real Fourier chains: x(t) as a
+  horizontal chain on top, y(t) as a vertical chain on the left. Thin guide lines from
+  the chain ends cross at the point that draws the red trail. N counts circles per chain;
+  the constant term is only the chain's starting position.
+- The label shows `N = …` and, under it, `error …`: the RMS distance between the n-term
+  curve and the contour, as a percentage of the shape's half-size (one value per stage).
+- Circles are exact (four cubic Bezier arcs each) and the trail is sampled in proportion to
+  the highest frequency in play, so lines are smooth at any N.
+- The complex series functions (`coefficients`, `partial_sum`, `chain_positions`) were removed.
