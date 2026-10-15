@@ -48,3 +48,13 @@ def test_join_subpaths_visits_the_nearest_path_next():
 def test_join_subpaths_rejects_an_empty_list():
     with pytest.raises(ValueError):
         join_subpaths([])
+
+
+def test_normalize_rejects_a_zero_extent_shape():
+    with pytest.raises(ValueError, match="zero extent"):
+        normalize(np.array([1 + 1j] * 3))
+
+
+def test_resample_rejects_fewer_than_two_points():
+    with pytest.raises(ValueError, match="at least 2 points"):
+        resample(np.array([1 + 1j]), 10)
