@@ -49,10 +49,10 @@ class FourierDrawing(Scene):
         outline = VMobject().set_stroke(WHITE, 2, opacity=0.12).set_fill(opacity=0)
         outline.set_points_as_corners(_to_points(place(np.append(spec.outline, spec.outline[0]))))
 
-        circles = VMobject().set_stroke(WHITE, 1.2, opacity=0.4).set_fill(opacity=0)
+        circles = VMobject().set_stroke(WHITE, 1.6, opacity=0.55).set_fill(opacity=0)
         hands = VMobject().set_stroke("#FFD166", 2.5).set_fill(opacity=0)
-        drops = VMobject().set_stroke(WHITE, 1, opacity=0.25).set_fill(opacity=0)
-        guides = VMobject().set_stroke(WHITE, 1.5, opacity=0.5).set_fill(opacity=0)
+        drops = VMobject().set_stroke(WHITE, 1.2, opacity=0.35).set_fill(opacity=0)
+        guides = VMobject().set_stroke(WHITE, 2, opacity=0.65).set_fill(opacity=0)
         trail = VMobject().set_stroke("#FF4D6D", 4).set_fill(opacity=0)
 
         def geometry():

@@ -14,10 +14,10 @@ from rl_fun.fourier.series import RealSeries
 class Layout:
     """Frame is 9 x 16 units, origin at the centre, y up. Starting values; tune by eye."""
 
-    shape_scale: float = 2.2
-    shape_centre: complex = 1.4 - 1.2j
-    x_row_y: float = 4.4
-    y_col_x: float = -2.9
+    shape_scale: float = 2.0
+    shape_centre: complex = 1.9 - 2.2j
+    x_row_y: float = 3.6
+    y_col_x: float = -2.5
 
 
 @dataclass(frozen=True)
