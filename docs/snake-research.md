@@ -109,3 +109,10 @@ Cloning gate on 8x8 (4,000 iterations, 4 minutes, `runs/snake-gpu/clone-8`):
 99.8% action accuracy; 127 of 128 greedy wins on the batched environment; 20 of 20 wins on
 the reference `SnakeEnv` tuning seeds. 16x16 acceptance (90 of 100 on seeds
 3000000..3000099) is not yet measured.
+
+Cloning on 16x16 (12,000 iterations, 36 minutes, `runs/snake-gpu/clone-16`): action accuracy
+99.98%, but greedy play is unstable between checkpoints (64-game batched evaluations at every
+1,000 iterations: 8%, 28%, 48%, 39%, 77%, 72%, 97%, 44%, 80%, 94%, 94%, 77% wins). The final
+model, evaluated on the 20 tuning seeds in the reference `SnakeEnv`, won 14 of 20 (70%, mean
+occupancy 72%); the 6 failures were all starvation, i.e. the policy looped without food.
+Below the 90-of-100 acceptance bar; no best-checkpoint selection and no PPO fine-tuning yet.
