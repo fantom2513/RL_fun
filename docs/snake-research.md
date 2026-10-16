@@ -126,3 +126,10 @@ without a KL anchor wins fell to 27-68%; with a KL anchor to the clone (coeffici
 went 73%, 92%, 90%, 95%, 98% over the next 80 iterations. The 8x8 clone has no headroom, so
 these runs only show stability; the best checkpoint (the clone itself) was kept in both.
 Whether PPO improves the 16x16 clone is not yet known.
+
+Pending run (not started): PPO on 16x16 from `runs/snake-gpu/clone-16/clone.pt`, command
+`uv run python scripts/snake_gpu_train.py finetune --size 16 --resume runs/snake-gpu/clone-16/clone.pt --envs 512 --iterations 600 --minibatch 2048 --critic-warmup 60 --lr 1e-5 --kl-coef 2.0 --start-fraction 0.9 --eval-games 256 --eval-steps 20000 --eval-every 50 --out runs/snake-gpu/ppo-16`,
+about 100 minutes. Use `--minibatch 2048` on 16x16: at 8192 the activations exceed the 12 GB of
+video memory and an iteration stalls for minutes (measured: 2048 -> 8 s per iteration at a 4.1 GB
+peak, 4096 -> 44 s at 6.6 GB). The baseline of that run is the clone's 76% on the batched
+evaluation.
