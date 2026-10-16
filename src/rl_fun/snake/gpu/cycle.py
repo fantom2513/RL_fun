@@ -19,4 +19,7 @@ def hamiltonian_cycle(size: int) -> np.ndarray:
     order = np.empty((size, size), dtype=np.int64)
     for index, (x, y) in enumerate(path):
         order[y, x] = index
+    if (size // 2) % 2:
+        # Run the cycle backwards so the standard start (middle row, heading right) follows it.
+        order = size * size - 1 - order
     return order

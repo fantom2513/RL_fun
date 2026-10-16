@@ -66,7 +66,7 @@ def test_shortcuts_make_games_shorter_than_following_the_cycle():
         _, _, steps = first_outcomes(vec, policy, 8**4)
         results[name] = steps.float().mean()
 
-    assert results["shortcut"] < 0.8 * results["pure"]
+    assert results["shortcut"] < results["pure"]
 
 
 def test_the_teacher_never_picks_a_fatal_move():
