@@ -14,9 +14,7 @@ def act(vec, *actions):
 
 def row_path(size):
     return [
-        (x, y)
-        for y in range(size)
-        for x in (range(size) if y % 2 == 0 else reversed(range(size)))
+        (x, y) for y in range(size) for x in (range(size) if y % 2 == 0 else reversed(range(size)))
     ]
 
 
@@ -28,7 +26,8 @@ def invariants_hold(vec):
         values = sorted(body[i][body[i] > 0].tolist())
         if values != list(range(1, length + 1)) or len(cells) != length:
             return False
-        if any(abs(a[0] - b[0]) + abs(a[1] - b[1]) != 1 for a, b in zip(cells, cells[1:], strict=False)):
+        pairs = zip(cells, cells[1:], strict=False)
+        if any(abs(a[0] - b[0]) + abs(a[1] - b[1]) != 1 for a, b in pairs):
             return False
         food = tuple(vec.food[i].tolist())
         if length < vec.size**2 and (food in cells or not _inside(food, vec.size)):
@@ -123,6 +122,7 @@ def test_moving_into_the_cell_the_tail_leaves_is_allowed():
 
     assert not done
 
+
 def test_wall_collision_ends_the_game_with_the_death_penalty():
     env, vec = make_pair()
     env.snake = [(7, 4), (6, 4), (5, 4)]
@@ -145,6 +145,7 @@ def test_self_collision_ends_the_game():
     done = step_pair(env, vec, 1)  # a left turn heads down into (3,4), a middle segment
 
     assert done and env.reason == "collision"
+
 
 def test_filling_the_board_is_a_win_with_the_win_reward():
     size = 8
