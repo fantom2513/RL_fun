@@ -82,6 +82,8 @@
 
     /* world: identical in both schemes, same values as racing/style.py */
     --scene-grass: #7a8e9c;
+    --race-ground: #233c40;
+    --race-ground-deep: #172a30;
     --scene-road: #4f616e;
     --scene-line: #fffffc;
     --scene-curb: #d62e3e;

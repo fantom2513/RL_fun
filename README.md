@@ -4,7 +4,8 @@ RL Fun — учебная лаборатория обучения с подкр�
 
 ## Snake Lab
 
-The local laboratory includes a Snake sandbox with manual play, DQN training,
+The local laboratory includes a Snake sandbox with manual play, DQN/Double DQN,
+REINFORCE (Policy Gradient), A2C, PPO, experimental TD3 with an action adapter,
 evolutionary neural-policy training, and human-left/agent-right comparison.
 Launch it from the repository root:
 
@@ -21,13 +22,102 @@ can continue after the other loses. Changing the board, seed, mode or model
 creates a fresh paused game.
 
 The training panel runs a separate CPU process. **DQN** learns from replayed
-experience using a target network and epsilon-greedy exploration. **Эволюция**
+experience using a target network and epsilon-greedy exploration. **Double DQN**
+selects the next action with the online network and values it with the target
+network. **REINFORCE** uses categorical actions and Monte Carlo episode returns.
+**A2C** uses n-step advantages and a separate state-value network. **PPO** uses
+GAE, fixed on-policy trajectories, clipped likelihood ratios and multiple
+minibatch passes. Their exploration comes from sampled action probabilities;
+entropy regularization is configurable, and replay/epsilon settings do not apply.
+**TD3 · адаптер ходов** trains two Q critics and a deterministic actor with
+delayed actor updates, target-action noise and soft target updates. Its actor
+outputs three continuous scores in [-1, 1]; argmax maps them to the three Snake
+turns. This piecewise-constant action adapter is experimental: original TD3 is
+intended for continuous actions. **Эволюция**
 evaluates a population on shared seeds, retains elites and mutates offspring.
-Both use an 11-feature observation and an `11 → 64 → 64 → 3` MLP. Scores count
+The legacy observation uses 11 features and an `11 → 64 → 64 → 3` MLP. The
+**Карта тела и еды** observation adds two board planes (ordered body segments
+and food); on 16×16 it uses a `523 → 128 → 128 → 3` MLP. Scores count
 food eaten; reward is `+10` for food, `-10` for collision and `-0.01` per ordinary
 step. The score graph distinguishes training averages from greedy evaluation on
 fixed seeds. A short run checks execution; substantial playing strength needs
 more training and parameter tuning.
+
+The objective is to occupy every board cell: 253 food items on 16×16. Training
+and evaluation report occupancy and the fraction of completed games. A separate
+configurable bonus rewards full-board victory. Evaluation respects the full
+configured step budget; starvation, loops, collisions and budget exhaustion
+are reported separately. Playback uses the best evaluated policy; continuation
+restores the latest network, optimizer and replay. Legacy version-1 models remain
+loadable, and continuation requires the same observation mode.
+
+Disable **Анимация обучения** for full-speed simulation: no per-step snapshots,
+frame transmission or animation sleeps. You can enable it again during a run.
+The **Карта относительно головы** observation centers the head and rotates its
+direction upward. Five planes encode the head, ordered body, food, occupied
+fraction and walls; the 16×16 policy uses `4805 → 128 → 128 → 3`.
+For RL algorithms, `curriculum_steps > 0` mixes ordinary starts with connected
+long bodies. Half the resets retain the usual length of three; the maximum
+synthetic starting length increases from 25% to 95% of the board over that
+number of environment steps. These are training states, not demonstrations.
+Playback and tuning/validation always start with three segments. Wins from
+synthetic training starts do not establish full-game completion.
+The optional `distance_reward` adds its value for each cell of Manhattan
+distance gained toward the previous food, and subtracts it for moving away.
+Food respawning does not change this progress calculation; collisions retain
+their configured penalty. It defaults to zero. This reward shaping can favor
+greedy food collection and must be tested for late-game self-trapping.
+
+Research directions include [head-centered PPO with curriculum](https://elichen.github.io/snake/index.html),
+[CNN-DQN with curriculum](https://web.stanford.edu/class/aa228/reports/2020/final16.pdf)
+and [AlphaSnake's MCTS plus RL](https://arxiv.org/abs/2211.09622).
+Their environments and training budgets differ. The current long-body reset
+curriculum is an experimental hypothesis, not a reproduction of their reported
+results. A successful configuration must be established by saved weights and
+independent full-game evaluation in this environment.
+
+The **Полное поле 16×16** preset selects Double DQN, board observations and
+disabled animation. It is explicitly experimental until a trained model wins
+at least 90 of 100 independent validation games at size 16 or larger.
+
+Run a reproducible, bounded training and validation experiment:
+
+```powershell
+uv run python scripts/snake_check.py --train-seconds 60 --episodes 100000
+uv run python scripts/snake_check.py --algorithm ppo --train-seconds 60 --episodes 100000
+uv run python scripts/snake_check.py --train-seconds 300 --episodes 100000 --resume runs/lab/snake/<run-id>/model.pt
+uv run python scripts/snake_check.py --validate-only --resume runs/lab/snake/<frozen-run-id>/model.pt
+```
+
+Training seeds, 20 tuning seeds and 100 validation seeds occupy separate ranges.
+Training chunks evaluate only the 20 tuning seeds and write `evaluation.json`.
+Freeze the selected model before running `--validate-only`: it performs no
+training and writes the 100 independent outcomes in `validation.json`. Artifacts
+include checkpoints, metrics, `record.json`, measured completion rate, elapsed
+time, checkpoint hash and source version. The time budget bounds training;
+greedy evaluation runs afterwards. Saved models appear in the lab model list.
+
+Compare all six RL algorithms with a bounded, headless parameter search:
+
+```powershell
+uv run python scripts/snake_search.py --steps 100000 --seconds 180 --workers 2 --manifest runs/lab/snake/search-round1.json
+```
+
+The search records actual environment steps, updates and training time for each
+experiment. The wall-clock cap may stop a slow algorithm before its step budget.
+`--configs` accepts a JSON list of `{ "name": "experiment", "config": { ... },
+"resume": "optional/model.pt" }` entries for follow-up parameter trials. The
+manifest is updated after each finished run; weights remain in its run directory.
+Ranking uses wins first, then mean occupancy on the 20 tuning games. These short
+trials screen candidates and do not establish reliable full-board completion.
+The **Лучший в поиске** preset loads the strongest saved tuning candidate and
+its parameters. It shows measured wins and occupancy, remains experimental,
+and ignores results whose checkpoint has changed since evaluation. Use
+**Обновить** after a search to refresh the preset catalogue.
+Under **Сохранённые модели → Лучшие предобученные**, choose the strongest
+evaluated checkpoint for each algorithm. Each option shows mean occupancy and
+victories on the tuning games; selection loads weights and training parameters.
+**Обновить** refreshes both saved models and the preset catalogue.
 
 Start, pause/resume, stop and save training from the panel. Models auto-save
 after the first completed iteration, every 20 iterations, and on completion or
@@ -36,7 +126,9 @@ To resume training, select the model and check **Продолжить выбра
 the new episode/generation budget is added to the saved count. Continuation
 requires the same algorithm, board size and (for evolution) population size.
 DQN restores optimizer, target network and replay; evolution restores the
-population and champion. Before training, agent play is explicitly labeled
+population and champion. On-policy algorithms restore the actor, critic,
+optimizer, unfinished trajectory, PPO minibatch cursor and RNG state. TD3
+restores both critics, target networks and continuous-score replay. Before training, agent play is explicitly labeled
 **Необученная сеть**.
 
 Artifacts live in `<runs-dir>/snake/<run-id>/`: `record.json`, `metrics.jsonl`
@@ -221,6 +313,35 @@ uv run python scripts/ppo_check.py --track circuit --minutes 5 --every 10
 Любой параметр PPO можно переопределить флагом (`--learning-rate 1e-3`, `--entropy-coef 0.01`, `--rollout-steps 256`, …), а также `--population`, `--max-steps`, `--seed`, `--iterations`.
 
 ## Структура проекта
+
+### Continuous Snake training
+
+Run an automatic 16×16 search with PPO, A2C, REINFORCE, DQN, Double DQN, and TD3:
+
+```powershell
+.venv\Scripts\python.exe -u scripts/snake_training_loop.py --seconds 1200 --steps 1000000 --target-occupancy 0.5
+```
+
+Each cycle changes parameters, trains without rendering, saves weights, and evaluates
+20 ordinary games starting at length 3. Latest training states continue separately
+for each algorithm; the best evaluated weights remain available for playback.
+The loop continues until stopped; reaching 50% mean occupancy triggers one frozen,
+independent 100-game validation and ends the search. Use `--target-occupancy 1`
+to require full board completion instead. TD3 uses the experimental scores-to-action adapter.
+This is a measured target, not a guarantee of a perfect learned policy.
+Best evaluated weights remain available in the UI pretrained selector.
+
+Status and completed results are recorded in `runs/lab/snake/training-loop.json`.
+Only one loop can run at a time. Request a graceful stop with:
+
+```powershell
+New-Item -ItemType File -Force runs/lab/snake/training-loop.stop
+```
+
+The current cycle saves its checkpoint and evaluation before stopping. Remove the
+stop file only when explicitly restarting. A completed independent validation
+requires review before starting a new search, so its results are not repeatedly
+used to tune parameters. `--max-cycles N` sets a finite cycle budget.
 
 - `src/rl_fun/` — среды, алгоритмы, policy, rollout, runtime и метрики;
 - `src/rl_fun/racing/` — гоночная среда, флот машинок, отрисовка, эталонная эволюция;

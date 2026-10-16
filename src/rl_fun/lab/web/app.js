@@ -16,6 +16,8 @@ import { initTracks } from './screens/tracks.js';
 import { compareRows, renderCompare, sortRows } from './screens/compare.js';
 import { initTooltips } from './ui/tooltip.js';
 import { summarizeRun } from './core/run_summary.js';
+import { completedIds, removeRuns } from './core/run_history.js';
+import { confirmRunRemoval } from './ui/confirm_runs.js';
 import './ui/seg.js';
 import { initSnake } from './snake/screen.js';
 
@@ -79,6 +81,8 @@ const state = {
   tracks: new Map(),
   colorIndex: 0,
   creating: false,
+  historySelection: new Set(),
+  deleting: false,
 };
 
 let view = null;
@@ -169,7 +173,10 @@ function addRun(row) {
       renderControls();
       renderBanner();
       scheduleGame();
-      if (run.id === state.activeId) renderNetworkState();
+      if (run.id === state.activeId) {
+        renderNetworkState();
+        renderSummary();
+      }
       if (run.id === state.activeId) form.refreshLock();
     },
     notice: (message) => toast(message.text),
@@ -262,6 +269,7 @@ async function select(id) {
     }
     el.loading.hidden = true;
     if (run.frame) view.setFrame(run.frame);
+    renderHint();
   } catch {
     if (state.activeId === id) {
       el.loading.hidden = true;
@@ -380,16 +388,45 @@ async function sendCommand(run, cmd) {
 
 async function removeRun() {
   const run = activeRun();
-  if (!run || !window.confirm(`Удалить запуск «${run.name}»? Его кривые и кадры пропадут.`)) return;
+  if (run) await deleteHistoryRuns([run.id], { allowLive: true });
+}
+
+async function deleteHistoryRuns(ids, { allowLive = false } = {}) {
+  if (state.deleting || state.confirmingRemoval) return;
+  const eligible = new Set(completedIds([...state.runs.values()]));
+  const runs = [...new Set(ids)].map((id) => state.runs.get(id))
+    .filter((run) => run && (allowLive || eligible.has(run.id)));
+  if (!runs.length) return;
+  state.confirmingRemoval = true;
+  let confirmed;
+  try { confirmed = await confirmRunRemoval(runs); }
+  finally { state.confirmingRemoval = false; }
+  if (!confirmed) return;
+  state.deleting = true;
+  renderCompareView();
+  renderControls();
   try {
-    await api.deleteRun(run.id);
-  } catch (error) {
-    if (error.status !== 404) return; // already gone on the server: just drop it from the page
+    const result = await removeRuns(runs.map((run) => run.id), api.deleteRun);
+    for (const id of result.removed) {
+      state.runs.get(id)?.subscription.close();
+      state.runs.delete(id);
+      state.historySelection.delete(id);
+    }
+    if (result.removed.includes(state.activeId)) {
+      const remaining = [...state.runs.keys()];
+      await select(remaining.at(-1) ?? null);
+    } else {
+      renderTabs();
+    }
+    chart.update();
+    refreshGame();
+    if (result.removed.length) toast(`Удалено заездов: ${result.removed.length}`);
+    if (result.failed.length) toast(`Не удалось удалить: ${result.failed.length}. Они остались в истории.`, 'error');
+  } finally {
+    state.deleting = false;
+    renderCompareView();
+    renderControls();
   }
-  run.subscription.close();
-  state.runs.delete(run.id);
-  const remaining = [...state.runs.keys()];
-  await select(remaining.length ? remaining[remaining.length - 1] : null);
 }
 
 // ---- tracks: the list, the editor and the use of a track in a new run -------------------------
@@ -452,9 +489,23 @@ function refreshGame() {
 }
 
 function renderCompareView() {
+  if (state.confirmingRemoval) return;
   const rows = compareRows([...state.runs.values()]);
   const { key, direction } = state.compareSort;
   renderCompare($('compare-view'), sortRows(rows, key, direction), {
+    selectedIds: state.historySelection,
+    busy: state.deleting,
+    onToggle: (id, checked) => {
+      if (checked) state.historySelection.add(id);
+      else state.historySelection.delete(id);
+      renderCompareView();
+    },
+    onSelectAll: (checked) => {
+      state.historySelection = new Set(checked ? completedIds(rows) : []);
+      renderCompareView();
+    },
+    onDelete: (id) => deleteHistoryRuns([id]),
+    onDeleteSelected: () => deleteHistoryRuns([...state.historySelection]),
     sortKey: key,
     sortDirection: direction,
     onSort: (column) => {
@@ -516,7 +567,7 @@ async function previewTrack(name) {
     view.setTrack(track, state.catalog.style);
     el.empty.hidden = true;
     el.loading.hidden = true;
-    el.hint.textContent = `Предпросмотр трассы «${name}»: настройте запуск слева и нажмите «Создать запуск».`;
+    el.hint.textContent = `Предпросмотр «${name}»: откройте «Параметры» и создайте запуск.`;
   } catch {
     // the preview is a convenience; the form still works without it
   }
@@ -529,7 +580,7 @@ function showLabView(compare) {
   $('compare-view').hidden = !compare;
   document.querySelector('.layout').style.display = compare ? 'none' : '';
   const toggle = $('view-toggle');
-  toggle.textContent = compare ? 'Заезд' : 'Сравнение';
+  toggle.textContent = compare ? 'К заезду' : 'История';
   toggle.setAttribute('href', compare ? '#/lab' : '#/lab/compare');
   if (compare) renderCompareView();
   else window.dispatchEvent(new Event('resize'));
@@ -537,7 +588,18 @@ function showLabView(compare) {
 
 // ---- rendering of the chrome --------------------------------------------------------------
 
+let tabsSignature = '';
+let tabsActiveId = null;
 function renderTabs() {
+  const selectedId = formMode() === 'run' ? state.activeId : null;
+  const signature = JSON.stringify([state.activeId, selectedId,
+    [...state.runs.values()].map(({ id, name, status, archived, color }) => [id, name, status, archived, color])]);
+  if (signature === tabsSignature) return;
+  tabsSignature = signature;
+  const revealActive = tabsActiveId !== state.activeId;
+  tabsActiveId = state.activeId;
+  const scrollLeft = el.tabs.scrollLeft;
+  const focusedId = el.tabs.contains(document.activeElement) ? document.activeElement.dataset.id : null;
   const fragment = document.createDocumentFragment();
   for (const run of state.runs.values()) {
     const tab = document.createElement('button');
@@ -574,6 +636,15 @@ function renderTabs() {
     fragment.append(tab);
   }
   el.tabs.replaceChildren(fragment);
+  el.tabs.scrollLeft = scrollLeft;
+  if (focusedId) [...el.tabs.children].find((tab) => tab.dataset.id === focusedId)?.focus({ preventScroll: true });
+  const active = el.tabs.querySelector('[aria-selected="true"], [aria-current="true"]');
+  if (active && revealActive) {
+    const bounds = el.tabs.getBoundingClientRect();
+    const tabBounds = active.getBoundingClientRect();
+    if (tabBounds.right > bounds.right) el.tabs.scrollLeft += tabBounds.right - bounds.right;
+    else if (tabBounds.left < bounds.left) el.tabs.scrollLeft -= bounds.left - tabBounds.left;
+  }
   renderLegend();
 }
 
@@ -612,6 +683,7 @@ function renderMetrics() {
 function renderControls() {
   const run = activeRun();
   const live = Boolean(run) && !TERMINAL.has(run.status);
+  el.remove.disabled = !run || state.deleting;
   el.pause.disabled = !live;
   el.pause.textContent = run?.status === 'paused' ? 'Продолжить' : 'Пауза';
   el.speed.disabled = !live;

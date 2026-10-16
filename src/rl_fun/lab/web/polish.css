@@ -1,0 +1,212 @@
+/* The lab's presentation layer: softer surfaces and clearer hierarchy without changing tokens. */
+
+.lab-screen {
+  background: radial-gradient(ellipse at top right, var(--surface-2), var(--bg) 65%);
+}
+
+.topbar {
+  gap: 12px 20px;
+  padding: 16px 20px;
+  background: var(--surface-sunken);
+  border-color: var(--border);
+}
+
+.brand-name {
+  font: 650 20px/1.2 var(--font-ui);
+  letter-spacing: -0.03em;
+  text-transform: none;
+}
+
+.tabs-wrap { gap: 10px; }
+.tabs { gap: 8px; }
+.tab {
+  min-height: 50px;
+  border-color: var(--border);
+  border-radius: 12px;
+  background: var(--surface-1);
+}
+.tab-body { padding: 8px 0; gap: 4px; }
+.tab-name { font-size: 14px; }
+.tab-meta { font: 12px/1.2 var(--font-ui); }
+.tab[aria-selected="true"] {
+  background: var(--surface-3);
+  box-shadow: inset 0 -2px 0 var(--run);
+}
+.tabs button[aria-selected="true"]::after { display: none; }
+
+.controls { gap: 10px; }
+.btn {
+  height: 36px;
+  border-radius: 10px;
+  border-color: var(--border);
+  font-weight: 550;
+}
+.btn-small { height: 30px; }
+.btn-primary {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px var(--accent-soft);
+}
+.btn-danger:not(:hover) {
+  background: transparent;
+  border-color: transparent;
+}
+.btn-danger:hover:not(:disabled) { background: var(--danger-soft); }
+
+.layout { gap: 14px; padding: 18px 20px; }
+.panel {
+  padding: 16px;
+  border-color: var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-1);
+}
+.panel-title {
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+.params { padding-bottom: 0; }
+.form-mode { font-size: 15px; }
+.group {
+  border-color: var(--border);
+  border-radius: 12px;
+  background: transparent;
+}
+.group > summary {
+  text-transform: none;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+.lock-note {
+  color: var(--text-2);
+  background: transparent;
+  font-size: 12px;
+  border-left-color: var(--border-strong);
+}
+.field-label { font-size: 13px; }
+.field-hint { line-height: 1.5; }
+
+.run-summary { gap: 12px; }
+.run-stats { gap: 10px; }
+.run-stat {
+  padding: 14px 16px;
+  border-color: var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-1);
+}
+.run-stat dt { font-size: 13px; }
+.run-stat dd { margin: 8px 0; font-size: 26px; letter-spacing: -0.04em; }
+.run-stat small { font-size: 12px; }
+.run-stat-best {
+  border-color: var(--accent-soft);
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface-1));
+}
+.run-stat-best dt, .run-stat-best dd { color: var(--accent-text); }
+
+.stage {
+  background: var(--race-ground);
+  border-color: var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-2);
+}
+.scene-tools, .camera-tools { top: 16px; }
+.scene-tools { left: 16px; }
+.camera-tools { right: 16px; }
+.chip {
+  height: 32px;
+  border-radius: 9px;
+  font-size: 13px;
+  border-color: var(--hud-border);
+}
+.stage-hint {
+  font-size: 11px;
+  background: var(--hud-bg);
+  color: var(--hud-text-2);
+  padding: 6px 10px;
+}
+.network-head .panel-title { color: var(--text-2); }
+.network-head { flex: none; }
+.network:has(#network-content[hidden]) { min-height: 60px; overflow: hidden; }
+.curves-head { gap: 12px; }
+.segmented { border-color: var(--border); border-radius: 10px; padding: 3px; }
+.legend { max-height: 48px; overflow: auto; }
+
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.history-heading h2 { margin: 0 0 6px; font: 650 24px/1.3 var(--font-ui); letter-spacing: -0.03em; }
+.history-heading p { margin: 0; font-size: 13px; }
+.history-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.history-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-1);
+}
+.history-table-wrap .table { margin: 0; }
+.history-table-wrap .table th { background: var(--surface-2); padding: 14px; white-space: nowrap; }
+.history-table-wrap .table td { padding: 14px; border-color: var(--border); }
+.history-table-wrap tr[aria-selected="true"] { background: var(--accent-soft); }
+.history-select { width: 44px; }
+.history-select input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+.history-select input:disabled { cursor: default; opacity: 0.4; }
+.history-actions, .history-table-wrap th:last-child {
+  position: sticky;
+  right: 0;
+  white-space: nowrap;
+  background: var(--surface-1);
+  box-shadow: -8px 0 12px var(--surface-1);
+}
+.history-table-wrap th:last-child { background: var(--surface-2); }
+.history-table-wrap tr[aria-selected="true"] .history-actions { background: var(--surface-2); }
+.compare-view { padding: 24px; }
+
+.run-delete-dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 24px;
+  color: var(--text);
+  border-radius: 18px;
+}
+.run-delete-dialog::backdrop { background: color-mix(in srgb, var(--bg) 72%, transparent); }
+.run-delete-dialog h2 { margin: 0 0 12px; font: 650 24px/1.3 var(--font-ui); }
+.run-delete-dialog p { line-height: 1.5; color: var(--text-2); }
+.run-delete-list {
+  list-style: none;
+  padding: 8px 14px;
+  max-height: 180px;
+  overflow: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.run-delete-list li { padding: 7px 0; overflow-wrap: anywhere; }
+.run-delete-note { font-size: 13px; }
+.run-delete-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.run-delete-actions .btn-danger { background: var(--danger-soft); color: var(--danger); }
+
+.level.is-locked { opacity: 1; }
+.level.is-locked .card-title { color: var(--text-2); }
+.level { border-radius: 14px; border-color: var(--border); }
+
+@media (max-width: 980px) {
+  .topbar { padding: 14px 16px; }
+  .layout { padding: 14px 16px; gap: 12px; }
+  .run-stat { padding: 12px 14px; }
+  .run-stat dd { font-size: 24px; }
+  .compare-view { padding: 16px; }
+}
+
+@media (max-width: 480px) {
+  .topbar, .layout { padding-left: 10px; padding-right: 10px; }
+  .run-stat { padding: 10px; }
+  .run-stat dd { font-size: 22px; }
+  .scene-tools, .camera-tools { top: 10px; }
+  .scene-tools { left: 8px; }
+  .camera-tools { right: 8px; }
+  .chip { font-size: 12px; }
+}

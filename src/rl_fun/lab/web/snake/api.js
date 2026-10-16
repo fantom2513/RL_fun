@@ -10,9 +10,10 @@ export async function request(path, body, method) {
   return data;
 }
 
-export function subscribe(onState, onError) {
+export function subscribe(onState, onError, onFrame) {
   const source = new EventSource('/api/snake/events');
   source.addEventListener('state', event => onState(JSON.parse(event.data)));
+  source.addEventListener('frame', event => onFrame?.(JSON.parse(event.data)));
   source.onerror = () => onError?.();
   return () => source.close();
 }

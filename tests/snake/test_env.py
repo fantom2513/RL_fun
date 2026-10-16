@@ -34,6 +34,21 @@ def test_food_grows_snake_and_scores():
     assert env.food not in env.snake
 
 
+def test_distance_reward_uses_previous_food_and_preserves_collision_penalty():
+    env = SnakeEnv(size=8, distance_reward=0.25, step_penalty=0)
+    env.reset(seed=1)
+    x, y = env.snake[0]
+    env.food = (x + 2, y)
+    assert env.step(0)[1] == 0.25
+    assert env.step(0)[1] == 10.25
+    env.reset(seed=1)
+    env.food = (x - 2, y)
+    assert env.step(0)[1] == -0.25
+    env.snake = [(7, 4), (6, 4), (5, 4)]
+    env.food = (0, 0)
+    assert env.step(0)[1] == -10
+
+
 def test_wall_collision_and_terminal_step():
     env = SnakeEnv(size=8)
     env.reset(seed=0)
@@ -84,3 +99,16 @@ def test_direction_translation_and_invalid_actions():
     for action in (-1, 3, True, 1.5):
         with pytest.raises(ValueError):
             env.step(action)
+
+
+def test_idle_penalty_applies_only_after_the_idle_limit_and_rewards_are_configurable():
+    env = SnakeEnv(8, idle_steps=2, idle_penalty=0.5, step_penalty=0.1)
+    env.reset(seed=1)
+    env.food = (0, 0)
+    rewards = [env.step(0)[1] for _ in range(4)]
+    assert rewards[:2] == [-0.1, -0.1]
+    assert rewards[2] == pytest.approx(-0.6)
+    custom = SnakeEnv(8, death_penalty=3.0)
+    custom.reset(seed=1)
+    custom.snake, custom.direction = [(7, 0), (6, 0), (5, 0)], 0
+    assert custom.step(0)[1] == -3.0

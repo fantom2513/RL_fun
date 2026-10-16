@@ -1,15 +1,18 @@
 # Snake completion and reproducible training
 
 Date: 2026-10-10
-Status: awaiting review of the written specification
+Status: software implemented; learned completion acceptance pending
 
 ## Approved intent
 
 The user wants an agent to finish Snake by occupying every cell, fast training
 with rendering disabled, another RL algorithm, and a preset backed by an actual
 trained model. The approved approach is to improve observations, add Double DQN,
-measure completion, and first establish results on a small board. All UI text is
-Russian; code and artifact identifiers are English.
+measure completion, and establish a verified completion preset for a board of
+at least 16x16. The user's subsequent clarification makes 16x16 the minimum
+acceptance size. Small-board experiments may inform tuning but do not satisfy
+the requested result. All UI text is Russian; code and artifact identifiers
+are English.
 
 This extends the existing Snake lab. Preserve all existing uncommitted work.
 No deterministic solver or scripted expert is presented as a learned policy.
@@ -34,9 +37,11 @@ snake length divided by board area, including the initial three cells. Food
 score remains a separate quantity. Collision, starvation, repeated-state loops
 and step-budget exhaustion are failures to complete, not wins.
 
-Allow sizes 4 through 32 in the environment, configuration, API and UI. The
-first learning preset uses 4x4; the familiar 16x16 sandbox stays available.
-Success at 4x4 must never be advertised as success at larger sizes.
+Retain sizes 8 through 32 in the environment, configuration, API and UI. The
+completion preset uses 16x16 and must eat 253 food items to occupy all 256
+cells. Smaller supported boards may be used for intermediate experiments;
+their results cannot qualify the completion preset. No size-4 extension is
+needed for this change.
 
 Support two explicit observation modes:
 
@@ -124,17 +129,21 @@ line benchmark. Applying a preset updates the visible configuration, board size
 and observation mode together. It is not called verified until evidence exists.
 
 The initial search configuration is a candidate, not an assertion of ideal
-parameters: Double DQN, board observation, size 4, learning rate 0.0003,
-gamma 0.99, batch size 64, replay capacity 50000, warmup 1000,
+parameters: Double DQN, board observation, size 16, learning rate 0.0003,
+gamma 0.999, batch size 64, replay capacity 50000, warmup 1000,
 train interval 4, target interval 500, epsilon 1.0 down to 0.02 over
-15000 episodes, episode budget 30000, max_steps 4000, food reward 10,
+60000 episodes, episode budget 100000, max_steps 100000, food reward 10,
 death penalty 10, win reward 100, ordinary-step penalty 0.001,
 idle_steps 0, animation disabled. All settings are explicit in saved artifacts.
+These are starting search settings, not a verified winning recipe. Measure
+throughput before a full run and use checkpointed training in bounded chunks.
 
 Tune on a fixed 20-seed evaluation set, then freeze the chosen configuration
 and model before evaluating 100 separate held-out seeds. Record training,
 tuning and validation seed sets and verify that they are disjoint. Validation
-uses greedy actions without exploration and the same game/reward rules.
+uses greedy actions without exploration and the same game/reward rules. Both
+tuning and final acceptance evaluate the chosen model on 16x16. If a larger
+board is offered as the completion preset, validate that exact size as well.
 
 Save the complete configuration, training seed, model checkpoint, per-episode
 validation outcomes, aggregate metrics, software/Git version, dirty-worktree
@@ -143,9 +152,11 @@ win rate and board size beside a verified preset. Avoid a machine-dependent
 absolute path or a hard-coded run ID in the UI; discover benchmark artifacts
 from the configured runs directory.
 
-A model qualifies as demonstrating learned completion only after an actual
-held-out full-board win. A preset qualifies as a reliable completion preset
-only after at least 90 wins out of 100 held-out games. Record results even if
+A model qualifies as demonstrating the requested learned completion only after
+an actual held-out full-board win on a board of at least 16x16. A preset
+qualifies as a reliable completion preset only after at least 90 wins out of
+100 held-out games at its advertised size, which must be at least 16x16.
+Record results even if
 the threshold is missed and keep the preset marked experimental. Passing code
 tests or one lucky win is not evidence of a reliable preset. Larger boards
 require their own training and validation; no generalization claim is implied.
@@ -158,7 +169,7 @@ runtime and learning curves; a long-running job is not silently left behind.
 
 ## Verification
 
-- Environment: full-board terminal reward once, occupancy, size-4 reset,
+- Environment: full-board terminal reward once, occupancy, size-16 reset,
   ordered-body/food planes, observation shape, tail movement, seeded food.
 - Algorithms: Double DQN action-selection/value split and terminal masking;
   both algorithms perform real parameter updates with each observation mode.
@@ -179,3 +190,7 @@ This change does not add PPO, recurrent policies, convolutional networks,
 curriculum across board sizes, parallel training jobs, GPU support or a
 deterministic completion agent. Double DQN supplies the requested additional
 RL option while keeping the first completion experiment reproducible.
+
+## User-requested algorithm extension
+
+The later explicit request for Policy Gradient, TD3 and other algorithms supersedes the initial exclusion of PPO. Snake now supports REINFORCE, A2C and PPO with categorical actions and an experimental TD3 action adapter (three continuous preference scores mapped to a turn by argmax). Algorithm availability is separate from learned-completion acceptance; no successful full-board preset has been established.

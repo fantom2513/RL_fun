@@ -3,6 +3,7 @@
 import { h } from "../core/dom.js";
 import { number, percent } from "../core/format.js";
 import { STEP_SECONDS } from "../core/levels.js";
+import { completedIds } from "../core/run_history.js";
 
 export const LEARNER_LABELS = { evolution: "Эволюция", ppo: "PPO", cem: "CEM", a2c: "A2C" };
 
@@ -123,7 +124,8 @@ function statusCell(row) {
   );
 }
 
-function bodyRow(row, onSelect) {
+function bodyRow(row, { onSelect, onToggle, onDelete, selectedIds, busy }) {
+  const removable = completedIds([row]).length > 0;
   const finished = isNil(row.population)
     ? number(row.finishedLast, 0)
     : `${number(row.finishedLast, 0)} из ${number(row.population, 0)}`;
@@ -131,11 +133,22 @@ function bodyRow(row, onSelect) {
     "tr",
     {
       tabindex: 0,
+      dataset: { historyFocus: `row:${row.id}` },
       onclick: () => onSelect?.(row.id),
       onkeydown: (event) => {
-        if (event.key === "Enter") onSelect?.(row.id);
+        if (event.target === event.currentTarget && event.key === "Enter") onSelect?.(row.id);
       },
+      "aria-selected": String(selectedIds?.has(row.id) ?? false),
     },
+    h("td", { class: "history-select", onclick: (event) => event.stopPropagation() },
+      h("input", {
+        type: "checkbox",
+        checked: selectedIds?.has(row.id),
+        disabled: !removable || busy,
+        "aria-label": `Выбрать заезд «${row.name}»`,
+        dataset: { selectRun: row.id, historyFocus: `select:${row.id}` },
+        onchange: (event) => onToggle?.(row.id, event.target.checked),
+      })),
     nameCell(row),
     statusCell(row),
     h("td", null, number(row.iterations, 0)),
@@ -144,6 +157,15 @@ function bodyRow(row, onSelect) {
     h("td", null, bestWrap(row.best.lap, dash(row.bestLap, (v) => number(v, 2)))),
     h("td", null, bestWrap(row.best.firstLap, dash(row.firstLap, (v) => number(v, 0)))),
     h("td", null, finished),
+    h("td", { class: "history-actions", onclick: (event) => event.stopPropagation() },
+      h("button", {
+        type: "button", class: "btn btn-small btn-danger",
+        dataset: { historyFocus: `delete:${row.id}` },
+        disabled: !removable || busy,
+        "aria-label": `Удалить заезд «${row.name}»`,
+        title: removable ? "Удалить из истории и гаража" : "Сначала остановите заезд",
+        onclick: () => onDelete?.(row.id),
+      }, "Удалить")),
   );
 }
 
@@ -157,7 +179,7 @@ function headerCell(column, sortKey, sortDirection, onSort) {
       "button",
       {
         type: "button",
-        dataset: { sort: column.key },
+        dataset: { sort: column.key, historyFocus: `sort:${column.key}` },
         onclick: () => onSort?.(column.key),
       },
       column.label,
@@ -165,7 +187,12 @@ function headerCell(column, sortKey, sortDirection, onSort) {
   );
 }
 
-export function renderCompare(container, rows, { sortKey, sortDirection, onSort, onSelect } = {}) {
+export function renderCompare(container, rows, options = {}) {
+  const { sortKey, sortDirection, onSort, onSelectAll, onDeleteSelected, selectedIds = new Set(), busy = false } = options;
+  const focusKey = container.contains(document.activeElement) ? document.activeElement?.dataset?.historyFocus : null;
+  const wrap = container.querySelector('.history-table-wrap');
+  const scrollLeft = wrap?.scrollLeft ?? 0;
+  const scrollTop = wrap?.scrollTop ?? 0;
   if (!rows.length) {
     container.replaceChildren(
       h(
@@ -179,15 +206,42 @@ export function renderCompare(container, rows, { sortKey, sortDirection, onSort,
   }
 
   const ordered = sortKey ? sortRows(rows, sortKey, sortDirection) : rows;
+  const removable = completedIds(rows);
+  const selected = removable.filter((id) => selectedIds.has(id));
+  const allSelected = removable.length > 0 && selected.length === removable.length;
+  const toolbar = h("div", { class: "history-toolbar" },
+    h("div", { class: "history-heading" },
+      h("h2", null, "История заездов"),
+      h("p", { class: "muted" }, `Всего: ${rows.length} · можно удалить: ${removable.length}`)),
+    h("div", { class: "history-controls" },
+      h("button", {
+        type: "button", class: "btn", disabled: !removable.length || busy,
+        dataset: { historyFocus: 'select-all' },
+        onclick: () => onSelectAll?.(!allSelected),
+      }, allSelected ? "Снять выделение" : "Выбрать старые"),
+      h("button", {
+        type: "button", class: "btn btn-danger", disabled: !selected.length || busy,
+        dataset: { historyFocus: 'delete-selected' },
+        onclick: onDeleteSelected,
+      }, busy ? "Удаление…" : `Удалить выбранные${selected.length ? ` (${selected.length})` : ''}`)));
   const table = h(
     "table",
     { class: "table" },
     h(
       "thead",
       null,
-      h("tr", null, COLUMNS.map((column) => headerCell(column, sortKey, sortDirection, onSort))),
+      h("tr", null, h("th", { "aria-label": "Выбор заездов" }),
+        COLUMNS.map((column) => headerCell(column, sortKey, sortDirection, onSort)),
+        h("th", null, "Действия")),
     ),
-    h("tbody", null, ordered.map((row) => bodyRow(row, onSelect))),
+    h("tbody", null, ordered.map((row) => bodyRow(row, { ...options, selectedIds, busy }))),
   );
-  container.replaceChildren(table);
+  const nextWrap = h("div", { class: "history-table-wrap" }, table);
+  container.replaceChildren(toolbar, nextWrap);
+  nextWrap.scrollLeft = scrollLeft;
+  nextWrap.scrollTop = scrollTop;
+  if (focusKey) {
+    [...container.querySelectorAll('[data-history-focus]')]
+      .find((node) => node.dataset.historyFocus === focusKey)?.focus({ preventScroll: true });
+  }
 }

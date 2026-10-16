@@ -17,7 +17,9 @@ export class SnakeChart {
   draw() {
     const {ctx, width, height, color} = canvasContext(this.canvas);
     if (width < 50) return;
-    const series = this.metric === 'reward' ? [['reward', '--accent'], ['mean_reward', '--info']]
+    const series = this.metric === 'occupancy' ? [['occupancy', '--success'], ['evaluation_occupancy', '--info']]
+      : this.metric === 'win_rate' ? [['evaluation_win_rate', '--info']]
+      : this.metric === 'reward' ? [['reward', '--accent'], ['mean_reward', '--info']]
       : [['mean_score', '--success'], ['evaluation_score', '--info']];
     const values = this.history.flatMap(row => series.map(([key]) => row[key]).filter(Number.isFinite));
     let low = Math.min(0, ...values), high = Math.max(1, ...values);
@@ -29,7 +31,8 @@ export class SnakeChart {
       ctx.strokeStyle = color('--border'); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
       ctx.fillStyle = color('--text-3'); ctx.textAlign = 'right';
-      ctx.fillText((high - i * (high - low) / 3).toFixed(1), left - 8, y + 4);
+      const percentage = ['occupancy','win_rate'].includes(this.metric);
+      ctx.fillText(((high - i * (high - low) / 3) * (percentage ? 100 : 1)).toFixed(1) + (percentage ? '%' : ''), left - 8, y + 4);
     }
     if (!this.history.length) {
       ctx.fillStyle = color('--text-3'); ctx.textAlign = 'center';

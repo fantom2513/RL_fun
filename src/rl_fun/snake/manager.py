@@ -31,8 +31,20 @@ class SnakeSession:
         self.policy = policy
         self.trained = trained
         self.model_id = data.get("model") or None
+        self.follow_training = data.get("follow_training", False)
+        if type(self.follow_training) is not bool:
+            raise ValueError("follow_training должен быть логическим значением")
+        self.model_iteration = 0
+        self.model_revision = None
+        self.agent_episode = 1
         self.human = SnakeEnv(data.get("size", 16)) if self.mode != "agent" else None
-        self.agent = SnakeEnv(data.get("size", 16)) if self.mode != "manual" else None
+        self.agent = (
+            SnakeEnv(
+                data.get("size", 16), observation_mode=getattr(policy, "observation_mode", "local")
+            )
+            if self.mode != "manual"
+            else None
+        )
         for env in (self.human, self.agent):
             if env is not None:
                 env.reset(seed=self.seed)
@@ -47,6 +59,9 @@ class SnakeSession:
             "agent": self.agent.snapshot() if self.agent else None,
             "trained": self.trained,
             "model": self.model_id,
+            "model_iteration": self.model_iteration,
+            "agent_episode": self.agent_episode,
+            "follow_training": self.follow_training,
         }
 
     def step(self, data):
@@ -58,7 +73,10 @@ class SnakeSession:
                 relative_action(self.human.direction, direction) if direction is not None else 0
             )
             self.human.step(action)
-        if self.agent and not self.agent.done:
+        if self.agent and self.agent.reason != "win":
+            if self.agent.done:
+                self.agent_episode += 1
+                self.agent.reset(seed=(self.seed + self.agent_episode - 1) % (2**31))
             self.agent.step(self.policy.act(self.agent.observation()))
         self.last_used = time.monotonic()
         return self.snapshot()
@@ -74,6 +92,9 @@ class SnakeManager:
         self.sessions = {}
         self.closed = False
         self.revision = 0
+        self.frame_revision = 0
+        self.latest_frame = None
+        self.visualization = {"enabled": False, "fps": 8}
         self.context = multiprocessing.get_context("spawn")
 
     def _path(self, model_id):
@@ -94,7 +115,7 @@ class SnakeManager:
         temporary.write_text(json.dumps(self.run, ensure_ascii=False), encoding="utf-8")
         os.replace(temporary, path)
 
-    def models(self):
+    def models(self, limit=100):
         with self.condition:
             rows = []
             for directory in self.root.iterdir():
@@ -105,6 +126,13 @@ class SnakeManager:
                     if not (path / "model.pt").is_file():
                         continue
                     record = json.loads((path / "record.json").read_text(encoding="utf-8"))
+                    verification = record.get("verification")
+                    if (
+                        verification
+                        and verification.get("model_mtime_ns")
+                        != (path / "model.pt").stat().st_mtime_ns
+                    ):
+                        verification = None
                     rows.append(
                         {
                             "id": directory.name,
@@ -117,31 +145,159 @@ class SnakeManager:
                             else "interrupted",
                             "iteration": record.get("saved_iteration", 0),
                             "history": record.get("history", [])[-500:],
+                            "verification": verification,
                         }
                     )
                 except (OSError, ValueError, KeyError, TypeError):
                     continue
-            return sorted(rows, key=lambda row: row["created"], reverse=True)[:100]
+            rows.sort(key=lambda row: row["created"], reverse=True)
+            return rows if limit is None else rows[:limit]
+
+    def presets(self):
+        from rl_fun.snake.presets import completion_preset, verification_status
+
+        presets = [completion_preset()]
+        models = self.models(limit=None)
+        measured = []
+        for model in models:
+            try:
+                directory = self._path(model["id"])
+                report = json.loads((directory / "evaluation.json").read_text(encoding="utf-8"))
+                if (
+                    report["phase"] == "tuning"
+                    and model["size"] >= 16
+                    and model["config"]["observation_mode"] in ("board", "egocentric")
+                    and report["config"] == model["config"]
+                    and report["model_mtime_ns"] == (directory / "model.pt").stat().st_mtime_ns
+                    and report["episodes"] == 20
+                    and 0 <= report["wins"] <= 20
+                    and 0 <= report["occupancy"] <= 1
+                ):
+                    measured.append((report["wins"], report["occupancy"], model, report))
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        if measured:
+            _, _, model, report = max(measured, key=lambda row: row[:2])
+            presets.append(
+                {
+                    "id": "measured_candidate",
+                    "model": model["id"],
+                    "label": f"Лучший в поиске · {model['algorithm']} · экспериментальный",
+                    "status": "experimental",
+                    "config": model["config"],
+                    "visualization": {"enabled": False, "fps": 60},
+                    "description": f"Настройка: {report['wins']}/20 побед, "
+                    f"среднее заполнение {report['occupancy']:.1%}. "
+                    "Выбрана сохранённая модель. Независимая проверка ещё не пройдена.",
+                }
+            )
+            labels = {
+                "dqn": "DQN",
+                "double_dqn": "Double DQN",
+                "reinforce": "REINFORCE / Policy Gradient",
+                "a2c": "A2C",
+                "ppo": "PPO",
+                "td3": "TD3 · адаптер ходов",
+                "evolution": "Эволюция",
+            }
+            for algorithm, label in labels.items():
+                candidates = [row for row in measured if row[2]["algorithm"] == algorithm]
+                if not candidates:
+                    continue
+                _, _, model, report = max(candidates, key=lambda row: row[:2])
+                presets.append(
+                    {
+                        "id": "best_" + algorithm,
+                        "model": model["id"],
+                        "label": f"{label} · {report['occupancy']:.1%} поля · "
+                        f"{report['wins']}/20 побед",
+                        "status": "experimental",
+                        "config": SnakeConfig.from_dict(model["config"]).to_dict(),
+                        "visualization": {"enabled": False, "fps": 60},
+                        "result": {key: report[key] for key in ("wins", "episodes", "occupancy")},
+                        "description": f"Лучший оценённый {label} "
+                        f"на поле {model['size']}×{model['size']}: "
+                        f"{report['wins']}/20 побед, среднее заполнение {report['occupancy']:.1%}. "
+                        "Загружены обученные веса и их параметры. "
+                        "Результат на играх для настройки.",
+                    }
+                )
+        for model in models:
+            evidence = model.get("verification")
+            if not evidence or evidence.get("status") != "verified":
+                continue
+            if (
+                verification_status(model["size"], evidence["episodes"], evidence["wins"])
+                != "verified"
+            ):
+                continue
+            presets.append(
+                {
+                    "id": "verified_" + model["id"],
+                    "model": model["id"],
+                    "label": f"Полное поле {model['size']}×{model['size']} · проверенный",
+                    "status": "verified",
+                    "config": model["config"],
+                    "visualization": {"enabled": False, "fps": 60},
+                    "description": f"Проверено: {evidence['wins']}/{evidence['episodes']} побед. "
+                    "Выбрана обученная модель; можно играть или продолжить обучение.",
+                }
+            )
+        return presets
 
     def state(self):
         with self.condition:
-            return {"run": copy.deepcopy(self.run), "revision": self.revision}
+            return {
+                "run": copy.deepcopy(self.run),
+                "revision": self.revision,
+                "frame": copy.deepcopy(self.latest_frame),
+                "frame_revision": self.frame_revision,
+                "visualization": dict(self.visualization),
+            }
 
-    def train(self, config_data, resume=None):
+    @staticmethod
+    def _visualization(data):
+        if (
+            not isinstance(data, dict)
+            or set(data) != {"enabled", "fps"}
+            or type(data["enabled"]) is not bool
+            or type(data["fps"]) is not int
+            or not 1 <= data["fps"] <= 240
+        ):
+            raise ValueError("для анимации нужны enabled (да/нет) и fps (1–240)")
+        return dict(data)
+
+    def configure_visualization(self, data):
+        settings = self._visualization(data)
+        with self.condition:
+            if self.run and self.run["status"] not in TERMINAL:
+                try:
+                    self.connection.send({"command": "visualization", "settings": settings})
+                except (BrokenPipeError, OSError):
+                    raise RuntimeError("процесс обучения недоступен") from None
+            self.visualization = settings
+            self._notify()
+
+    def train(self, config_data, resume=None, visualization=None):
         config = SnakeConfig.from_dict(config_data)
+        settings = self._visualization(
+            {"enabled": False, "fps": 8} if visualization is None else visualization
+        )
         resume_path = None
         if resume:
             from rl_fun.snake.checkpoint import load_checkpoint
 
             resume_path = self._path(resume) / "model.pt"
             restored = load_checkpoint(resume_path)
-            previous = restored["config"]
-            keys = ["algorithm", "size"]
+            previous = SnakeConfig.from_dict(restored["config"]).to_dict()
+            keys = ["algorithm", "size", "observation_mode"]
             if config.algorithm == "evolution":
                 keys.append("population")
             if any(previous[key] != config.to_dict()[key] for key in keys):
-                raise ValueError("для продолжения нужны прежний алгоритм, поле и популяция")
-            budget = "episodes" if config.algorithm == "dqn" else "generations"
+                raise ValueError(
+                    "для продолжения нужны прежний алгоритм, поле, наблюдение и популяция"
+                )
+            budget = "generations" if config.algorithm == "evolution" else "episodes"
             SnakeConfig.from_dict(
                 {**config.to_dict(), budget: getattr(config, budget) + restored["completed"]}
             )
@@ -167,6 +323,9 @@ class SnakeManager:
                 "saved_iteration": 0,
                 "error": None,
             }
+            self.visualization = settings
+            self.latest_frame = None
+            self.frame_revision += 1
             self._persist()
             parent, child = self.context.Pipe()
             process = self.context.Process(
@@ -176,6 +335,7 @@ class SnakeManager:
                     child,
                     str(path),
                     str(resume_path) if resume_path else None,
+                    settings,
                 ),
                 daemon=True,
                 name=f"snake-{run_id[:8]}",
@@ -208,15 +368,28 @@ class SnakeManager:
                         break
                     continue
                 message = connection.recv()
+                if message["kind"] == "status" and message["status"] in TERMINAL:
+                    # A reusable run must have released its child process as well as saved weights.
+                    process.join()
                 with self.condition:
                     if not self.run or self.run["id"] != run_id:
                         break
-                    if message["kind"] == "metric":
+                    if message["kind"] == "frame":
+                        self.frame_revision += 1
+                        self.latest_frame = {
+                            "run_id": run_id,
+                            "seq": self.frame_revision,
+                            **message["frame"],
+                        }
+                        self.condition.notify_all()
+                        continue
+                    elif message["kind"] == "metric":
                         self.run["history"].append(message["metric"])
                         self.run["history"] = self.run["history"][-500:]
                     elif message["kind"] == "saved":
                         self.run["saved"] = True
                         self.run["saved_iteration"] = message["iteration"]
+                        self.run["saved_revision"] = self.run.get("saved_revision", 0) + 1
                     elif message["kind"] == "status":
                         self.run["status"] = message["status"]
                         self.run["error"] = message.get("error")
@@ -271,18 +444,26 @@ class SnakeManager:
                     torch.manual_seed(42)
                     policy = Policy()
                 if data.get("model"):
-                    from rl_fun.snake.checkpoint import load_checkpoint
+                    from rl_fun.snake.checkpoint import load_checkpoint, playback_weights
 
                     state = load_checkpoint(self._path(data["model"]) / "model.pt")
                     if state["config"]["size"] != data.get("size", 16):
                         raise ValueError("выберите размер поля, с которым обучалась модель")
-                    policy.load_state_dict(state["model"])
+                    policy = Policy(
+                        state["config"]["size"], state["config"].get("observation_mode", "local")
+                    )
+                    policy.load_state_dict(playback_weights(state))
+                    policy.action_adapter = state.get("action_adapter")
                     trained = (
-                        state.get("updates", 0) > 0
-                        if state["algorithm"] == "dqn"
+                        state.get("actor_updates" if state["algorithm"] == "td3" else "updates", 0)
+                        > 0
+                        if state["algorithm"] != "evolution"
                         else state["completed"] > 0
                     )
             session = SnakeSession(data, policy, trained)
+            if data.get("model") and mode != "manual":
+                session.model_iteration = state["completed"]
+            self._refresh_policy(session)
             expired = [
                 key
                 for key, value in self.sessions.items()
@@ -297,7 +478,42 @@ class SnakeManager:
 
     def step_game(self, game_id, data):
         with self.condition:
-            return self.sessions[game_id].step(data)
+            session = self.sessions[game_id]
+            if "follow_training" in data:
+                if type(data["follow_training"]) is not bool:
+                    raise ValueError("follow_training должен быть логическим значением")
+                session.follow_training = data["follow_training"]
+            self._refresh_policy(session)
+            return session.step(data)
+
+    def _refresh_policy(self, session):
+        run = self.run
+        if not (session.agent and session.follow_training and run and run.get("saved")):
+            return
+        if run["config"]["size"] != session.agent.size:
+            return
+        revision = (run["id"], run.get("saved_revision", run["saved_iteration"]))
+        if session.model_revision == revision:
+            return
+        from rl_fun.snake.checkpoint import load_checkpoint, playback_weights
+        from rl_fun.snake.policy import Policy
+
+        state = load_checkpoint(self._path(run["id"]) / "model.pt")
+        observation_mode = state["config"].get("observation_mode", "local")
+        session.policy = Policy(session.agent.size, observation_mode)
+        session.policy.load_state_dict(playback_weights(state))
+        session.policy.action_adapter = state.get("action_adapter")
+        if session.agent.observation_mode != observation_mode:
+            session.agent = SnakeEnv(session.agent.size, observation_mode=observation_mode)
+            session.agent.reset(seed=session.seed)
+        session.model_id = run["id"]
+        session.model_iteration = state["completed"]
+        session.model_revision = revision
+        session.trained = (
+            state.get("actor_updates" if state["algorithm"] == "td3" else "updates", 0) > 0
+            if state["algorithm"] != "evolution"
+            else state["completed"] > 0
+        )
 
     def delete_game(self, game_id):
         with self.condition:

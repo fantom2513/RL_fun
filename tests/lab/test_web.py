@@ -468,7 +468,7 @@ def test_index_loads_the_layers_before_the_legacy_stylesheet() -> None:
     sheets = re.findall(r"""<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']""", html)
 
     assert sheets[:2] == ["/static/css/tokens.css", "/static/css/base.css"]
-    assert sheets[-1] == "/static/style.css"
+    assert sheets[-2:] == ["/static/style.css", "/static/polish.css"]
 
 
 def test_icon_sprite_is_a_local_symbol_sheet() -> None:
@@ -689,7 +689,7 @@ def test_shell_files_exist() -> None:
 def test_index_loads_the_component_and_layout_layers() -> None:
     sheets = re.findall(r"""<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']""", _index_html())
 
-    assert [s for s in sheets if s != "/static/style.css"] == [
+    assert sheets[:-2] == [
         "/static/css/tokens.css",
         "/static/css/base.css",
         "/static/css/components.css",
@@ -773,6 +773,68 @@ def _node_json(module: str, expression: str) -> object:
     url = (WEB_DIR / module).as_uri()
     script = f"import * as m from {json.dumps(url)};console.log(JSON.stringify({expression}));"
     return json.loads(_node(script))
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_history_selection_excludes_running_and_paused_runs() -> None:
+    result = _node_json(
+        "core/run_history.js",
+        "m.completedIds([{id:'a',status:'running'},{id:'b',status:'paused'},"
+        "{id:'c',status:'stopped'},{id:'d',status:'finished'},{id:'e',status:'error'}])",
+    )
+
+    assert result == ["c", "d", "e"]
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional")
+@pytest.mark.parametrize(("action", "accepted"), [("Отмена", False), ("Удалить заезды (2)", True), ("Escape", False)])
+def test_run_deletion_dialog_requires_an_explicit_choice(action: str, accepted: bool) -> None:
+    result = _node_json("ui/confirm_runs.js", """await (async () => {
+  class Element {
+    constructor(tag) { this.tag=tag; this.children=[]; this.dataset={}; this.attrs={}; this.events={}; }
+    append(...items) { this.children.push(...items); }
+    setAttribute(key,value) { this.attrs[key]=value; }
+    addEventListener(key,callback) { this.events[key]=callback; }
+    showModal() { this.open=true; }
+    close(value='') { this.returnValue=value; this.events.close(); }
+    remove() { this.removed=true; }
+    focus() { document.activeElement=this; }
+  }
+  globalThis.Node=Element;
+  const origin=new Element('button'); origin.isConnected=true;
+  globalThis.document={activeElement:origin,body:new Element('body'),
+    createElement:(tag)=>new Element(tag),createTextNode:(text)=>text};
+  const pending=m.confirmRunRemoval([{name:'<img src=x>'},{name:'Old run'}]);
+  const dialog=document.body.children[0];
+  const flatten=(node)=>[node,...(node.children??[]).flatMap(flatten)];
+  const nodes=flatten(dialog);
+  const defaultFocus=document.activeElement.children.includes('Отмена');
+  const action=ACTION;
+  if(action==='Escape') dialog.close();
+  else nodes.find((node)=>node.tag==='button'&&node.children.includes(action)).events.click();
+  return {accepted:await pending,defaultFocus,removed:dialog.removed,
+    focusRestored:document.activeElement===origin,names:nodes.filter((node)=>node.tag==='li').map((node)=>node.children[0])};
+})()""".replace("ACTION", json.dumps(action)))
+
+    assert result == {"accepted": accepted, "defaultFocus": True, "removed": True,
+                      "focusRestored": True, "names": ["<img src=x>", "Old run"]}
+
+
+@pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")
+def test_history_batch_deletion_keeps_failures_and_treats_missing_runs_as_removed() -> None:
+    url = (WEB_DIR / "core" / "run_history.js").as_uri()
+    script = (
+        f"import * as m from {json.dumps(url)};"
+        "const calls=[];const result=await m.removeRuns(['a','b','c','a'],async(id)=>{"
+        "calls.push(id);if(id==='b')throw {status:500};if(id==='c')throw {status:404};});"
+        "console.log(JSON.stringify({calls,...result}));"
+    )
+
+    assert json.loads(_node(script)) == {
+        "calls": ["a", "b", "c"],
+        "removed": ["a", "c"],
+        "failed": ["b"],
+    }
 
 
 @pytest.mark.skipif(_NODE is None, reason="Node is optional; it only runs the pure JS helpers")

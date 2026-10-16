@@ -171,7 +171,10 @@ export class TrackView {
   }
 
   setStyle(style) {
-    this.style = style;
+    const css = getComputedStyle(this.canvas);
+    const ground = css.getPropertyValue('--race-ground').trim();
+    this.groundDeep = css.getPropertyValue('--race-ground-deep').trim();
+    this.style = { ...style, grass: ground || style.grass };
     this.parts = style.car.map((part) => {
       const path = new Path2D();
       part.points.forEach(([x, y], index) => (index === 0 ? path.moveTo(x, y) : path.lineTo(x, y)));
@@ -280,8 +283,6 @@ export class TrackView {
     canvas.width = Math.ceil(widthM * scale);
     canvas.height = Math.ceil(heightM * scale);
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = this.style.grass;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(scale, 0, 0, -scale, -left * scale, top * scale);
     this.paintTrack(ctx);
     this.background = { canvas, scale, left, top };
@@ -454,6 +455,12 @@ export class TrackView {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.globalAlpha = 1;
     ctx.fillStyle = style?.grass ?? '#7a8e9c';
+    if (style?.grass) {
+      const ground = ctx.createLinearGradient(0, 0, width, height);
+      ground.addColorStop(0, style.grass);
+      ground.addColorStop(1, this.groundDeep || style.grass);
+      ctx.fillStyle = ground;
+    }
     ctx.fillRect(0, 0, width, height);
     if (!this.track || !style) return;
 
@@ -550,23 +557,23 @@ export class TrackView {
     const ctx = this.ctx;
     const [sx, sy] = toScreen(lead[0], lead[1]);
     if (this.showRays) {
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255,255,255,0.78)';
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.beginPath();
-    for (const [rx, ry] of rays) {
-      const [ex, ey] = toScreen(rx, ry);
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(ex, ey);
-    }
-    ctx.stroke();
-    ctx.beginPath();
-    for (const [rx, ry] of rays) {
-      const [ex, ey] = toScreen(rx, ry);
-      ctx.moveTo(ex + 2, ey);
-      ctx.arc(ex, ey, 2, 0, Math.PI * 2);
-    }
-    ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.78)';
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.beginPath();
+      for (const [rx, ry] of rays) {
+        const [ex, ey] = toScreen(rx, ry);
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+      }
+      ctx.stroke();
+      ctx.beginPath();
+      for (const [rx, ry] of rays) {
+        const [ex, ey] = toScreen(rx, ry);
+        ctx.moveTo(ex + 2, ey);
+        ctx.arc(ex, ey, 2, 0, Math.PI * 2);
+      }
+      ctx.fill();
     }
 
     const radius = Math.max(18, 3.4 * scale);
@@ -593,9 +600,8 @@ export class TrackView {
   drawHud() {
     const ctx = this.ctx;
     const frame = this.frame;
-    const text = frame
-      ? `Лидер: ${this.progressText(frame.hud.progress)} · ${frame.hud.speed.toFixed(1)} м/с`
-      : 'Ждём кадр…';
+    if (!frame) return;
+    const text = `Лидер: ${this.progressText(frame.hud.progress)} · ${frame.hud.speed.toFixed(1)} м/с`;
     ctx.font = HUD_FONT;
     const x = 10;
     const y = this.height - 76;

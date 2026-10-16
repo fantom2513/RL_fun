@@ -40,7 +40,7 @@ def test_learning_changes_weights_and_bounds_replay():
         {"size": 7},
         {"population": True},
         {"learning_rate": float("nan")},
-        {"algorithm": "ppo"},
+        {"algorithm": "unknown"},
         {"unknown": 1},
         {"batch_size": 16, "replay_capacity": 8},
     ],
