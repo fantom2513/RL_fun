@@ -20,6 +20,13 @@ def teacher_actions(
     ``shortcuts=False`` follows the cycle exactly. Shortcuts apply only while the snake is
     shorter than ``shortcut_fraction`` of the board.
     """
+    return allowed_distances(vec, shortcuts, shortcut_fraction).argmax(dim=1)
+
+
+def allowed_distances(
+    vec: VecSnake, shortcuts: bool = True, shortcut_fraction: float = 1.0
+) -> torch.Tensor:
+    """``(num_envs, 3)`` cycle distance covered by each safe expert move, -1 if not allowed."""
     batch, size = vec.num_envs, vec.size
     area = size * size
     cycle = vec.cycle_order.view(-1)
@@ -40,4 +47,4 @@ def teacher_actions(
         reach = torch.minimum(food_distance, tail_distance - 1)[:, None]
         short_enough = (vec.length < shortcut_fraction * area)[:, None]
         allowed |= safe & (distance >= 2) & (distance <= reach) & short_enough
-    return torch.where(allowed, distance, -1).argmax(dim=1)
+    return torch.where(allowed, distance, -1)
