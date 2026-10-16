@@ -116,3 +116,13 @@ Cloning on 16x16 (12,000 iterations, 36 minutes, `runs/snake-gpu/clone-16`): act
 model, evaluated on the 20 tuning seeds in the reference `SnakeEnv`, won 14 of 20 (70%, mean
 occupancy 72%); the 6 failures were all starvation, i.e. the policy looped without food.
 Below the 90-of-100 acceptance bar; no best-checkpoint selection and no PPO fine-tuning yet.
+
+PPO fine-tuning stage (`scripts/snake_gpu_train.py finetune`, reward food +1, death -1, step -0.0005,
+win +2, no move mask in training because a mask would hide the penalty for fatal moves). On 8x8,
+starting from the 99% clone (`runs/snake-gpu/ppo-8-*`): a 5-iteration critic warm-up followed by
+lr 3e-5 dropped greedy wins from 99% to 9% within 20 iterations. With a 60-iteration critic-only
+warm-up the clone's play is unchanged (99.2% throughout), and after unfreezing at lr 1e-5:
+without a KL anchor wins fell to 27-68%; with a KL anchor to the clone (coefficient 2.0) they
+went 73%, 92%, 90%, 95%, 98% over the next 80 iterations. The 8x8 clone has no headroom, so
+these runs only show stability; the best checkpoint (the clone itself) was kept in both.
+Whether PPO improves the 16x16 clone is not yet known.
