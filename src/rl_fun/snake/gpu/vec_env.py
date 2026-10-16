@@ -85,6 +85,11 @@ class VecSnake:
             cells[order.reshape(-1)] = torch.stack((x.reshape(-1), y.reshape(-1)), dim=1)
             self.cycle_order = order
             self.cycle_cells = cells
+            width = 2 * size - 1
+            positions = torch.arange(width * width, device=self.device).view(width, width)
+            self._rotations = torch.stack(
+                [torch.rot90(positions, (d + 1) % 4, (0, 1)).reshape(-1) for d in range(4)]
+            )
         self.reset()
 
     # -- starting positions -------------------------------------------------------------
@@ -188,6 +193,53 @@ class VecSnake:
         self.score[index] = 0
         self.steps[index] = 0
         self.since_food[index] = since_food
+
+    # -- observations -------------------------------------------------------------------------
+
+    def observation(self) -> torch.Tensor:
+        """Six planes of the window centred on the head, rotated so the heading is up.
+
+        Planes: head, body order (rank/length), food, length/area, outside the board, and
+        the distance ahead along the Hamiltonian cycle from the head (0 outside the board).
+        Same layout as ``SnakeEnv(observation_mode="egocentric_cycle")``.
+        """
+        if self.size % 2:
+            raise ValueError("наблюдение с циклом требует чётной стороны поля")
+        batch, size = self.num_envs, self.size
+        width, center, area = 2 * size - 1, size - 1, size * size
+        offsets = torch.arange(width, device=self.device) - center
+        xs = self.head[:, 0, None, None] + offsets[None, None, :]
+        ys = self.head[:, 1, None, None] + offsets[None, :, None]
+        inside = (xs >= 0) & (xs < size) & (ys >= 0) & (ys < size)
+        flat = (ys.clamp(0, size - 1) * size + xs.clamp(0, size - 1)).view(batch, -1)
+        ranks = self.body.view(batch, -1).gather(1, flat).view(batch, width, width)
+        cycle = self.cycle_order.view(-1)[flat].view(batch, width, width)
+        head_cycle = self.cycle_order[self.head[:, 1], self.head[:, 0]]
+
+        planes = torch.zeros(batch, 6, width, width, device=self.device)
+        planes[:, 0, center, center] = 1
+        planes[:, 1] = torch.where(inside, ranks, 0) / self.length[:, None, None]
+        planes[:, 2] = (
+            inside & (xs == self.food[:, 0, None, None]) & (ys == self.food[:, 1, None, None])
+        )
+        planes[:, 3] = (self.length / area)[:, None, None]
+        planes[:, 4] = ~inside
+        ahead = (cycle - head_cycle[:, None, None]) % area
+        planes[:, 5] = torch.where(inside, ahead / area, 0.0)
+
+        source = self._rotations[self.direction]
+        rotated = planes.view(batch, 6, -1).gather(2, source[:, None, :].expand(batch, 6, -1))
+        return rotated.view(batch, 6, width, width)
+
+    def action_mask(self) -> torch.Tensor:
+        """``(num_envs, 3)`` booleans: True where the action does not end the game."""
+        batch, size = self.num_envs, self.size
+        directions = (self.direction[:, None] + self._turns[None, :]) % 4
+        target = self.head[:, None, :] + self._directions[directions]
+        inside = ((target >= 0) & (target < size)).all(dim=2)
+        flat = target[..., 1].clamp(0, size - 1) * size + target[..., 0].clamp(0, size - 1)
+        occupied = self.body.view(batch, -1).gather(1, flat)
+        return inside & (occupied <= 1)
 
     # -- dynamics -----------------------------------------------------------------------------
 

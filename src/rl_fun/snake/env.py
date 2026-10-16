@@ -6,6 +6,8 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
+from rl_fun.snake.gpu.cycle import hamiltonian_cycle
+
 DIRECTIONS = ((1, 0), (0, 1), (-1, 0), (0, -1))
 TURNS = (0, -1, 1)
 
@@ -41,9 +43,12 @@ class SnakeEnv(gym.Env):
         if type(starvation_factor) is not int or starvation_factor < 1:
             raise ValueError("лимит голода должен быть положительным целым числом")
         self.size = size
-        if observation_mode not in ("local", "board", "egocentric"):
-            raise ValueError("наблюдение: local, board или egocentric")
+        if observation_mode not in ("local", "board", "egocentric", "egocentric_cycle"):
+            raise ValueError("наблюдение: local, board, egocentric или egocentric_cycle")
+        if observation_mode == "egocentric_cycle" and size % 2:
+            raise ValueError("наблюдение egocentric_cycle требует чётной стороны поля")
         self.observation_mode = observation_mode
+        self._cycle = hamiltonian_cycle(size) if observation_mode == "egocentric_cycle" else None
         self.win_reward = win_reward
         self.food_reward = food_reward
         self.death_penalty = death_penalty
@@ -57,8 +62,8 @@ class SnakeEnv(gym.Env):
             0,
             1,
             (
-                5 * (2 * size - 1) ** 2
-                if observation_mode == "egocentric"
+                (6 if observation_mode == "egocentric_cycle" else 5) * (2 * size - 1) ** 2
+                if observation_mode in ("egocentric", "egocentric_cycle")
                 else 11 + (2 * size * size if observation_mode == "board" else 0),
             ),
             dtype=np.float32,
@@ -120,9 +125,10 @@ class SnakeEnv(gym.Env):
     def observation(self):
         if not self.snake:
             return np.zeros(self.observation_space.shape, dtype=np.float32)
-        if self.observation_mode == "egocentric":
+        if self.observation_mode in ("egocentric", "egocentric_cycle"):
             width, center = 2 * self.size - 1, self.size - 1
-            planes = np.zeros((5, width, width), dtype=np.float32)
+            with_cycle = self._cycle is not None
+            planes = np.zeros((6 if with_cycle else 5, width, width), dtype=np.float32)
             x, y = self.snake[0]
             planes[0, center, center] = 1
             for rank, (sx, sy) in enumerate(reversed(self.snake), start=1):
@@ -132,7 +138,15 @@ class SnakeEnv(gym.Env):
                 planes[2, fy - y + center, fx - x + center] = 1
             planes[3].fill(len(self.snake) / self.size**2)
             xs, ys = self._view_x + x, self._view_y + y
-            planes[4] = (xs < 0) | (xs >= self.size) | (ys < 0) | (ys >= self.size)
+            outside = (xs < 0) | (xs >= self.size) | (ys < 0) | (ys >= self.size)
+            planes[4] = outside
+            if with_cycle:
+                # Distance ahead along the Hamiltonian cycle from the head, 0 outside the board.
+                ahead = (
+                    self._cycle[ys.clip(0, self.size - 1), xs.clip(0, self.size - 1)]
+                    - self._cycle[y, x]
+                ) % self.size**2
+                planes[5] = np.where(outside, 0, ahead / self.size**2)
             return np.rot90(planes, (self.direction + 1) % 4, axes=(1, 2)).copy().ravel()
         x, y = self.snake[0]
         fx, fy = self.food if self.food is not None else (x, y)
