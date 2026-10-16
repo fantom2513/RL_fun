@@ -354,3 +354,17 @@ used to tune parameters. `--max-cycles N` sets a finite cycle budget.
 - `runs/` — создаваемые артефакты.
 
 [Как добавить новую среду](docs/environment-authoring.md): runtime отвечает за запуск и ресурсы, среда — за наблюдения, действия, награды и границы эпизода. PyTorch (CPU) используется обучателем PPO лаборатории; Arena остаётся будущим этапом.
+
+## Fourier epicycle animation
+
+Two chains of rotating circles (x on top, y on the left) draw a contour (π, a heart, your own SVG\nor a silhouette image); the error of the current approximation is shown under the counter.
+It is unrelated to the RL code and uses the optional `animation` dependency group:
+
+```bash
+uv run --group animation python scripts/fourier.py --source pi --quality low
+uv run --group animation python scripts/fourier.py --source my-shape.svg --stages 3,10,50,300
+```
+
+Presets: `pi`, `heart`, `star` (see `src/rl_fun/fourier/assets/`). Raster images should
+be dark shapes on a light background. Output goes to `runs/fourier/<name>.mp4`
+(1080x1920, 60 fps with `--quality high`).
