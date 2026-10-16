@@ -1,9 +1,9 @@
 import pytest
 import torch
-from rl_fun.snake.gpu.vec_env import REASONS, VecSnake
 
 from rl_fun.snake.env import DIRECTIONS, SnakeEnv
 from rl_fun.snake.gpu.cycle import hamiltonian_cycle
+from rl_fun.snake.gpu.vec_env import REASONS, VecSnake
 
 DEVICES = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
 
