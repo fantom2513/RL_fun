@@ -1,9 +1,9 @@
 import pytest
 import torch
+from rl_fun.snake.gpu.vec_env import REASONS, VecSnake
 
 from rl_fun.snake.env import DIRECTIONS, SnakeEnv
 from rl_fun.snake.gpu.cycle import hamiltonian_cycle
-from rl_fun.snake.gpu.vec_env import REASONS, VecSnake
 
 DEVICES = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
 
@@ -28,7 +28,7 @@ def invariants_hold(vec):
         values = sorted(body[i][body[i] > 0].tolist())
         if values != list(range(1, length + 1)) or len(cells) != length:
             return False
-        if any(abs(a[0] - b[0]) + abs(a[1] - b[1]) != 1 for a, b in zip(cells, cells[1:])):
+        if any(abs(a[0] - b[0]) + abs(a[1] - b[1]) != 1 for a, b in zip(cells, cells[1:], strict=False)):
             return False
         food = tuple(vec.food[i].tolist())
         if length < vec.size**2 and (food in cells or not _inside(food, vec.size)):
@@ -227,7 +227,7 @@ def test_cycle_segment_starts_follow_the_cycle_order():
     for i in range(vec.num_envs):
         cells = vec.snake_cells(i)  # head first
         indexes = [int(order[y, x]) for x, y in cells]
-        assert all((a - b) % 64 == 1 for a, b in zip(indexes, indexes[1:]))
+        assert all((a - b) % 64 == 1 for a, b in zip(indexes, indexes[1:], strict=False))
     assert min(lengths) >= 3 and max(lengths) <= 40 and len(set(lengths)) > 10
     assert invariants_hold(vec)
 
