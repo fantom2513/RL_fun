@@ -87,7 +87,7 @@ def make_rollout(use_mask=True, steps=8, envs=32, seed=0):
     vec = VecSnake(8, envs, DEVICE, seed=seed, food_reward=1.0, death_penalty=1.0)
     config = PPOConfig(minibatch=64, epochs=1, use_mask=use_mask)
     rollout = collect_rollout(model, vec, steps, use_mask)
-    return model, config, finish_rollout(rollout, model, config)
+    return model, config, finish_rollout(rollout, config)
 
 
 def test_a_rollout_has_one_entry_per_step_and_game():
