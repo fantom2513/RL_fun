@@ -92,3 +92,20 @@ All three follow-up runs still evaluate from ordinary length-three starts.
 The 20 completed screening trials before those follow-ups added 3,012,099
 environment steps in total and recorded no full wins. Splitting steps between
 configurations is not equivalent to training one model for that entire budget.
+
+## GPU pipeline: Hamiltonian-cycle teacher and cloning (2026-10-16)
+
+Design: `docs/superpowers/specs/2026-10-16-snake-gpu-design.md`. Code: `src/rl_fun/snake/gpu/`.
+The batched environment runs 1.14 million steps/s on an RTX 5070 (16x16, 4096 games,
+observations included), against about 270 steps/s for the earlier CPU runs.
+
+The network is a convolutional policy over the head-centred window with a sixth plane
+that gives every cell's distance ahead along a fixed Hamiltonian cycle. It is pretrained by
+imitating a cycle-following teacher with safe shortcuts (the teacher wins every game it was
+checked on: 1000 games on 8x8, 200 on 16x16) and is evaluated greedily, without the teacher
+and without an action mask. It is not learned from scratch.
+
+Cloning gate on 8x8 (4,000 iterations, 4 minutes, `runs/snake-gpu/clone-8`):
+99.8% action accuracy; 127 of 128 greedy wins on the batched environment; 20 of 20 wins on
+the reference `SnakeEnv` tuning seeds. 16x16 acceptance (90 of 100 on seeds
+3000000..3000099) is not yet measured.

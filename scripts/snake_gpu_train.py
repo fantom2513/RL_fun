@@ -57,7 +57,12 @@ def run_clone(args):
             done += chunk
             model.eval()
             report = evaluate_vec(
-                greedy_policy(model), args.size, args.eval_games, args.seed + 1, device
+                greedy_policy(model),
+                args.size,
+                args.eval_games,
+                args.seed + 1,
+                device,
+                max_steps=args.eval_steps,
             )
             model.train()
             log(
@@ -96,6 +101,7 @@ def main():
     parser.add_argument("--max-start-fraction", type=float, default=0.9)
     parser.add_argument("--eval-every", type=int, default=200)
     parser.add_argument("--eval-games", type=int, default=128)
+    parser.add_argument("--eval-steps", type=int, help="step cap of periodic evaluation")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--resume")
