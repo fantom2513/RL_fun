@@ -67,6 +67,31 @@ def evaluate_vec(
     }
 
 
+def _outcome(env: SnakeEnv, seed: int, size: int, reason: str) -> dict:
+    return {
+        "seed": int(seed),
+        "score": env.score,
+        "steps": env.steps,
+        "occupancy": len(env.snake) / size**2,
+        "reason": reason,
+        "win": reason == "win",
+    }
+
+
+def _reference_report(outcomes: list[dict]) -> dict:
+    reasons = dict(Counter(row["reason"] for row in outcomes))
+    wins = reasons.get("win", 0)
+    return {
+        "games": len(outcomes),
+        "wins": wins,
+        "win_rate": wins / len(outcomes),
+        "occupancy": float(np.mean([row["occupancy"] for row in outcomes])),
+        "steps": float(np.mean([row["steps"] for row in outcomes])),
+        "reasons": reasons,
+        "outcomes": outcomes,
+    }
+
+
 def evaluate_reference(
     model: ConvActorCritic,
     size: int,
@@ -90,24 +115,48 @@ def evaluate_reference(
             if terminated or truncated:
                 reason = env.reason
                 break
-        outcomes.append(
-            {
-                "seed": int(seed),
-                "score": env.score,
-                "steps": env.steps,
-                "occupancy": len(env.snake) / size**2,
-                "reason": reason,
-                "win": reason == "win",
-            }
-        )
-    reasons = dict(Counter(row["reason"] for row in outcomes))
-    wins = reasons.get("win", 0)
-    return {
-        "games": len(outcomes),
-        "wins": wins,
-        "win_rate": wins / len(outcomes),
-        "occupancy": float(np.mean([row["occupancy"] for row in outcomes])),
-        "steps": float(np.mean([row["steps"] for row in outcomes])),
-        "reasons": reasons,
-        "outcomes": outcomes,
-    }
+        outcomes.append(_outcome(env, seed, size, reason))
+    return _reference_report(outcomes)
+
+
+def evaluate_reference_batched(
+    model: ConvActorCritic,
+    size: int,
+    seeds: list[int],
+    max_steps: int,
+    device: str | torch.device = "cpu",
+    env_options: dict | None = None,
+) -> dict:
+    """Same games and report as ``evaluate_reference``, stepped in lockstep with batched inference.
+
+    Every game runs in its own reference ``SnakeEnv``; only the network forward pass is batched
+    (and may run on the GPU), so the rules and the observation are the authoritative ones.
+    """
+    if not seeds:
+        raise ValueError("для проверки нужен хотя бы один seed")
+    window = 2 * size - 1
+    model = model.to(device).eval()
+    envs = [
+        SnakeEnv(size, observation_mode="egocentric_cycle", **(env_options or {})) for _ in seeds
+    ]
+    observations = [env.reset(seed=int(seed))[0] for env, seed in zip(envs, seeds, strict=True)]
+    reasons = ["max_steps"] * len(seeds)
+    active = list(range(len(seeds)))
+    for _ in range(max_steps):
+        if not active:
+            break
+        batch = torch.as_tensor(np.stack([observations[i] for i in active]), device=device)
+        actions = model.greedy(batch.view(len(active), model.channels, window, window)).tolist()
+        still_playing = []
+        for index, action in zip(active, actions, strict=True):
+            observations[index], _, terminated, truncated, _ = envs[index].step(action)
+            if terminated or truncated:
+                reasons[index] = envs[index].reason
+            else:
+                still_playing.append(index)
+        active = still_playing
+    outcomes = [
+        _outcome(env, seed, size, reason)
+        for env, seed, reason in zip(envs, seeds, reasons, strict=True)
+    ]
+    return _reference_report(outcomes)
