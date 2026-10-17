@@ -12,6 +12,8 @@ from rl_fun.snake.gpu.evaluate import evaluate_reference, evaluate_vec, greedy_p
 from rl_fun.snake.gpu.imitation import clone
 from rl_fun.snake.gpu.model import ConvActorCritic
 from rl_fun.snake.gpu.ppo import PPOConfig, collect_rollout, finish_rollout, ppo_update
+from rl_fun.snake.gpu.schedule import learning_rate_at
+from rl_fun.snake.gpu.selection import BestTracker
 from rl_fun.snake.gpu.vec_env import VecSnake
 from rl_fun.snake.presets import benchmark_seeds
 
@@ -46,6 +48,13 @@ def run_clone(args):
         lr=args.lr,
     )
     tuning_seeds = benchmark_seeds()[0]
+    tracker = BestTracker()
+
+    def schedule(iteration):
+        return learning_rate_at(
+            iteration, args.iterations, args.lr, args.lr_decay_start, args.lr_floor
+        )
+
     started = time.perf_counter()
     with (out / "log.jsonl").open("a", encoding="utf-8") as handle:
         log(handle, {"event": "start", "args": vars(args), "parameters": model.parameter_count()})
@@ -53,38 +62,49 @@ def run_clone(args):
         while done < args.iterations:
             chunk = min(args.eval_every, args.iterations - done)
             history = clone(
-                model, vec, chunk, rollout=args.rollout, explore=args.explore, optimizer=optimizer
+                model,
+                vec,
+                chunk,
+                rollout=args.rollout,
+                explore=args.explore,
+                optimizer=optimizer,
+                start_iteration=done,
+                learning_rate_schedule=schedule,
             )
             done += chunk
-            model.eval()
-            report = evaluate_vec(
-                greedy_policy(model),
-                args.size,
-                args.eval_games,
-                args.seed + 1,
-                device,
-                max_steps=args.eval_steps,
-            )
-            model.train()
-            log(
-                handle,
-                {
-                    "event": "progress",
-                    "iteration": done,
-                    "seconds": round(time.perf_counter() - started, 1),
-                    "loss": history[-1]["loss"],
-                    "accuracy": sum(row["accuracy"] for row in history[-20:]) / len(history[-20:]),
-                    "greedy": {k: report[k] for k in ("win_rate", "occupancy", "reasons")},
-                },
-            )
             save_model(out / "clone.pt", model, {"stage": "clone", "iterations": done})
-        model = model.eval().cpu()
-        final = evaluate_reference(model, args.size, tuning_seeds, max_steps=args.size**4)
+            record = {
+                "event": "progress",
+                "iteration": done,
+                "seconds": round(time.perf_counter() - started, 1),
+                "lr": history[-1]["lr"],
+                "loss": history[-1]["loss"],
+                "accuracy": sum(row["accuracy"] for row in history[-20:]) / len(history[-20:]),
+            }
+            if done >= args.eval_from:
+                model.eval()
+                report = evaluate_vec(
+                    greedy_policy(model),
+                    args.size,
+                    args.eval_games,
+                    args.seed + 1,
+                    device,
+                    max_steps=args.eval_steps,
+                )
+                model.train()
+                if tracker.update(report, done):
+                    save_model(out / "best.pt", model, {"stage": "clone", "iterations": done})
+                record["greedy"] = {k: report[k] for k in ("win_rate", "occupancy", "reasons")}
+                record["best_iteration"] = tracker.iteration
+            log(handle, record)
+        best_path = out / "best.pt" if tracker.iteration is not None else out / "clone.pt"
+        model, _ = load_model(best_path, size=args.size)
+        final = evaluate_reference(model.eval(), args.size, tuning_seeds, max_steps=args.size**4)
         log(
             handle,
             {
                 "event": "tuning",
-                "backend": "reference SnakeEnv, greedy, no mask",
+                "backend": f"reference SnakeEnv, greedy, no mask, {best_path.name}",
                 **{k: final[k] for k in ("games", "wins", "win_rate", "occupancy", "reasons")},
             },
         )
@@ -228,6 +248,9 @@ def main():
         "--mask", action="store_true", help="hide fatal moves while training (hides their penalty)"
     )
     parser.add_argument("--explore", type=float, default=0.1)
+    parser.add_argument("--lr-decay-start", type=float, default=1.0, help="fraction of iterations")
+    parser.add_argument("--lr-floor", type=float, default=0.02, help="final lr / base lr")
+    parser.add_argument("--eval-from", type=int, default=0, help="first iteration to evaluate")
     parser.add_argument("--max-start-fraction", type=float, default=0.9)
     parser.add_argument("--eval-every", type=int, default=200)
     parser.add_argument("--eval-games", type=int, default=128)
