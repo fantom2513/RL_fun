@@ -20,8 +20,9 @@ def test_greedy_cycle_ends_early_with_failure_penalty():
 
 
 def test_cycling_population_still_completes_generations_promptly():
-    trainer = EvolutionTrainer(SnakeConfig(algorithm="evolution", size=8,
-                               population=4, generations=2, max_steps=1000))
+    trainer = EvolutionTrainer(
+        SnakeConfig(algorithm="evolution", size=8, population=4, generations=2, max_steps=1000)
+    )
     trainer.population.zero_()
     trainer.population[:, -2] = 10  # final layer action-left bias
     frames, rows = [], []
@@ -33,8 +34,14 @@ def test_cycling_population_still_completes_generations_promptly():
 
 
 def test_resume_recomputes_champion_fitness_instead_of_trusting_old_reward():
-    config = SnakeConfig(algorithm="evolution", size=8, population=4,
-                         generations=2, max_steps=20, evaluation_episodes=1)
+    config = SnakeConfig(
+        algorithm="evolution",
+        size=8,
+        population=4,
+        generations=2,
+        max_steps=20,
+        evaluation_episodes=1,
+    )
     previous = EvolutionTrainer(config)
     previous.completed = 1
     previous.champion_reward = 1e9  # checkpoint produced with a different scoring rule

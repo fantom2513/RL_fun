@@ -44,19 +44,25 @@ def test_game_lifecycle_and_bad_inputs(server):
     assert request(server, "PUT", "/api/snake/state")[0] == 405
 
 
-@pytest.mark.parametrize("data", [{}, {"enabled": True, "fps": 0},
-                                  {"enabled": True, "fps": True},
-                                  {"enabled": "yes", "fps": 8}])
+@pytest.mark.parametrize(
+    "data",
+    [{}, {"enabled": True, "fps": 0}, {"enabled": True, "fps": True}, {"enabled": "yes", "fps": 8}],
+)
 def test_bad_animation_settings_rejected(server, data):
     assert request(server, "POST", "/api/snake/visualization", data)[0] == 400
     assert request(server, "POST", "/api/snake/train", {"visualization": data})[0] == 400
 
 
 def test_sse_streams_actual_training_frames(server):
-    status, run = request(server, "POST", "/api/snake/train", {
-        "config": {"size": 8, "episodes": 10, "max_steps": 10},
-        "visualization": {"enabled": True, "fps": 20},
-    })
+    status, run = request(
+        server,
+        "POST",
+        "/api/snake/train",
+        {
+            "config": {"size": 8, "episodes": 10, "max_steps": 10},
+            "visualization": {"enabled": True, "fps": 20},
+        },
+    )
     assert status == 201
     conn = http.client.HTTPConnection("127.0.0.1", server.port, timeout=10)
     try:

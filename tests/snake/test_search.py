@@ -81,9 +81,10 @@ def test_early_stop_saves_the_policy_that_was_evaluated(tmp_path):
                 encoding="utf-8",
             )
         assert directory.name not in {model["id"] for model in manager.models()}
-        assert next(p for p in manager.presets() if p["id"] == "measured_candidate")[
-            "model"
-        ] == directory.name
+        assert (
+            next(p for p in manager.presets() if p["id"] == "measured_candidate")["model"]
+            == directory.name
+        )
         import os
 
         checkpoint = directory / "model.pt"
