@@ -133,3 +133,9 @@ about 100 minutes. Use `--minibatch 2048` on 16x16: at 8192 the activations exce
 video memory and an iteration stalls for minutes (measured: 2048 -> 8 s per iteration at a 4.1 GB
 peak, 4096 -> 44 s at 6.6 GB). The baseline of that run is the clone's 76% on the batched
 evaluation.
+
+Re-measurement of the 16x16 clone (`runs/snake-gpu/clone-16/clone.pt`, last checkpoint) on 256 fresh
+games, batched evaluation, greedy and unmasked, seed 123, step cap 65,536: 191 wins (74.6%, about
+69-80% at 95% confidence), mean occupancy 77.5%. Failures: 62 starvation (the policy loops without
+food), 3 collisions. Consistent with the 70% on the 20 tuning seeds. Next: keep the best checkpoint
+by validation during cloning and decay the learning rate at the end; PPO only if that is not enough.
