@@ -20,6 +20,8 @@ def clone(
     explore: float = 0.0,
     optimizer: torch.optim.Optimizer | None = None,
     on_step: Callable[[int, dict], None] | None = None,
+    start_iteration: int = 0,
+    learning_rate_schedule: Callable[[int], float] | None = None,
 ) -> list[dict]:
     """Train the policy to pick the teacher's move; the value head is left untouched.
 
@@ -35,7 +37,11 @@ def clone(
     optimizer = optimizer or torch.optim.Adam(parameters, lr=learning_rate)
     history = []
     model.train()
-    for iteration in range(iterations):
+    for offset in range(iterations):
+        iteration = start_iteration + offset
+        if learning_rate_schedule is not None:
+            for group in optimizer.param_groups:
+                group["lr"] = learning_rate_schedule(iteration)
         observations, labels = [], []
         for _ in range(rollout):
             distances = allowed_distances(vec)
@@ -57,6 +63,7 @@ def clone(
         optimizer.step()
         row = {
             "iteration": iteration,
+            "lr": optimizer.param_groups[0]["lr"],
             "loss": float(loss.detach()),
             "accuracy": float((logits.argmax(dim=1) == target).float().mean()),
         }
