@@ -113,7 +113,7 @@ def test_process_training_checkpoint_resume_and_archive(tmp_path, algorithm):
         manager.shutdown()
     reopened = SnakeManager(tmp_path)
     try:
-        assert len(reopened.models()) == 2
+        assert len([row for row in reopened.models() if not row.get("builtin")]) == 2
     finally:
         reopened.shutdown()
 

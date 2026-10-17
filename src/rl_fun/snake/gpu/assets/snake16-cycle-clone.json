@@ -1,0 +1,15 @@
+{
+  "games": 100,
+  "wins": 100,
+  "win_rate": 1.0,
+  "occupancy": 1.0,
+  "mean_steps": 15155.84,
+  "seeds": [
+    3000000,
+    3000099
+  ],
+  "backend": "reference SnakeEnv (egocentric_cycle), greedy, no mask, no teacher",
+  "status": "verified",
+  "date": "2026-10-17",
+  "method": "convolutional actor-critic pretrained by imitating a Hamiltonian-cycle teacher with shortcuts (12000 iterations, learning rate decay); observation includes a cycle-order plane; PPO not used"
+}

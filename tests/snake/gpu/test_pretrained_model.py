@@ -1,9 +1,9 @@
 import json
 
 import pytest
-from rl_fun.snake.gpu.pretrained import PRETRAINED, load_pretrained, pretrained_rows
 
 from rl_fun.snake.env import SnakeEnv
+from rl_fun.snake.gpu.pretrained import PRETRAINED, load_pretrained, pretrained_rows
 
 NAME = "snake16-cycle-clone"
 

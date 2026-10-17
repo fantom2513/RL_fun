@@ -5,7 +5,7 @@ import {keyDirection, TurnQueue} from './input.js';
 
 const STATUS = {running:'Обучается', paused:'Пауза', finished:'Завершено', stopped:'Остановлено', error:'Ошибка'};
 const END = {collision:'Столкновение', starvation:'Лимит без еды', loop:'Зациклилась · следующий кандидат', win:'Поле заполнено!'};
-const ALGORITHM = {dqn:'DQN', double_dqn:'Double DQN', reinforce:'REINFORCE · Policy Gradient', a2c:'A2C', ppo:'PPO', td3:'TD3 · адаптер ходов', evolution:'Эволюция'};
+const ALGORITHM = {dqn:'DQN', double_dqn:'Double DQN', reinforce:'REINFORCE · Policy Gradient', a2c:'A2C', ppo:'PPO', td3:'TD3 · адаптер ходов', evolution:'Эволюция', pretrained:'Предобучена (имитация цикла)'};
 const isDqn = algorithm => ['dqn','double_dqn'].includes(algorithm);
 const FIELDS = {
   common: [['max_steps','Лимит ходов',10,100000,10],
@@ -300,12 +300,12 @@ export function initSnake({root, toast}) {
   async function refreshModels() {
     models = await api.request('models'); const selected = el('model').value;
     el('model').replaceChildren(new Option('Обучение вживую','__live__'),new Option('Необученная сеть',''));
-    for (const model of models) el('model').add(new Option(`${ALGORITHM[model.algorithm]} · ${model.iteration} ит. · ${model.size}×${model.size} · ${model.verification?.status === 'verified' ? `проверено: ${model.verification.wins}/${model.verification.episodes} побед · ` : ''}${model.id.slice(0,8)}`,model.id));
+    for (const model of models) el('model').add(new Option(`${ALGORITHM[model.algorithm]}${model.algorithm === 'pretrained' ? '' : ` · ${model.iteration} ит.`} · ${model.size}×${model.size} · ${model.verification?.status === 'verified' ? `проверено: ${model.verification.wins}/${model.verification.episodes} побед · ` : ''}${model.id.slice(0,8)}`,model.id));
     if (selected === '__live__' || selected === '' || models.some(row => row.id === selected)) el('model').value = selected;
     el('model-list').replaceChildren();
     for (const model of models.slice(0,5)) {
       const button = document.createElement('button'); button.className = 'snake-model-row';
-      button.textContent = `${ALGORITHM[model.algorithm]} · ${model.id.slice(0,8)} · ${model.iteration} ит.`;
+      button.textContent = `${ALGORITHM[model.algorithm]} · ${model.id.slice(0,8)}${model.algorithm === 'pretrained' ? '' : ` · ${model.iteration} ит.`}`;
       button.addEventListener('click', () => safe(async () => { el('model').value = model.id; await chooseModel(); }));
       el('model-list').append(button);
     }
@@ -313,7 +313,8 @@ export function initSnake({root, toast}) {
   async function chooseModel() {
     const model = models.find(row => row.id === el('model').value);
     if (model) {
-      el('size').value = model.size; el('algorithm').value = model.algorithm; renderFields(model.config);
+      el('size').value = model.size;
+      if (model.algorithm !== 'pretrained') { el('algorithm').value = model.algorithm; renderFields(model.config); }
       if (!run || ['finished','stopped','error'].includes(run.status)) {
         history = model.history; updateTraining();
       }

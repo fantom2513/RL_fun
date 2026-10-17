@@ -151,7 +151,9 @@ class SnakeManager:
                 except (OSError, ValueError, KeyError, TypeError):
                     continue
             rows.sort(key=lambda row: row["created"], reverse=True)
-            return rows if limit is None else rows[:limit]
+            from rl_fun.snake.gpu.pretrained import pretrained_rows
+
+            return (rows if limit is None else rows[:limit]) + pretrained_rows()
 
     def presets(self):
         from rl_fun.snake.presets import completion_preset, verification_status
@@ -160,6 +162,8 @@ class SnakeManager:
         models = self.models(limit=None)
         measured = []
         for model in models:
+            if model.get("builtin"):
+                continue
             try:
                 directory = self._path(model["id"])
                 report = json.loads((directory / "evaluation.json").read_text(encoding="utf-8"))
@@ -223,6 +227,24 @@ class SnakeManager:
                     }
                 )
         for model in models:
+            if model.get("builtin"):
+                evidence = model["verification"]
+                presets.append(
+                    {
+                        "id": f"pretrained_{model['size']}",
+                        "model": model["id"],
+                        "label": f"Полное поле {model['size']}×{model['size']} · "
+                        "предобученная нейросеть",
+                        "status": evidence["status"],
+                        "config": model["config"],
+                        "visualization": {"enabled": False, "fps": 60},
+                        "description": f"Предобучена имитацией гамильтонова цикла: "
+                        f"{evidence['wins']}/{evidence['episodes']} побед на независимых играх. "
+                        "Играет жадно, без маски ходов и без учителя. Только показ модели: "
+                        "продолжить её обучение нельзя.",
+                    }
+                )
+                continue
             evidence = model.get("verification")
             if not evidence or evidence.get("status") != "verified":
                 continue
@@ -431,6 +453,7 @@ class SnakeManager:
             raise ValueError("неизвестный режим игры")
         policy = None
         trained = False
+        state = None
         with self.condition:
             if self.closed:
                 raise RuntimeError("сервер останавливается")
@@ -443,7 +466,14 @@ class SnakeManager:
                 with torch.random.fork_rng():
                     torch.manual_seed(42)
                     policy = Policy()
-                if data.get("model"):
+                from rl_fun.snake.gpu.pretrained import PRETRAINED, load_pretrained
+
+                if isinstance(data.get("model"), str) and data["model"] in PRETRAINED:
+                    policy = load_pretrained(data["model"])
+                    if policy.size != data.get("size", 16):
+                        raise ValueError("выберите размер поля, с которым обучалась модель")
+                    trained = True
+                elif data.get("model"):
                     from rl_fun.snake.checkpoint import load_checkpoint, playback_weights
 
                     state = load_checkpoint(self._path(data["model"]) / "model.pt")
@@ -461,7 +491,7 @@ class SnakeManager:
                         else state["completed"] > 0
                     )
             session = SnakeSession(data, policy, trained)
-            if data.get("model") and mode != "manual":
+            if state is not None and mode != "manual":
                 session.model_iteration = state["completed"]
             self._refresh_policy(session)
             expired = [
