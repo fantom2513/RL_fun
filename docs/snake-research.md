@@ -139,3 +139,14 @@ games, batched evaluation, greedy and unmasked, seed 123, step cap 65,536: 191 w
 69-80% at 95% confidence), mean occupancy 77.5%. Failures: 62 starvation (the policy loops without
 food), 3 collisions. Consistent with the 70% on the 20 tuning seeds. Next: keep the best checkpoint
 by validation during cloning and decay the learning rate at the end; PPO only if that is not enough.
+
+Second 16x16 clone (`runs/snake-gpu/clone-16b`, seed 1, 12,000 iterations, learning rate 1e-3 held for 70% of the
+run then decayed linearly to 2e-5, 33 minutes): action accuracy 100.00% at the end. Re-measured on 256 fresh
+games with the same protocol as the first clone (batched evaluation, seed 123, greedy, no mask, cap 65,536
+steps): 252 wins (98.4%), mean occupancy 98.7%, mean 14,860 steps per game; the 4 failures are collisions and
+there is no looping. On the 20 tuning seeds of the reference `SnakeEnv`: 20 of 20 wins. The first clone had 74.6%
+on the same protocol, so the decay of the learning rate is what moved it. Caveat: the periodic evaluation of
+this run used a step cap of 12,000, below the length of a winning game, so it reported 0% wins throughout and
+the "best" checkpoint was chosen on occupancy only (it was the last one). The official 100-game acceptance on the
+reference environment (seeds 3000000..3000099) is not yet run: the single-game CPU evaluation takes hours, a
+batched reference harness is needed first.
