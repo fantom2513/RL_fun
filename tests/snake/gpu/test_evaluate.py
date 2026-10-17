@@ -1,7 +1,12 @@
 import pytest
 import torch
 
-from rl_fun.snake.gpu.evaluate import evaluate_reference, evaluate_vec, greedy_policy
+from rl_fun.snake.gpu.evaluate import (
+    evaluate_reference,
+    evaluate_reference_batched,
+    evaluate_vec,
+    greedy_policy,
+)
 from rl_fun.snake.gpu.model import ConvActorCritic
 from rl_fun.snake.gpu.teacher import teacher_actions
 
@@ -62,6 +67,40 @@ def test_the_reference_backend_is_reproducible_and_reports_each_game():
     assert first == second
     assert first["games"] == 3 and len(first["outcomes"]) == 3
     assert {"seed", "score", "steps", "reason", "win"} <= set(first["outcomes"][0])
+
+
+def test_the_batched_reference_matches_the_one_game_at_a_time_reference():
+    model = ConvActorCritic(8).eval()
+    seeds = [1, 2, 3, 4, 5]
+
+    sequential = evaluate_reference(model, size=8, seeds=seeds, max_steps=400)
+    batched = evaluate_reference_batched(model, size=8, seeds=seeds, max_steps=400, device="cpu")
+
+    assert batched == sequential
+
+
+def test_the_batched_reference_keeps_the_seed_order_and_marks_unfinished_games():
+    model = ConvActorCritic(8).eval()
+
+    report = evaluate_reference_batched(model, size=8, seeds=[9, 8, 7], max_steps=1, device="cpu")
+
+    assert [row["seed"] for row in report["outcomes"]] == [9, 8, 7]
+    assert report["reasons"] == {"max_steps": 3}
+
+
+def test_the_batched_reference_runs_on_the_gpu_when_available():
+    model = ConvActorCritic(8).eval()
+
+    report = evaluate_reference_batched(
+        model, size=8, seeds=[1, 2, 3], max_steps=200, device=DEVICE
+    )
+
+    assert report["games"] == 3 and sum(report["reasons"].values()) == 3
+
+
+def test_the_batched_reference_needs_at_least_one_seed():
+    with pytest.raises(ValueError):
+        evaluate_reference_batched(ConvActorCritic(8), size=8, seeds=[], max_steps=10)
 
 
 def test_the_reference_backend_needs_at_least_one_seed():
