@@ -150,3 +150,11 @@ this run used a step cap of 12,000, below the length of a winning game, so it re
 the "best" checkpoint was chosen on occupancy only (it was the last one). The official 100-game acceptance on the
 reference environment (seeds 3000000..3000099) is not yet run: the single-game CPU evaluation takes hours, a
 batched reference harness is needed first.
+
+Acceptance (2026-10-17): `runs/snake-gpu/clone-16b/best.pt` on the reference `SnakeEnv` (observation mode
+`egocentric_cycle`), 16x16, 100 games on the frozen validation seeds 3000000..3000099, greedy, no action mask, no
+teacher, step cap 65,536: **100 wins out of 100**, mean 15,156 steps per game, status `verified` (threshold: 90 of 100).
+The validation seeds were used once, after the checkpoint was fixed; all tuning used other seeds. The model is a
+network pretrained by imitating the Hamiltonian-cycle teacher and sees a cycle-order plane in its input; it was not
+trained from scratch and PPO fine-tuning was not needed. Harness: `scripts/snake_gpu_verify.py`
+(`evaluate_reference_batched`, 100 reference games stepped in lockstep with batched GPU inference, 100 s).
