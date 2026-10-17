@@ -80,6 +80,38 @@ The **Полное поле 16×16** preset selects Double DQN, board observatio
 disabled animation. It is explicitly experimental until a trained model wins
 at least 90 of 100 independent validation games at size 16 or larger.
 
+### GPU training and the pretrained 16×16 model
+
+The preset **Полное поле 16×16 · предобученная нейросеть** replays a shipped
+network (`src/rl_fun/snake/gpu/assets/`) that won 100 of 100 independent games on
+16×16 (validation seeds 3000000..3000099, greedy play without a move mask or any
+teacher, reference `SnakeEnv`). It also appears under the saved models as
+**Предобучена (имитация цикла)**. It is replay only: it cannot be resumed.
+
+How it was made, so the claim is read correctly: the network is a convolutional
+actor-critic over a head-centred window whose sixth plane is each cell's
+distance ahead along a fixed Hamiltonian cycle. It was **pretrained by imitating
+a Hamiltonian-cycle expert with shortcuts** (which itself always wins) and is not
+learned from scratch; PPO fine-tuning is implemented but was not needed. Details,
+numbers and the failed attempts are in `docs/snake-research.md`; the design is
+in `docs/superpowers/specs/2026-10-16-snake-gpu-design.md`.
+
+The batched GPU environment (`rl_fun.snake.gpu.vec_env.VecSnake`) runs about
+1.1 million steps/s on an RTX 5070 and follows the rules of `SnakeEnv`. It needs the
+CUDA build of torch, which `pyproject.toml` selects (`cu130`; the `cu128` index
+stops at torch 2.11). Commands:
+
+```powershell
+uv run python scripts/snake_gpu_bench.py
+uv run python scripts/snake_gpu_train.py clone --size 16 --envs 1024 --iterations 12000 --eval-from 4000 --eval-every 1000 --eval-games 256 --lr-decay-start 0.7 --seed 1 --out runs/snake-gpu/clone-16b
+uv run python scripts/snake_gpu_train.py finetune --size 16 --resume runs/snake-gpu/clone-16b/best.pt --minibatch 2048 --kl-coef 2.0 --critic-warmup 60 --lr 1e-5
+uv run python scripts/snake_gpu_verify.py runs/snake-gpu/clone-16b/best.pt --size 16
+```
+
+Use `--minibatch 2048` for PPO on 16×16: larger batches exceed 12 GB of video
+memory. Periodic evaluation needs a step cap above the length of a winning game
+(about 15,000 steps on 16×16), or it reports no wins.
+
 Run a reproducible, bounded training and validation experiment:
 
 ```powershell
